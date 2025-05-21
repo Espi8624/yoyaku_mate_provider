@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page.dart';
+import 'package:yoyaku_mate_provider/pages/sales_entry_page.dart';
 import 'package:yoyaku_mate_provider/pages/sales_overview_page.dart';
 import 'package:yoyaku_mate_provider/pages/shop_status_page.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page.dart';
@@ -35,10 +36,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const List<Widget> _pages = <Widget>[
     ShopStatusPage(),
+    ProfilePage(),
     WaitingPage(),
+    SalesEntryPage(),
     SalesOverviewPage(),
     MenuManagementPage(),
-    ProfilePage(),
     SettingPage(),
   ];
 
@@ -77,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
             top: 0,
             left: 0,
             bottom: 0,
-            width: _isExpanded ? 220 : 70,
+            width: _isExpanded ? 270 : 60,
             child: SideNavigationBar(
               isExpanded: _isExpanded,
               selectedIndex: _selectedIndex,

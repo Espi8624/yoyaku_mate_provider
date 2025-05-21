@@ -159,7 +159,7 @@ class WaitingListCard extends StatelessWidget {
             itemBuilder: (context, index) {
               final item = waitingList[index];
               return Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
+                margin: const EdgeInsets.symmetric(vertical: 4),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,

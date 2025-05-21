@@ -58,7 +58,7 @@ class SideNavigationBar extends StatelessWidget {
           if (isExpanded) ...[
             InkWell(
               // InkWell 추가
-              onTap: () => onItemTapped(4), // 프로필 탭 이벤트
+              onTap: () => onItemTapped(1), // 프로필 탭 이벤트
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Row(
@@ -84,7 +84,7 @@ class SideNavigationBar extends StatelessWidget {
           ] else ...[
             InkWell(
               // 축소된 상태에서도 탭 가능하게
-              onTap: () => onItemTapped(4),
+              onTap: () => onItemTapped(1),
               child: CircleAvatar(
                 radius: 20,
                 backgroundColor: Colors.grey[300],
@@ -123,19 +123,36 @@ class SideNavigationBar extends StatelessWidget {
                 ),
           const SizedBox(height: 15),
 
-          // ウェイティングリスト
+          // 待機リスト
           isExpanded
               ? _NavItem(
                   icon: Icons.list_alt_rounded,
-                  label: 'ウェイティングリスト',
-                  selected: selectedIndex == 1,
-                  onTap: () => onItemTapped(1),
+                  label: '待機リスト',
+                  selected: selectedIndex == 2,
+                  onTap: () => onItemTapped(2),
                 )
               : _NavIcon(
                   icon: Icons.list_alt_rounded,
-                  selected: selectedIndex == 1,
-                  label: 'ウェイティングリスト',
-                  onTap: () => onItemTapped(1),
+                  selected: selectedIndex == 2,
+                  label: '待機リスト',
+                  onTap: () => onItemTapped(2),
+                  isExpanded: isExpanded,
+                ),
+          const SizedBox(height: 15),
+
+          // 売上入力
+          isExpanded
+              ? _NavItem(
+                  icon: Icons.receipt_rounded,
+                  label: '売上入力',
+                  selected: selectedIndex == 3,
+                  onTap: () => onItemTapped(3),
+                )
+              : _NavIcon(
+                  icon: Icons.receipt_rounded,
+                  selected: selectedIndex == 3,
+                  label: '売上入力',
+                  onTap: () => onItemTapped(3),
                   isExpanded: isExpanded,
                 ),
           const SizedBox(height: 15),
@@ -145,14 +162,14 @@ class SideNavigationBar extends StatelessWidget {
               ? _NavItem(
                   icon: Icons.bar_chart_rounded,
                   label: '売上管理',
-                  selected: selectedIndex == 2,
-                  onTap: () => onItemTapped(2),
+                  selected: selectedIndex == 4,
+                  onTap: () => onItemTapped(4),
                 )
               : _NavIcon(
                   icon: Icons.bar_chart_rounded,
-                  selected: selectedIndex == 2,
+                  selected: selectedIndex == 4,
                   label: '売上管理',
-                  onTap: () => onItemTapped(2),
+                  onTap: () => onItemTapped(4),
                   isExpanded: isExpanded,
                 ),
           const SizedBox(height: 15),
@@ -162,14 +179,14 @@ class SideNavigationBar extends StatelessWidget {
               ? _NavItem(
                   icon: Icons.table_view_rounded,
                   label: 'メニュー管理',
-                  selected: selectedIndex == 3,
-                  onTap: () => onItemTapped(3),
+                  selected: selectedIndex == 5,
+                  onTap: () => onItemTapped(5),
                 )
               : _NavIcon(
                   icon: Icons.table_view_rounded,
-                  selected: selectedIndex == 3,
+                  selected: selectedIndex == 5,
                   label: 'メニュー管理',
-                  onTap: () => onItemTapped(3),
+                  onTap: () => onItemTapped(5),
                   isExpanded: isExpanded,
                 ),
 
@@ -182,14 +199,14 @@ class SideNavigationBar extends StatelessWidget {
               ? _NavItem(
                   icon: Icons.settings,
                   label: '設定',
-                  selected: selectedIndex == 5,
-                  onTap: () => onItemTapped(5),
+                  selected: selectedIndex == 6,
+                  onTap: () => onItemTapped(6),
                 )
               : _NavIcon(
                   icon: Icons.settings,
-                  selected: selectedIndex == 5,
+                  selected: selectedIndex == 6,
                   label: '設定',
-                  onTap: () => onItemTapped(5),
+                  onTap: () => onItemTapped(6),
                   isExpanded: isExpanded,
                 ),
           const SizedBox(height: 15),
@@ -257,6 +274,7 @@ class _NavItem extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 17,
+                fontWeight: FontWeight.w400,
                 color: selected ?? false
                     ? const Color(0xFFFF6F61)
                     : Colors.grey[600],
