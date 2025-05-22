@@ -43,7 +43,7 @@ class SideNavigationBar extends StatelessWidget {
           const SizedBox(height: 20),
           // 토글 버튼
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Align(
               alignment: Alignment.topRight,
               child: IconButton(
@@ -143,13 +143,13 @@ class SideNavigationBar extends StatelessWidget {
           // 売上入力
           isExpanded
               ? _NavItem(
-                  icon: Icons.receipt_rounded,
-                  label: '売上入力',
+                  icon: Icons.library_books_rounded,
+                  label: '売出入力',
                   selected: selectedIndex == 3,
                   onTap: () => onItemTapped(3),
                 )
               : _NavIcon(
-                  icon: Icons.receipt_rounded,
+                  icon: Icons.library_books_rounded,
                   selected: selectedIndex == 3,
                   label: '売上入力',
                   onTap: () => onItemTapped(3),
@@ -161,7 +161,7 @@ class SideNavigationBar extends StatelessWidget {
           isExpanded
               ? _NavItem(
                   icon: Icons.bar_chart_rounded,
-                  label: '売上管理',
+                  label: '売出管理',
                   selected: selectedIndex == 4,
                   onTap: () => onItemTapped(4),
                 )

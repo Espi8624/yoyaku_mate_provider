@@ -6,9 +6,10 @@ class WaitingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
+      backgroundColor: Color(0xFFF5F5F5),
       body: Padding(
         padding:
-            EdgeInsets.only(top: 20, left: 3, right: 10, bottom: 3), // 전체 여백
+            EdgeInsets.only(top: 20, left: 12, right: 10, bottom: 3), // 전체 여백
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

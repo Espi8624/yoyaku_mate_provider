@@ -11,6 +11,7 @@ class ShopStatusPage extends StatelessWidget {
       //   title: const Text('Shop Status Page'),
       // ),
       body: ShopStatusLayout(),
+      backgroundColor: Color(0xFFF5F5F5), // 배경색 설정
     );
   }
 }

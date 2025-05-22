@@ -56,7 +56,7 @@ class _SalesEntryPageState extends State<SalesEntryPage> {
   Widget _buildSingleFormContainer(String formKey, {Key? key}) {
     return Container(
       key: key,
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -114,6 +114,7 @@ class _SalesEntryPageState extends State<SalesEntryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       body: Row(
         children: [
           // 왼쪽: 매상 입력 폼 (2)
@@ -233,7 +234,7 @@ class _SalesEntryPageState extends State<SalesEntryPage> {
           // 오른쪽: 매상 확인 (1)
           Expanded(
             child: Container(
-              color: Colors.grey[100],
+              color: Colors.grey[50],
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

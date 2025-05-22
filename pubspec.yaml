@@ -37,6 +37,7 @@ dependencies:
   cupertino_icons: ^1.0.6
   window_manager: ^0.3.9
   bitsdojo_window: ^0.1.5
+  fl_chart: ^0.66.2
 
 dev_dependencies:
   flutter_test:

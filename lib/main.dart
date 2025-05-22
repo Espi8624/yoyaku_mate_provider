@@ -71,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // 메인 컨텐츠: 항상 같은 위치와 크기
           Positioned.fill(
-            left: 80, // 네비게이션 바 최소 너비만큼 띄움
+            left: 60, // 네비게이션 바 최소 너비만큼 띄움
             child: _pages[_selectedIndex],
           ),
           // 네비게이션 바: 확장 시 오른쪽으로 겹침
