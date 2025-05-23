@@ -134,37 +134,112 @@ class _SalesOverviewPageState extends State<SalesOverviewPage> {
                             child: _sectionBox(
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
-                                child: LineChart(
+                                child: // LineChart 부분 수정
+                                    LineChart(
                                   LineChartData(
-                                    gridData: const FlGridData(show: false),
-                                    titlesData: const FlTitlesData(
-                                      rightTitles: AxisTitles(
-                                        sideTitles:
-                                            SideTitles(showTitles: false),
-                                      ),
-                                      topTitles: AxisTitles(
-                                        sideTitles:
-                                            SideTitles(showTitles: false),
-                                      ),
-                                    ),
                                     borderData: FlBorderData(show: false),
                                     lineBarsData: [
                                       LineChartBarData(
                                         spots: const [
-                                          FlSpot(0, 3),
-                                          FlSpot(1, 1),
-                                          FlSpot(2, 4),
-                                          FlSpot(3, 2),
-                                          FlSpot(4, 5),
-                                          FlSpot(5, 3),
-                                          FlSpot(6, 4),
+                                          FlSpot(0, 12), // 월요일
+                                          FlSpot(1, 8), // 화요일
+                                          FlSpot(2, 15), // 수요일
+                                          FlSpot(3, 10), // 목요일
+                                          FlSpot(4, 18), // 금요일
+                                          FlSpot(5, 25), // 토요일
+                                          FlSpot(6, 22), // 일요일
                                         ],
                                         isCurved: true,
                                         color: const Color(0xFF263238),
                                         barWidth: 2,
-                                        dotData: const FlDotData(show: false),
+                                        dotData: const FlDotData(
+                                          show: true,
+                                        ),
                                       ),
                                     ],
+                                    gridData: FlGridData(
+                                      show: true,
+                                      drawVerticalLine: true,
+                                      horizontalInterval: 1,
+                                      verticalInterval: 1,
+                                      getDrawingHorizontalLine: (value) {
+                                        return FlLine(
+                                          color: Colors.grey[300],
+                                          strokeWidth: 1,
+                                        );
+                                      },
+                                      getDrawingVerticalLine: (value) {
+                                        return FlLine(
+                                          color: Colors.grey[300],
+                                          strokeWidth: 1,
+                                        );
+                                      },
+                                    ),
+                                    titlesData: FlTitlesData(
+                                      rightTitles: const AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false),
+                                      ),
+                                      topTitles: const AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false),
+                                      ),
+                                      bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          getTitlesWidget: (value, meta) {
+                                            const style = TextStyle(
+                                              color: Color(0xFF263238),
+                                              fontSize: 12,
+                                            );
+                                            String text;
+                                            switch (value.toInt()) {
+                                              case 0:
+                                                text = '月';
+                                                break;
+                                              case 1:
+                                                text = '火';
+                                                break;
+                                              case 2:
+                                                text = '水';
+                                                break;
+                                              case 3:
+                                                text = '木';
+                                                break;
+                                              case 4:
+                                                text = '金';
+                                                break;
+                                              case 5:
+                                                text = '土';
+                                                break;
+                                              case 6:
+                                                text = '日';
+                                                break;
+                                              default:
+                                                text = '';
+                                            }
+
+                                            return Text(text, style: style);
+                                          },
+                                        ),
+                                      ),
+                                      leftTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          interval: 2,
+                                          getTitlesWidget: (value, meta) {
+                                            return Text(
+                                              '${value.toInt()}万',
+                                              style: const TextStyle(
+                                                color: Color(0xFF263238),
+                                                fontSize: 12,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    // ...existing borderData and lineBarsData...
                                   ),
                                 ),
                               ),
@@ -181,26 +256,15 @@ class _SalesOverviewPageState extends State<SalesOverviewPage> {
                                 padding: const EdgeInsets.all(16),
                                 child: BarChart(
                                   BarChartData(
-                                    gridData: const FlGridData(show: false),
-                                    titlesData: const FlTitlesData(
-                                      rightTitles: AxisTitles(
-                                        sideTitles:
-                                            SideTitles(showTitles: false),
-                                      ),
-                                      topTitles: AxisTitles(
-                                        sideTitles:
-                                            SideTitles(showTitles: false),
-                                      ),
-                                    ),
                                     borderData: FlBorderData(show: false),
                                     barGroups: [
                                       BarChartGroupData(
                                         x: 0,
                                         barRods: [
                                           BarChartRodData(
-                                            toY: 8,
+                                            toY: 5, // 10시
                                             color: const Color(0xFF263238),
-                                            width: 20,
+                                            width: 16,
                                           )
                                         ],
                                       ),
@@ -208,9 +272,9 @@ class _SalesOverviewPageState extends State<SalesOverviewPage> {
                                         x: 1,
                                         barRods: [
                                           BarChartRodData(
-                                            toY: 10,
+                                            toY: 12, // 12시
                                             color: const Color(0xFF263238),
-                                            width: 20,
+                                            width: 16,
                                           )
                                         ],
                                       ),
@@ -218,9 +282,9 @@ class _SalesOverviewPageState extends State<SalesOverviewPage> {
                                         x: 2,
                                         barRods: [
                                           BarChartRodData(
-                                            toY: 14,
+                                            toY: 8, // 14시
                                             color: const Color(0xFF263238),
-                                            width: 20,
+                                            width: 16,
                                           )
                                         ],
                                       ),
@@ -228,9 +292,9 @@ class _SalesOverviewPageState extends State<SalesOverviewPage> {
                                         x: 3,
                                         barRods: [
                                           BarChartRodData(
-                                            toY: 15,
+                                            toY: 15, // 16시
                                             color: const Color(0xFF263238),
-                                            width: 20,
+                                            width: 16,
                                           )
                                         ],
                                       ),
@@ -238,9 +302,9 @@ class _SalesOverviewPageState extends State<SalesOverviewPage> {
                                         x: 4,
                                         barRods: [
                                           BarChartRodData(
-                                            toY: 13,
+                                            toY: 20, // 18시
                                             color: const Color(0xFF263238),
-                                            width: 20,
+                                            width: 16,
                                           )
                                         ],
                                       ),
@@ -248,13 +312,85 @@ class _SalesOverviewPageState extends State<SalesOverviewPage> {
                                         x: 5,
                                         barRods: [
                                           BarChartRodData(
-                                            toY: 10,
+                                            toY: 17, // 20시
                                             color: const Color(0xFF263238),
-                                            width: 20,
+                                            width: 16,
                                           )
                                         ],
                                       ),
                                     ],
+                                    gridData: FlGridData(
+                                      show: true,
+                                      drawVerticalLine: false,
+                                      horizontalInterval: 1,
+                                      getDrawingHorizontalLine: (value) {
+                                        return FlLine(
+                                          color: Colors.grey[300],
+                                          strokeWidth: 1,
+                                        );
+                                      },
+                                    ),
+                                    titlesData: FlTitlesData(
+                                      rightTitles: const AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false),
+                                      ),
+                                      topTitles: const AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false),
+                                      ),
+                                      bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          getTitlesWidget: (value, meta) {
+                                            const style = TextStyle(
+                                              color: Color(0xFF263238),
+                                              fontSize: 12,
+                                            );
+                                            String text;
+                                            switch (value.toInt()) {
+                                              case 0:
+                                                text = '10時';
+                                                break;
+                                              case 1:
+                                                text = '12時';
+                                                break;
+                                              case 2:
+                                                text = '14時';
+                                                break;
+                                              case 3:
+                                                text = '16時';
+                                                break;
+                                              case 4:
+                                                text = '18時';
+                                                break;
+                                              case 5:
+                                                text = '20時';
+                                                break;
+                                              default:
+                                                text = '';
+                                            }
+                                            return Text(text, style: style);
+                                          },
+                                        ),
+                                      ),
+                                      leftTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          interval: 2,
+                                          getTitlesWidget: (value, meta) {
+                                            return Text(
+                                              '${value.toInt()}万',
+                                              style: const TextStyle(
+                                                color: Color(0xFF263238),
+                                                fontSize: 12,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    // ...existing borderData and barGroups...
                                   ),
                                 ),
                               ),
