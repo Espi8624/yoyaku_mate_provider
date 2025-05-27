@@ -59,14 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text(
-      //     'Yoyaku Mate',
-      //     style: TextStyle(
-      //       fontWeight: FontWeight.bold,
-      //     ),
-      //   ),
-      // ),
       body: Stack(
         children: [
           // 메인 컨텐츠: 항상 같은 위치와 크기

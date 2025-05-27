@@ -55,32 +55,33 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 12),
                   GestureDetector(
-  onTap: () => _showEditDialog('name', '店名'),
-  child: Center(
-    child: IntrinsicWidth( // 텍스트 + 아이콘 묶음을 가운데로 정렬
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            profile['name'],
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF263238),
-            ),
-          ),
-          const SizedBox(width: 12), // 아이콘과 텍스트 사이 간격만 적당히
-          Icon(
-            Icons.edit,
-            color: Colors.grey[600],
-            size: 20,
-          ),
-        ],
-      ),
-    ),
-  ),
-),
+                    onTap: () => _showEditDialog('name', '店名'),
+                    child: Center(
+                      child: IntrinsicWidth(
+                        // 텍스트 + 아이콘 묶음을 가운데로 정렬
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              profile['name'],
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF263238),
+                              ),
+                            ),
+                            const SizedBox(width: 12), // 아이콘과 텍스트 사이 간격만 적당히
+                            Icon(
+                              Icons.edit,
+                              color: Colors.grey[600],
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

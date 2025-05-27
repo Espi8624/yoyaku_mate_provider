@@ -1,15 +1,93 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import '../services/waiting_service.dart';
+import '../models/waiting_list.dart';
 
-class WaitingPage extends StatelessWidget {
+class WaitingPage extends StatefulWidget {
   const WaitingPage({super.key});
 
   @override
+  State<WaitingPage> createState() => _WaitingPageState();
+}
+
+class _WaitingPageState extends State<WaitingPage> {
+  final WaitingService _waitingService = WaitingService();
+  List<WaitingList> _waitingList = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
+
+  Future<void> _initializeData() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // 초기 데이터 로드
+      print('Fetching initial data...');
+      final initialData = await _waitingService.fetchWaitingCustomers();
+      
+      if (!mounted) return;
+      
+      print('Received initial data: ${initialData.length} items');
+      
+      setState(() {
+        _waitingList = initialData;
+        _isLoading = false;
+      });
+
+      print('Initial data loaded, starting polling updates...');
+      
+      // polling 시작 및 실시간 업데이트 구독
+      _waitingService.startPolling();
+      _waitingService.waitingListStream.listen(
+        (updatedList) {
+          print('Received updated waiting list: ${updatedList.length} items');
+          if (!mounted) return;
+          setState(() {
+            _waitingList = updatedList;
+            _error = null;
+          });
+        },
+        onError: (error) {
+          print('Update stream error: $error');
+          if (!mounted) return;
+          setState(() {
+            _error = 'リアルタイム更新中にエラーが発生しました: $error';
+          });
+        },
+      );
+    } catch (e) {
+      print('Error in _initializeData: $e');
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = 'データの読み込み中にエラーが発生しました: $e';
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    print('Disposing WaitingPage');
+    _waitingService.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFF5F5F5),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       body: Padding(
-        padding:
-            EdgeInsets.only(top: 20, left: 12, right: 10, bottom: 3), // 전체 여백
+        padding: const EdgeInsets.all(16.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -19,18 +97,21 @@ class WaitingPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  WaitingListButtons(),
-                  SizedBox(height: 10),
+                  const WaitingListButtons(),
+                  const SizedBox(height: 10),
                   Expanded(
-                    // 추가: 리스트가 남은 공간을 채우고 스크롤 가능
-                    child: WaitingListCard(),
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _error != null
+                            ? Center(child: Text(_error!))
+                            : WaitingListCard(waitingList: _waitingList),
                   ),
                 ],
               ),
             ),
-            SizedBox(width: 11),
+            const SizedBox(width: 11),
             // 우측: 웨이팅 상태 (1/3 너비)
-            Expanded(
+            const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -39,9 +120,6 @@ class WaitingPage extends StatelessWidget {
                   Expanded(
                     child: WaitingStatusArea(),
                   ),
-                  // WaitingStatusCard(),
-                  // SizedBox(height: 2),
-                  // CurrentWaitingCard(),
                 ],
               ),
             ),
@@ -88,56 +166,21 @@ class WaitingListButtons extends StatelessWidget {
 }
 
 class WaitingListCard extends StatelessWidget {
-  const WaitingListCard({super.key});
+  final List<WaitingList> waitingList;
+
+  const WaitingListCard({required this.waitingList, super.key});
+
+  String _calculateWaitingTime(DateTime registrationTime) {
+    final utcCurrentTime = DateTime.now().toUtc();
+    final utcRegistrationTime = registrationTime.toUtc();
+    final duration = utcCurrentTime.difference(utcRegistrationTime);
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '$minutes分 $seconds秒';
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 예시 데이터
-    final waitingList = [
-      {
-        'number': '1',
-        'team': '5',
-        'name': '9933',
-        'time': '03:07',
-      },
-      {
-        'number': '2',
-        'team': '2',
-        'name': '904',
-        'time': '05:17',
-      },
-      {
-        'number': '3',
-        'team': '2',
-        'name': '904',
-        'time': '05:17',
-      },
-      {
-        'number': '4',
-        'team': '2',
-        'name': '904',
-        'time': '05:17',
-      },
-      {
-        'number': '5',
-        'team': '2',
-        'name': '904',
-        'time': '05:17',
-      },
-      {
-        'number': '6',
-        'team': '2',
-        'name': '904',
-        'time': '05:17',
-      },
-      {
-        'number': '7',
-        'team': '2',
-        'name': '904',
-        'time': '05:17',
-      },
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -153,107 +196,106 @@ class WaitingListCard extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            // shrinkWrap: true,
-            // physics: const NeverScrollableScrollPhysics(),
-            itemCount: waitingList.length,
-            itemBuilder: (context, index) {
-              final item = waitingList[index];
-              return Container(
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                  border: Border.all(color: const Color(0xFFE0E0E0)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          child: waitingList.isEmpty
+              ? const Center(child: Text('待機中のお客様がいません。'))
+              : ListView.builder(
+                  itemCount: waitingList.length,
+                  itemBuilder: (context, index) {
+                    final item = waitingList[index];
+                    final waitingTime = _calculateWaitingTime(item.registrationTime);
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                        border: Border.all(color: const Color(0xFFE0E0E0)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                "#${item['number']}",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: Color(0xFFFF6F61),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      "#${item.queueNumber}",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                        color: Color(0xFFFF6F61),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 15),
+                                    Text(
+                                      "${item.customerName}様",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                        color: Color(0xFF263238),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 15),
+                                    Text(
+                                      "${item.partySize}名",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                        color: Color(0xFFFF6F61),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(width: 15),
-                              Text(
-                                "${item['name']}様",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
+                                const Divider(
+                                  height: 16,
+                                  indent: 0,
+                                  endIndent: 16,
+                                  thickness: 0.2,
                                   color: Color(0xFF263238),
                                 ),
-                              ),
-                              const SizedBox(width: 15),
-                              Text(
-                                "${item['team']}名",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: Color(0xFFFF6F61),
+                                Text(
+                                  "待機時間　・・・　$waitingTime",
+                                  style: const TextStyle(
+                                      fontSize: 13, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () {},
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF263238),
+                                  minimumSize: const Size(75, 75),
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.notifications_active_rounded,
+                                  color: Colors.white,
+                                  size: 30,
                                 ),
                               ),
                             ],
                           ),
-                          const Divider(
-                            height: 16,
-                            indent: 0,
-                            endIndent: 16,
-                            thickness: 0.2,
-                            color: Color(0xFF263238),
-                          ),
-                          // 기타 정보(메모 등) 필요시 여기에 추가
-                          Text(
-                            "待機時間　・・・　${item["time"]}",
-                            style: const TextStyle(
-                                fontSize: 13, color: Colors.grey),
-                          ),
                         ],
                       ),
-                    ),
-                    // 오른쪽: 버튼(세로 중앙)
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF263238),
-                            minimumSize: const Size(75, 75),
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.notifications_active_rounded,
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
       ],
     );
