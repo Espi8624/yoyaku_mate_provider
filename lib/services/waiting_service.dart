@@ -38,16 +38,34 @@ class WaitingService {
         headers: {'Content-Type': 'application/json'},
       );
 
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        print('Decoded JSON: $jsonResponse');
+        
         if (jsonResponse['data'] != null) {
           final List<dynamic> data = jsonResponse['data'];
-          return data.map((json) => WaitingList.fromJson(json)).toList();
+          print('Data list length: ${data.length}');
+          return data.map((json) {
+            try {
+              return WaitingList.fromJson(json);
+            } catch (e) {
+              print('Error parsing item: $json');
+              print('Parse error: $e');
+              rethrow;
+            }
+          }).toList();
+        } else {
+          print('Data field is null in response');
+          return [];
         }
       }
       throw Exception('Server returned ${response.statusCode}: ${response.body}');
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Error fetching waiting customers: $e');
+      print('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -60,35 +78,35 @@ class WaitingService {
         headers: {'Content-Type': 'application/json'},
       );
 
+      print('Polling response status: ${response.statusCode}');
+      print('Polling response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        print('Polling decoded JSON: $jsonResponse');
+        
         if (jsonResponse['data'] != null) {
           final List<dynamic> data = jsonResponse['data'];
-          return data.map((json) => WaitingList.fromJson(json)).toList();
+          print('Polling data list length: ${data.length}');
+          return data.map((json) {
+            try {
+              return WaitingList.fromJson(json);
+            } catch (e) {
+              print('Error parsing polling item: $json');
+              print('Polling parse error: $e');
+              rethrow;
+            }
+          }).toList();
+        } else {
+          print('Data field is null in polling response');
+          return [];
         }
       }
       throw Exception('Failed to fetch waiting list: ${response.statusCode}');
-    } catch (e) {
-      print('Error fetching waiting list: $e');
-      rethrow;
-    }
-  }
-
-  void startPolling({String storeId = 'store-001'}) {
-    if (_isConnected) {
-      print('Already connected and polling');
-      return;
-    }
-
-    try {
-      print('Starting polling connection...');
-      _isConnected = true;
-      _startPolling(storeId);
     } catch (e, stackTrace) {
-      print('Polling connection error: $e');
-      print('Stack trace: $stackTrace');
-      _isConnected = false;
-      _waitingListController.addError(e);
+      print('Error fetching waiting list: $e');
+      print('Polling stack trace: $stackTrace');
+      rethrow;
     }
   }
 
@@ -97,11 +115,27 @@ class WaitingService {
       return true;
     }
 
-    // 간단한 비교: 각 항목의 ID와 상태만 비교
-    for (int i = 0; i < newData.length; i++) {
-      if (_lastData![i].id != newData[i].id ||
-          _lastData![i].status != newData[i].status ||
-          _lastData![i].queueNumber != newData[i].queueNumber) {
+    // 정렬된 리스트로 비교하여 순서 변경도 감지
+    final sortedLastData = List<WaitingList>.from(_lastData!)
+      ..sort((a, b) => (a.waitingId).compareTo(b.waitingId));
+    final sortedNewData = List<WaitingList>.from(newData)
+      ..sort((a, b) => (a.waitingId).compareTo(b.waitingId));
+
+    for (int i = 0; i < sortedNewData.length; i++) {
+      final lastItem = sortedLastData[i];
+      final newItem = sortedNewData[i];
+      
+      // 모든 필드를 비교하여 변경 사항 감지
+      if (lastItem.waitingId != newItem.waitingId ||
+          lastItem.status != newItem.status ||
+          lastItem.queueNumber != newItem.queueNumber ||
+          lastItem.customerName != newItem.customerName ||
+          lastItem.partySize != newItem.partySize ||
+          lastItem.registrationTime != newItem.registrationTime ||
+          lastItem.contact != newItem.contact ||
+          lastItem.notes != newItem.notes ||
+          lastItem.calledTime != newItem.calledTime ||
+          lastItem.entryTime != newItem.entryTime) {
         return true;
       }
     }
@@ -110,23 +144,59 @@ class WaitingService {
 
   void _adjustPollingInterval(bool dataChanged) {
     if (dataChanged) {
-      // 데이터가 변경되었으면 polling 간격을 최소로 줄임
+      // 데이터가 변경되었으면 즉시 polling 간격을 최소로 설정
       if (_currentPollingInterval != _minPollingInterval) {
         print('Data changed, reducing polling interval to ${_minPollingInterval.inSeconds}s');
         _currentPollingInterval = _minPollingInterval;
+        // polling 타이머 재시작
+        if (_lastStoreId != null) {
+          _restartPolling(_lastStoreId!);
+        }
       }
       _unchangedDataCount = 0;
     } else {
-      // 데이터 변경이 없으면 카운트 증가
       _unchangedDataCount++;
       
-      // 일정 횟수 이상 변경이 없으면 polling 간격을 늘림
+      // 연속 5번 이상 변경이 없으면 polling 간격을 점진적으로 증가
       if (_unchangedDataCount >= _maxUnchangedCount && 
           _currentPollingInterval < _maxPollingInterval) {
-        _currentPollingInterval += const Duration(seconds: 1);
-        print('No changes detected, increasing polling interval to ${_currentPollingInterval.inSeconds}s');
+        final newInterval = _currentPollingInterval + const Duration(seconds: 1);
+        if (newInterval <= _maxPollingInterval) {
+          print('No changes detected, increasing polling interval to ${newInterval.inSeconds}s');
+          _currentPollingInterval = newInterval;
+          // polling 타이머 재시작
+          if (_lastStoreId != null) {
+            _restartPolling(_lastStoreId!);
+          }
+        }
         _unchangedDataCount = 0;
       }
+    }
+  }
+
+  String? _lastStoreId;
+
+  void _restartPolling(String storeId) {
+    _pollingTimer?.cancel();
+    _startPolling(storeId);
+  }
+
+  void startPolling({String storeId = 'store-001'}) {
+    if (_isConnected && _lastStoreId == storeId) {
+      print('Already connected and polling for store: $storeId');
+      return;
+    }
+
+    try {
+      print('Starting polling connection for store: $storeId');
+      _isConnected = true;
+      _lastStoreId = storeId;
+      _startPolling(storeId);
+    } catch (e, stackTrace) {
+      print('Polling connection error: $e');
+      print('Stack trace: $stackTrace');
+      _isConnected = false;
+      _waitingListController.addError(e);
     }
   }
 
@@ -162,6 +232,7 @@ class WaitingService {
     _pollingTimer?.cancel();
     _isConnected = false;
     _lastData = null;
+    _lastStoreId = null;
     _unchangedDataCount = 0;
     _currentPollingInterval = _minPollingInterval;
   }
@@ -170,5 +241,59 @@ class WaitingService {
     print('Disposing waiting service');
     stopPolling();
     _waitingListController.close();
+  }
+
+  // 새로운 대기 추가 함수
+  Future<WaitingList> createWaitingListItem({
+    required String customerName,
+    required int partySize,
+    required String contact,
+    String notes = '',
+    String storeId = 'store-001',
+  }) async {
+    try {
+      print('Creating waiting list item with data:');  // Add debug log
+      print('customerName: $customerName');
+      print('partySize: $partySize');
+      print('contact: $contact');
+      print('notes: $notes');
+      print('storeId: $storeId');
+
+      // Create request body with only required fields
+      final Map<String, dynamic> requestBody = {
+        'store_id': storeId,
+        'customer_name': customerName,
+        'party_size': partySize,
+        'contact': contact,
+        'notes': notes,
+        'status': 'waiting',
+      };
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/waiting-list'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(requestBody),
+      );
+
+      print('Server response status: ${response.statusCode}');  // Add debug log
+      print('Server response body: ${response.body}');  // Add debug log
+
+      if (response.statusCode == 201) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        final waitingList = WaitingList.fromJson(jsonResponse);
+        
+        // 데이터가 변경되었으므로 polling 간격을 최소로 재설정
+        _currentPollingInterval = _minPollingInterval;
+        if (_lastStoreId != null) {
+          _restartPolling(_lastStoreId!);
+        }
+        
+        return waitingList;
+      }
+      throw Exception('Failed to create waiting list item: ${response.statusCode}\nResponse: ${response.body}');
+    } catch (e) {
+      print('Error creating waiting list item: $e');  // Add debug log
+      rethrow;
+    }
   }
 }

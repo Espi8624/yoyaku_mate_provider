@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:yoyaku_mate_provider/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page.dart';
@@ -59,27 +60,60 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // 메인 컨텐츠: 항상 같은 위치와 크기
-          Positioned.fill(
-            left: 60, // 네비게이션 바 최소 너비만큼 띄움
-            child: _pages[_selectedIndex],
-          ),
-          // 네비게이션 바: 확장 시 오른쪽으로 겹침
-          Positioned(
-            top: 0,
-            left: 0,
-            bottom: 0,
-            width: _isExpanded ? 270 : 60,
-            child: SideNavigationBar(
-              isExpanded: _isExpanded,
-              selectedIndex: _selectedIndex,
-              onItemTapped: _onItemTapped,
-              onToggle: _toggleSidebar,
+      backgroundColor: const Color(0xFFF5F5F5),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Stack(
+          children: [
+            // 메인 컨텐츠: 항상 같은 위치와 크기
+            Positioned.fill(
+              left: 67,
+              child: GestureDetector(
+                onTap: () {
+                  if (_isExpanded) {
+                    setState(() {
+                      _isExpanded = false;
+                    });
+                  }
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: _pages[_selectedIndex],
+                ),
+              ),
             ),
-          ),
-        ],
+            // 네비게이션 바: 확장 시 오른쪽으로 겹침
+            Positioned(
+              top: 0,
+              left: 0,
+              bottom: 0,
+              width: _isExpanded ? 270 : 60,
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x99EDB6B0),
+                      blurRadius: 10,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: SideNavigationBar(
+                  isExpanded: _isExpanded,
+                  selectedIndex: _selectedIndex,
+                  onItemTapped: _onItemTapped,
+                  onToggle: _toggleSidebar,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

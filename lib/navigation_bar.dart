@@ -17,26 +17,10 @@ class SideNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      // width: isExpanded ? 220 : 60,
-      // color: Colors.grey[200],
+      duration: const Duration(milliseconds: 200),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFFCF2F3), // 연한 핑크/살구
-            Color(0xFFEDB6B0), // 코랄
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x99EDB6B0), // 그림자 색상
-            blurRadius: 12, // 그림자 퍼짐 정도
-            offset: Offset(2, 0), // x=4, y=0 → 오른쪽으로만 그림자
-            spreadRadius: 0.1, // 그림자 확장 정도
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
       child: Column(
         children: [
@@ -57,8 +41,7 @@ class SideNavigationBar extends StatelessWidget {
           // 프로필 섹션
           if (isExpanded) ...[
             InkWell(
-              // InkWell 추가
-              onTap: () => onItemTapped(1), // 프로필 탭 이벤트
+              onTap: () => onItemTapped(1),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Row(
@@ -66,8 +49,7 @@ class SideNavigationBar extends StatelessWidget {
                     CircleAvatar(
                       radius: 25,
                       backgroundColor: Colors.grey[300],
-                      child: const Icon(Icons.person,
-                          size: 30, color: Colors.white),
+                      child: const Icon(Icons.person, size: 30, color: Colors.white),
                     ),
                     const SizedBox(width: 12),
                     const Text(
@@ -83,7 +65,6 @@ class SideNavigationBar extends StatelessWidget {
             ),
           ] else ...[
             InkWell(
-              // 축소된 상태에서도 탭 가능하게
               onTap: () => onItemTapped(1),
               child: CircleAvatar(
                 radius: 20,
@@ -102,9 +83,7 @@ class SideNavigationBar extends StatelessWidget {
             indent: 16,
             endIndent: 16,
           ),
-          const SizedBox(
-            height: 15
-          ),
+          const SizedBox(height: 15),
 
           // 店舗状況
           isExpanded
@@ -189,10 +168,9 @@ class SideNavigationBar extends StatelessWidget {
                   onTap: () => onItemTapped(5),
                   isExpanded: isExpanded,
                 ),
-
           const SizedBox(height: 15),
 
-          const Spacer(), // 나머지 공간을 채움
+          const Spacer(),
 
           // 設定
           isExpanded

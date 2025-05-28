@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'dart:async';
 import '../services/waiting_service.dart';
 import '../models/waiting_list.dart';
@@ -32,25 +33,19 @@ class _WaitingPageState extends State<WaitingPage> {
 
     try {
       // 초기 데이터 로드
-      print('Fetching initial data...');
       final initialData = await _waitingService.fetchWaitingCustomers();
       
       if (!mounted) return;
-      
-      print('Received initial data: ${initialData.length} items');
       
       setState(() {
         _waitingList = initialData;
         _isLoading = false;
       });
 
-      print('Initial data loaded, starting polling updates...');
-      
       // polling 시작 및 실시간 업데이트 구독
       _waitingService.startPolling();
       _waitingService.waitingListStream.listen(
         (updatedList) {
-          print('Received updated waiting list: ${updatedList.length} items');
           if (!mounted) return;
           setState(() {
             _waitingList = updatedList;
@@ -58,19 +53,29 @@ class _WaitingPageState extends State<WaitingPage> {
           });
         },
         onError: (error) {
-          print('Update stream error: $error');
           if (!mounted) return;
           setState(() {
-            _error = 'リアルタイム更新中にエラーが発生しました: $error';
+            if (error.toString().contains("data\":null")) {
+              // 데이터가 없는 경우는 에러가 아닌 정상적인 상태로 처리
+              _waitingList = [];
+              _error = null;
+            } else {
+              _error = 'データの更新中にエラーが発生しました。しばらくしてからもう一度お試しください。';
+            }
           });
         },
       );
     } catch (e) {
-      print('Error in _initializeData: $e');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _error = 'データの読み込み中にエラーが発生しました: $e';
+        if (e.toString().contains("data\":null")) {
+          // 데이터가 없는 경우는 에러가 아닌 정상적인 상태로 처리
+          _waitingList = [];
+          _error = null;
+        } else {
+          _error = 'データの読み込み中にエラーが発生しました。しばらくしてからもう一度お試しください。';
+        }
       });
     }
   }
@@ -103,22 +108,40 @@ class _WaitingPageState extends State<WaitingPage> {
                     child: _isLoading
                         ? const Center(child: CircularProgressIndicator())
                         : _error != null
-                            ? Center(child: Text(_error!))
-                            : WaitingListCard(waitingList: _waitingList),
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      _error!,
+                                      style: const TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton(
+                                      onPressed: _initializeData,
+                                      child: const Text('再試行'),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : WaitingListCard(waitingList: _waitingList, onRefresh: _initializeData),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 11),
             // 우측: 웨이팅 상태 (1/3 너비)
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  QRCodeButtons(),
-                  SizedBox(height: 10),
+                  const QRCodeButtons(),
+                  const SizedBox(height: 10),
                   Expanded(
-                    child: WaitingStatusArea(),
+                    child: WaitingStatusArea(waitingCount: _waitingList.length),
                   ),
                 ],
               ),
@@ -140,7 +163,12 @@ class WaitingListButtons extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         ElevatedButton(
-          onPressed: () {},
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => const AddWaitingDialog(),
+            );
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF263238),
           ),
@@ -165,15 +193,348 @@ class WaitingListButtons extends StatelessWidget {
   }
 }
 
-class WaitingListCard extends StatelessWidget {
-  final List<WaitingList> waitingList;
+class AddWaitingDialog extends StatefulWidget {
+  const AddWaitingDialog({super.key});
 
-  const WaitingListCard({required this.waitingList, super.key});
+  @override
+  State<AddWaitingDialog> createState() => _AddWaitingDialogState();
+}
+
+class _AddWaitingDialogState extends State<AddWaitingDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _customerNameController = TextEditingController();
+  final _partySizeController = TextEditingController();
+  final _contactController = TextEditingController();
+  final _notesController = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _customerNameController.dispose();
+    _partySizeController.dispose();
+    _contactController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final waitingService = WaitingService();
+      await waitingService.createWaitingListItem(
+        customerName: _customerNameController.text,
+        partySize: int.parse(_partySizeController.text),
+        contact: _contactController.text,
+        notes: _notesController.text,
+        storeId: 'store-001',
+      );
+
+      // If we get here, the item was created successfully
+      if (!mounted) return;
+      
+      // Close the dialog regardless of any non-critical errors
+      Navigator.of(context).pop();
+    } catch (e) {
+      print('Error in _submitForm: $e');
+      
+      if (!mounted) return;
+
+      // Only show error and keep dialog open if it's a critical error
+      if (e.toString().contains('Failed to create waiting list item')) {
+        setState(() {
+          _error = 'エラー: データの保存に失敗しました。';
+          _isLoading = false;
+        });
+      } else {
+        // For non-critical errors, still close the dialog as the item was created
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: 400,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '新しい待機追加',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF263238),
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _customerNameController,
+                cursorColor: const Color(0xFF263238),
+                decoration: const InputDecoration(
+                  labelText: 'お客様名',
+                  border: OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF263238), width: 2),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.red),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.red, width: 2),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  labelStyle: TextStyle(color: Color(0xFF263238)),
+                  floatingLabelStyle: TextStyle(color: Color(0xFF263238)),
+                ),
+                style: const TextStyle(color: Color(0xFF263238)),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'お客様名を入力してください';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _partySizeController,
+                cursorColor: const Color(0xFF263238),
+                decoration: const InputDecoration(
+                  labelText: '人数',
+                  border: OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF263238), width: 2),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.red),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.red, width: 2),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  labelStyle: TextStyle(color: Color(0xFF263238)),
+                  floatingLabelStyle: TextStyle(color: Color(0xFF263238)),
+                ),
+                style: const TextStyle(color: Color(0xFF263238)),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return '人数を入力してください';
+                  }
+                  if (int.tryParse(value) == null) {
+                    return '有効な数字を入力してください';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _contactController,
+                cursorColor: const Color(0xFF263238),
+                decoration: const InputDecoration(
+                  labelText: '連絡先',
+                  border: OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF263238), width: 2),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.red),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.red, width: 2),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  labelStyle: TextStyle(color: Color(0xFF263238)),
+                  floatingLabelStyle: TextStyle(color: Color(0xFF263238)),
+                ),
+                style: const TextStyle(color: Color(0xFF263238)),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return '連絡先を入力してください';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _notesController,
+                cursorColor: const Color(0xFF263238),
+                decoration: const InputDecoration(
+                  labelText: '要望事項',
+                  border: OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF263238), width: 2),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.red),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.red, width: 2),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  labelStyle: TextStyle(color: Color(0xFF263238)),
+                  floatingLabelStyle: TextStyle(color: Color(0xFF263238)),
+                ),
+                style: const TextStyle(color: Color(0xFF263238)),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 24),
+              if (_error != null) ...[
+                Text(
+                  _error!,
+                  style: const TextStyle(color: Colors.red),
+                ),
+                const SizedBox(height: 16),
+              ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                    style: ButtonStyle(
+                      overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                        (Set<WidgetState> states) {
+                          if (states.contains(WidgetState.hovered)) {
+                            return Colors.grey[200];
+                          }
+                          return null;
+                        },
+                      ),
+                      foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                        (Set<WidgetState> states) {
+                          if (states.contains(WidgetState.hovered)) {
+                            return Colors.grey[600] ?? Colors.grey;
+                          }
+                          return Colors.grey[400] ?? Colors.grey;
+                        },
+                      ),
+                    ),
+                    child: const Text('キャンセル'),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF6F61),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            '追加',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class WaitingListCard extends StatefulWidget {
+  final List<WaitingList> waitingList;
+  final VoidCallback onRefresh;
+
+  const WaitingListCard({
+    required this.waitingList,
+    required this.onRefresh,
+    super.key
+  });
+
+  @override
+  State<WaitingListCard> createState() => _WaitingListCardState();
+}
+
+class _WaitingListCardState extends State<WaitingListCard> {
+  Timer? _timer;
+  final Map<String, String> _waitingTimes = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _updateWaitingTimes();
+    // 1초마다 대기 시간 업데이트
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateWaitingTimes();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(WaitingListCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 위젯이 업데이트될 때(새로운 데이터가 들어올 때) 대기 시간도 업데이트
+    _updateWaitingTimes();
+  }
+
+  void _updateWaitingTimes() {
+    if (!mounted) return;
+    
+    setState(() {
+      for (var item in widget.waitingList) {
+        _waitingTimes[item.waitingId] = _calculateWaitingTime(item.registrationTime);
+      }
+    });
+  }
 
   String _calculateWaitingTime(DateTime registrationTime) {
-    final utcCurrentTime = DateTime.now().toUtc();
-    final utcRegistrationTime = registrationTime.toUtc();
-    final duration = utcCurrentTime.difference(utcRegistrationTime);
+    final currentTime = DateTime.now();
+    final duration = currentTime.difference(registrationTime);
     final minutes = duration.inMinutes;
     final seconds = duration.inSeconds % 60;
     return '$minutes分 $seconds秒';
@@ -184,25 +545,60 @@ class WaitingListCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
-          child: Text(
-            "待機中のお客様リスト",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF263238),
-            ),
+        Padding(
+          padding: const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              const Text(
+                "待機中のお客様リスト",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF263238),
+                ),
+              ),
+              const SizedBox(width: 16),
+              IconButton(
+                onPressed: widget.onRefresh,
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                tooltip: 'リスト更新',
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFF263238),
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
+            ],
           ),
         ),
         Expanded(
-          child: waitingList.isEmpty
-              ? const Center(child: Text('待機中のお客様がいません。'))
+          child: widget.waitingList.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.people_outline,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '待機中のお客様がいません。',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
               : ListView.builder(
-                  itemCount: waitingList.length,
+                  itemCount: widget.waitingList.length,
                   itemBuilder: (context, index) {
-                    final item = waitingList[index];
-                    final waitingTime = _calculateWaitingTime(item.registrationTime);
+                    final item = widget.waitingList[index];
+                    final waitingTime = _waitingTimes[item.waitingId] ?? _calculateWaitingTime(item.registrationTime);
                     return Container(
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.all(16),
@@ -265,7 +661,9 @@ class WaitingListCard extends StatelessWidget {
                                 Text(
                                   "待機時間　・・・　$waitingTime",
                                   style: const TextStyle(
-                                      fontSize: 13, color: Colors.grey),
+                                    fontSize: 13,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                               ],
                             ),
@@ -333,7 +731,8 @@ class QRCodeButtons extends StatelessWidget {
 }
 
 class WaitingStatusArea extends StatelessWidget {
-  const WaitingStatusArea({super.key});
+  final int waitingCount;
+  const WaitingStatusArea({super.key, required this.waitingCount});
 
   @override
   Widget build(BuildContext context) {
@@ -388,12 +787,12 @@ class WaitingStatusArea extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFF263238), width: 2),
             ),
-            child: const Column(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(height: 10),
-                Text(
+                const SizedBox(height: 10),
+                const Text(
                   "現在待機チーム",
                   style: TextStyle(
                     fontSize: 18,
@@ -404,17 +803,17 @@ class WaitingStatusArea extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(width: 55),
+                    const SizedBox(width: 55),
                     Text(
-                      "2",
-                      style: TextStyle(
+                      waitingCount.toString(),
+                      style: const TextStyle(
                         fontSize: 60,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFFF6F61),
                       ),
                     ),
-                    SizedBox(width: 16), // 숫자와 チーム 사이 간격
-                    Text(
+                    const SizedBox(width: 16),
+                    const Text(
                       "チーム",
                       style: TextStyle(
                         fontSize: 15,

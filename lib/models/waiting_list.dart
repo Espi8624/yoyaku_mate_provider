@@ -1,5 +1,5 @@
 class WaitingList {
-  final String id;
+  final String? id;
   final String storeId;
   final String waitingId;
   final int queueNumber;
@@ -8,10 +8,12 @@ class WaitingList {
   final DateTime registrationTime;
   final String contact;
   final String status;
-  final String notes;
+  final String? notes;
+  final DateTime? calledTime;
+  final DateTime? entryTime;
 
   WaitingList({
-    required this.id,
+    this.id,
     required this.storeId,
     required this.waitingId,
     required this.queueNumber,
@@ -20,7 +22,9 @@ class WaitingList {
     required this.registrationTime,
     required this.contact,
     required this.status,
-    required this.notes,
+    this.notes,
+    this.calledTime,
+    this.entryTime,
   });
 
   factory WaitingList.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,8 @@ class WaitingList {
       contact: json['contact'],
       status: json['status'],
       notes: json['notes'],
+      calledTime: json['called_time'] != null ? DateTime.parse(json['called_time']) : null,
+      entryTime: json['entry_time'] != null ? DateTime.parse(json['entry_time']) : null,
     );
   }
 }
