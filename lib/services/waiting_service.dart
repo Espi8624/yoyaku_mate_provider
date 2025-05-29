@@ -296,4 +296,33 @@ class WaitingService {
       rethrow;
     }
   }
+
+  // 대기 목록 초기화 함수
+  Future<void> clearWaitingList({String storeId = 'store-001'}) async {
+    try {
+      print('Clearing waiting list for store: $storeId');
+      print('Request URL: $_baseUrl/api/waiting-list?action=clear&store_id=$storeId');
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/waiting-list?action=clear&store_id=$storeId'),
+        headers: {'Content-Type': 'application/json'},
+        body: '{}',  // 빈 JSON 객체 추가
+      );
+
+      print('Clear waiting list response status: ${response.statusCode}');
+      print('Clear waiting list response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to clear waiting list: ${response.statusCode}');
+      }
+
+      // 초기화 후 즉시 데이터를 다시 가져와서 스트림에 전달
+      final updatedList = await fetchWaitingCustomers(storeId: storeId);
+      _waitingListController.add(updatedList);
+      _lastData = updatedList;
+    } catch (e) {
+      print('Error clearing waiting list: $e');
+      rethrow;
+    }
+  }
 }

@@ -67,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             // 메인 컨텐츠: 항상 같은 위치와 크기
             Positioned.fill(
-              left: 67,
+              left: 70,
               child: GestureDetector(
                 onTap: () {
                   if (_isExpanded) {

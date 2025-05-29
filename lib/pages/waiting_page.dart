@@ -25,7 +25,7 @@ class _WaitingPageState extends State<WaitingPage> {
 
   Future<void> _initializeData() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -34,9 +34,9 @@ class _WaitingPageState extends State<WaitingPage> {
     try {
       // 초기 데이터 로드
       final initialData = await _waitingService.fetchWaitingCustomers();
-      
+
       if (!mounted) return;
-      
+
       setState(() {
         _waitingList = initialData;
         _isLoading = false;
@@ -92,7 +92,7 @@ class _WaitingPageState extends State<WaitingPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.only(top: 16.0, left: 16.0, bottom: 0.0, right: 16.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -127,7 +127,9 @@ class _WaitingPageState extends State<WaitingPage> {
                                   ],
                                 ),
                               )
-                            : WaitingListCard(waitingList: _waitingList, onRefresh: _initializeData),
+                            : WaitingListCard(
+                                waitingList: _waitingList,
+                                onRefresh: _initializeData),
                   ),
                 ],
               ),
@@ -159,6 +161,9 @@ class WaitingListButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final waitingPageState =
+        context.findAncestorStateOfType<_WaitingPageState>();
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -166,7 +171,9 @@ class WaitingListButtons extends StatelessWidget {
           onPressed: () {
             showDialog(
               context: context,
-              builder: (context) => const AddWaitingDialog(),
+              builder: (context) => AddWaitingDialog(
+                onAddSuccess: waitingPageState!._initializeData,
+              ),
             );
           },
           style: ElevatedButton.styleFrom(
@@ -179,7 +186,79 @@ class WaitingListButtons extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         ElevatedButton(
-          onPressed: () {},
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                // 다이얼로그 배경색
+                backgroundColor: Colors.white,
+                // 다이얼로그 모양 (둥근 모서리)
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: const Text(
+                  '待機目録初期化',
+                  style: TextStyle(
+                      color: Color(0xFF263238), fontWeight: FontWeight.bold),
+                ),
+                content: const Text('現在の待機目録を全て初期化しますか？\nこの操作は取り消しできません。'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ButtonStyle(
+                      overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                        (Set<WidgetState> states) {
+                          if (states.contains(WidgetState.hovered)) {
+                            return Colors.grey[200];
+                          }
+                          return null;
+                        },
+                      ),
+                      foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                        (Set<WidgetState> states) {
+                          if (states.contains(WidgetState.hovered)) {
+                            return Colors.grey[600] ?? Colors.grey;
+                          }
+                          return Colors.grey[400] ?? Colors.grey;
+                        },
+                      ),
+                    ),
+                    child: const Text('キャンセル'),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      try {
+                        final waitingService = WaitingService();
+                        await waitingService.clearWaitingList();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('待機目録を初期化しました。'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('待機目録の初期化に失敗しました。'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                    child: const Text('初期化'),
+                  ),
+                ],
+              ),
+            );
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
           ),
@@ -194,7 +273,9 @@ class WaitingListButtons extends StatelessWidget {
 }
 
 class AddWaitingDialog extends StatefulWidget {
-  const AddWaitingDialog({super.key});
+  final VoidCallback onAddSuccess;
+
+  const AddWaitingDialog({super.key, required this.onAddSuccess});
 
   @override
   State<AddWaitingDialog> createState() => _AddWaitingDialogState();
@@ -238,12 +319,21 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
 
       // If we get here, the item was created successfully
       if (!mounted) return;
-      
+
+      widget.onAddSuccess();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('待機が正常に追加されました。'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
       // Close the dialog regardless of any non-critical errors
       Navigator.of(context).pop();
     } catch (e) {
       print('Error in _submitForm: $e');
-      
+
       if (!mounted) return;
 
       // Only show error and keep dialog open if it's a critical error
@@ -253,6 +343,7 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
           _isLoading = false;
         });
       } else {
+        widget.onAddSuccess();
         // For non-critical errors, still close the dialog as the item was created
         Navigator.of(context).pop();
       }
@@ -430,7 +521,8 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                    onPressed:
+                        _isLoading ? null : () => Navigator.of(context).pop(),
                     style: ButtonStyle(
                       overlayColor: WidgetStateProperty.resolveWith<Color?>(
                         (Set<WidgetState> states) {
@@ -463,7 +555,8 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
                         : const Text(
@@ -485,11 +578,8 @@ class WaitingListCard extends StatefulWidget {
   final List<WaitingList> waitingList;
   final VoidCallback onRefresh;
 
-  const WaitingListCard({
-    required this.waitingList,
-    required this.onRefresh,
-    super.key
-  });
+  const WaitingListCard(
+      {required this.waitingList, required this.onRefresh, super.key});
 
   @override
   State<WaitingListCard> createState() => _WaitingListCardState();
@@ -524,10 +614,11 @@ class _WaitingListCardState extends State<WaitingListCard> {
 
   void _updateWaitingTimes() {
     if (!mounted) return;
-    
+
     setState(() {
       for (var item in widget.waitingList) {
-        _waitingTimes[item.waitingId] = _calculateWaitingTime(item.registrationTime);
+        _waitingTimes[item.waitingId] =
+            _calculateWaitingTime(item.registrationTime);
       }
     });
   }
@@ -598,7 +689,8 @@ class _WaitingListCardState extends State<WaitingListCard> {
                   itemCount: widget.waitingList.length,
                   itemBuilder: (context, index) {
                     final item = widget.waitingList[index];
-                    final waitingTime = _waitingTimes[item.waitingId] ?? _calculateWaitingTime(item.registrationTime);
+                    final waitingTime = _waitingTimes[item.waitingId] ??
+                        _calculateWaitingTime(item.registrationTime);
                     return Container(
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.all(16),
@@ -633,7 +725,7 @@ class _WaitingListCardState extends State<WaitingListCard> {
                                     ),
                                     const SizedBox(width: 15),
                                     Text(
-                                      "${item.customerName}様",
+                                      "${item.customerName} 様",
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18,
@@ -660,6 +752,13 @@ class _WaitingListCardState extends State<WaitingListCard> {
                                 ),
                                 Text(
                                   "待機時間　・・・　$waitingTime",
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                Text(
+                                  "備考　　　・・・　${item.notes}",
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: Colors.grey,
