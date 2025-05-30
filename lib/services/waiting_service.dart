@@ -248,6 +248,7 @@ class WaitingService {
     required String customerName,
     required int partySize,
     required String contact,
+    required String nationality,
     String notes = '',
     String storeId = 'store-001',
   }) async {
@@ -255,6 +256,7 @@ class WaitingService {
       print('Creating waiting list item with data:');  // Add debug log
       print('customerName: $customerName');
       print('partySize: $partySize');
+      print('nationality: $nationality');
       print('contact: $contact');
       print('notes: $notes');
       print('storeId: $storeId');
@@ -264,6 +266,7 @@ class WaitingService {
         'store_id': storeId,
         'customer_name': customerName,
         'party_size': partySize,
+        'nationality': nationality,
         'contact': contact,
         'notes': notes,
         'status': 'waiting',

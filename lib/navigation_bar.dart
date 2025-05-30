@@ -31,7 +31,8 @@ class SideNavigationBar extends StatelessWidget {
             child: Align(
               alignment: Alignment.topRight,
               child: IconButton(
-                icon: Icon(isExpanded ? Icons.close : Icons.arrow_forward_ios_rounded),
+                icon: Icon(
+                    isExpanded ? Icons.close : Icons.arrow_forward_ios_rounded),
                 onPressed: onToggle,
               ),
             ),
@@ -41,7 +42,10 @@ class SideNavigationBar extends StatelessWidget {
           // 프로필 섹션
           if (isExpanded) ...[
             InkWell(
-              onTap: () => onItemTapped(1),
+              onTap: () {
+                onItemTapped(1);
+                onToggle();
+              },
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Row(
@@ -49,7 +53,8 @@ class SideNavigationBar extends StatelessWidget {
                     CircleAvatar(
                       radius: 25,
                       backgroundColor: Colors.grey[300],
-                      child: const Icon(Icons.person, size: 30, color: Colors.white),
+                      child: const Icon(Icons.person,
+                          size: 30, color: Colors.white),
                     ),
                     const SizedBox(width: 12),
                     const Text(
@@ -91,7 +96,10 @@ class SideNavigationBar extends StatelessWidget {
                   icon: Icons.newspaper_rounded,
                   label: '店舗状況',
                   selected: selectedIndex == 0,
-                  onTap: () => onItemTapped(0),
+                  onTap: () {
+                    onItemTapped(0);
+                    onToggle();
+                  },
                 )
               : _NavIcon(
                   icon: Icons.newspaper_rounded,
@@ -108,7 +116,10 @@ class SideNavigationBar extends StatelessWidget {
                   icon: Icons.list_alt_rounded,
                   label: '待機リスト',
                   selected: selectedIndex == 2,
-                  onTap: () => onItemTapped(2),
+                  onTap: () {
+                    onItemTapped(2);
+                    onToggle();
+                  },
                 )
               : _NavIcon(
                   icon: Icons.list_alt_rounded,
@@ -125,7 +136,10 @@ class SideNavigationBar extends StatelessWidget {
                   icon: Icons.library_books_rounded,
                   label: '売出入力',
                   selected: selectedIndex == 3,
-                  onTap: () => onItemTapped(3),
+                  onTap: () {
+                    onItemTapped(3);
+                    onToggle();
+                  },
                 )
               : _NavIcon(
                   icon: Icons.library_books_rounded,
@@ -142,7 +156,10 @@ class SideNavigationBar extends StatelessWidget {
                   icon: Icons.bar_chart_rounded,
                   label: '売出管理',
                   selected: selectedIndex == 4,
-                  onTap: () => onItemTapped(4),
+                  onTap: () {
+                    onItemTapped(4);
+                    onToggle();
+                  },
                 )
               : _NavIcon(
                   icon: Icons.bar_chart_rounded,
@@ -159,7 +176,10 @@ class SideNavigationBar extends StatelessWidget {
                   icon: Icons.table_view_rounded,
                   label: 'メニュー管理',
                   selected: selectedIndex == 5,
-                  onTap: () => onItemTapped(5),
+                  onTap: () {
+                    onItemTapped(5);
+                    onToggle();
+                  },
                 )
               : _NavIcon(
                   icon: Icons.table_view_rounded,
@@ -178,7 +198,10 @@ class SideNavigationBar extends StatelessWidget {
                   icon: Icons.settings,
                   label: '設定',
                   selected: selectedIndex == 6,
-                  onTap: () => onItemTapped(6),
+                  onTap: () {
+                    onItemTapped(6);
+                    onToggle();
+                  },
                 )
               : _NavIcon(
                   icon: Icons.settings,

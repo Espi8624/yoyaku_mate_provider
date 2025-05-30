@@ -5,6 +5,7 @@ class WaitingList {
   final int queueNumber;
   final String customerName;
   final int partySize;
+  final String nationality;
   final DateTime registrationTime;
   final String contact;
   final String status;
@@ -19,6 +20,7 @@ class WaitingList {
     required this.queueNumber,
     required this.customerName,
     required this.partySize,
+    required this.nationality,
     required this.registrationTime,
     required this.contact,
     required this.status,
@@ -35,6 +37,7 @@ class WaitingList {
       queueNumber: json['queue_number'],
       customerName: json['customer_name'],
       partySize: json['party_size'],
+      nationality: json['nationality'],
       registrationTime: DateTime.parse(json['registration_time']),
       contact: json['contact'],
       status: json['status'],

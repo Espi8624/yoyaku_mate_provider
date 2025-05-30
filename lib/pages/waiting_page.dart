@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/services.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../services/waiting_service.dart';
 import '../models/waiting_list.dart';
 
@@ -92,7 +95,8 @@ class _WaitingPageState extends State<WaitingPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: Padding(
-        padding: const EdgeInsets.only(top: 16.0, left: 16.0, bottom: 0.0, right: 16.0),
+        padding: const EdgeInsets.only(
+            top: 16.0, left: 16.0, bottom: 0.0, right: 16.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -122,6 +126,19 @@ class _WaitingPageState extends State<WaitingPage> {
                                     const SizedBox(height: 16),
                                     ElevatedButton(
                                       onPressed: _initializeData,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFF263238), // 배경색
+                                        foregroundColor: Colors.white, // 글자색
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 10), // 내부 여백
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                              16), // 둥근 모서리
+                                        ),
+                                        elevation: 5, // 그림자 효과
+                                      ),
                                       child: const Text('再試行'),
                                     ),
                                   ],
@@ -285,15 +302,25 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
   final _formKey = GlobalKey<FormState>();
   final _customerNameController = TextEditingController();
   final _partySizeController = TextEditingController();
+  final _nationalityController = TextEditingController();
   final _contactController = TextEditingController();
   final _notesController = TextEditingController();
   bool _isLoading = false;
   String? _error;
+  String? _selectedNationality;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedNationality = "日本";
+    _nationalityController.text = _selectedNationality ?? '';
+  }
 
   @override
   void dispose() {
     _customerNameController.dispose();
     _partySizeController.dispose();
+    _nationalityController.dispose();
     _contactController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -312,12 +339,12 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
       await waitingService.createWaitingListItem(
         customerName: _customerNameController.text,
         partySize: int.parse(_partySizeController.text),
+        nationality: _nationalityController.text,
         contact: _contactController.text,
         notes: _notesController.text,
         storeId: 'store-001',
       );
 
-      // If we get here, the item was created successfully
       if (!mounted) return;
 
       widget.onAddSuccess();
@@ -329,14 +356,12 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
         ),
       );
 
-      // Close the dialog regardless of any non-critical errors
       Navigator.of(context).pop();
     } catch (e) {
       print('Error in _submitForm: $e');
 
       if (!mounted) return;
 
-      // Only show error and keep dialog open if it's a critical error
       if (e.toString().contains('Failed to create waiting list item')) {
         setState(() {
           _error = 'エラー: データの保存に失敗しました。';
@@ -344,7 +369,6 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
         });
       } else {
         widget.onAddSuccess();
-        // For non-critical errors, still close the dialog as the item was created
         Navigator.of(context).pop();
       }
     }
@@ -354,7 +378,8 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       child: Container(
-        width: 400,
+        width: MediaQuery.of(context).size.width * 0.9,
+        constraints: const BoxConstraints(maxWidth: 400),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -479,6 +504,93 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+              DropdownSearch<String>(
+                asyncItems: (String? filter) async {
+                  try {
+                    final String response = await DefaultAssetBundle.of(context)
+                        .loadString('assets/nationalities.json');
+                    final data = json.decode(response);
+                    List<String> nationalities =
+                        List<String>.from(data['nationalities']);
+
+                    if (filter != null && filter.isNotEmpty) {
+                      nationalities = nationalities
+                          .where((item) =>
+                              item.toLowerCase().contains(filter.toLowerCase()))
+                          .toList();
+                    }
+
+                    print(
+                        'Loaded ${nationalities.length} nationalities for filter: $filter');
+                    return nationalities;
+                  } catch (e) {
+                    print('Error loading nationalities: $e');
+                    return ['データ読み込みエラー'];
+                  }
+                },
+                selectedItem: _selectedNationality,
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedNationality = newValue;
+                    _nationalityController.text = newValue ?? '';
+                  });
+                },
+                enabled: true,
+                dropdownDecoratorProps: const DropDownDecoratorProps(
+                  dropdownSearchDecoration: InputDecoration(
+                    labelText: '国籍',
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Color(0xFF263238), width: 2),
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.red),
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.red, width: 2),
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                    labelStyle: TextStyle(color: Color(0xFF263238)),
+                    floatingLabelStyle: TextStyle(color: Color(0xFF263238)),
+                  ),
+                ),
+                popupProps: PopupProps.menu(
+                  showSearchBox: true,
+                  searchFieldProps: const TextFieldProps(
+                    decoration: InputDecoration(
+                      hintText: '国籍を検索',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                      ),
+                    ),
+                  ),
+                  constraints:
+                      const BoxConstraints(maxHeight: 300, maxWidth: 350),
+                  listViewProps: const ListViewProps(
+                    physics: ClampingScrollPhysics(),
+                    cacheExtent: 1000.0,
+                  ),
+                  // dialogProps: const DialogProps(
+                  //   shape: RoundedRectangleBorder(
+                  //     borderRadius: BorderRadius.all(Radius.circular(12)),
+                  //   ),
+                  // ),
+                  emptyBuilder: (context, searchEntry) => const Center(
+                    child: Text('データが見つかりません'),
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -771,7 +883,9 @@ class _WaitingListCardState extends State<WaitingListCard> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               ElevatedButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  print('通知ボタンが押されました${item.waitingId}');
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF263238),
                                   minimumSize: const Size(75, 75),
@@ -866,11 +980,24 @@ class WaitingStatusArea extends StatelessWidget {
           const Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _StatusInfo(label: "今から待機したら", value: "20分"),
+              _StatusInfo(label: "本日混雑予想時間帯", value: "13時"),
               SizedBox(height: 8),
-              _StatusInfo(label: "チーム当たり待機時間", value: "10分"),
+              _StatusInfo(label: "直前入場時間", value: "12:40"),
               SizedBox(height: 8),
-              _StatusInfo(label: "現在時間帯回転率", value: "3.0"),
+              _StatusInfo(label: "平均待機時間", value: "10分"),
+              SizedBox(height: 8),
+              _StatusInfo(label: "現在時間帯回転率", value: ""),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "今後追加される予定です",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
