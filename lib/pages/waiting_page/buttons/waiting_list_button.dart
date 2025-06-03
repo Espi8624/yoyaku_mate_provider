@@ -73,7 +73,9 @@ class WaitingListButtons extends StatelessWidget {
                       Navigator.of(context).pop();
                       try {
                         final waitingService = WaitingService();
-                        await waitingService.clearWaitingList();
+                        await waitingService.clearWaitingList(); // 비동기 작업 완료 대기
+
+                        // UI 업데이트 전에 context가 유효한지 확인
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(

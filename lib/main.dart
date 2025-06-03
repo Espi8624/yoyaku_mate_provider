@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/navigation_bar.dart';
+
 import 'package:yoyaku_mate_provider/pages/menu_management_page.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page.dart';
 import 'package:yoyaku_mate_provider/pages/sales_entry_page.dart';

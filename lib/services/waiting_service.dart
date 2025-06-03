@@ -32,40 +32,40 @@ class WaitingService {
   // 대기 목록 데이터를 한 번만 가져오는 함수
   Future<List<WaitingList>> fetchWaitingCustomers({String storeId = 'store-001'}) async {
     try {
-      print('Fetching waiting customers from: $_baseUrl/api/waiting-list?store_id=$storeId');
+      // print('Fetching waiting customers from: $_baseUrl/api/waiting-list?store_id=$storeId');
       final response = await http.get(
         Uri.parse('$_baseUrl/api/waiting-list?store_id=$storeId'),
         headers: {'Content-Type': 'application/json'},
       );
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      // print('Response status: ${response.statusCode}');
+      // print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        print('Decoded JSON: $jsonResponse');
+        // print('Decoded JSON: $jsonResponse');
         
         if (jsonResponse['data'] != null) {
           final List<dynamic> data = jsonResponse['data'];
-          print('Data list length: ${data.length}');
+          // print('Data list length: ${data.length}');
           return data.map((json) {
             try {
               return WaitingList.fromJson(json);
             } catch (e) {
-              print('Error parsing item: $json');
-              print('Parse error: $e');
+              // print('Error parsing item: $json');
+              // print('Parse error: $e');
               rethrow;
             }
           }).toList();
         } else {
-          print('Data field is null in response');
+          // print('Data field is null in response');
           return [];
         }
       }
       throw Exception('Server returned ${response.statusCode}: ${response.body}');
     } catch (e, stackTrace) {
-      print('Error fetching waiting customers: $e');
-      print('Stack trace: $stackTrace');
+      // print('Error fetching waiting customers: $e');
+      // print('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -78,34 +78,34 @@ class WaitingService {
         headers: {'Content-Type': 'application/json'},
       );
 
-      print('Polling response status: ${response.statusCode}');
-      print('Polling response body: ${response.body}');
+      // print('Polling response status: ${response.statusCode}');
+      // print('Polling response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        print('Polling decoded JSON: $jsonResponse');
+        // print('Polling decoded JSON: $jsonResponse');
         
         if (jsonResponse['data'] != null) {
           final List<dynamic> data = jsonResponse['data'];
-          print('Polling data list length: ${data.length}');
+          // print('Polling data list length: ${data.length}');
           return data.map((json) {
             try {
               return WaitingList.fromJson(json);
             } catch (e) {
-              print('Error parsing polling item: $json');
-              print('Polling parse error: $e');
+              // print('Error parsing polling item: $json');
+              // print('Polling parse error: $e');
               rethrow;
             }
           }).toList();
         } else {
-          print('Data field is null in polling response');
+          // print('Data field is null in polling response');
           return [];
         }
       }
       throw Exception('Failed to fetch waiting list: ${response.statusCode}');
     } catch (e, stackTrace) {
-      print('Error fetching waiting list: $e');
-      print('Polling stack trace: $stackTrace');
+      // print('Error fetching waiting list: $e');
+      // print('Polling stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -146,7 +146,7 @@ class WaitingService {
     if (dataChanged) {
       // 데이터가 변경되었으면 즉시 polling 간격을 최소로 설정
       if (_currentPollingInterval != _minPollingInterval) {
-        print('Data changed, reducing polling interval to ${_minPollingInterval.inSeconds}s');
+        // print('Data changed, reducing polling interval to ${_minPollingInterval.inSeconds}s');
         _currentPollingInterval = _minPollingInterval;
         // polling 타이머 재시작
         if (_lastStoreId != null) {
@@ -162,7 +162,7 @@ class WaitingService {
           _currentPollingInterval < _maxPollingInterval) {
         final newInterval = _currentPollingInterval + const Duration(seconds: 1);
         if (newInterval <= _maxPollingInterval) {
-          print('No changes detected, increasing polling interval to ${newInterval.inSeconds}s');
+          // print('No changes detected, increasing polling interval to ${newInterval.inSeconds}s');
           _currentPollingInterval = newInterval;
           // polling 타이머 재시작
           if (_lastStoreId != null) {
@@ -183,18 +183,18 @@ class WaitingService {
 
   void startPolling({String storeId = 'store-001'}) {
     if (_isConnected && _lastStoreId == storeId) {
-      print('Already connected and polling for store: $storeId');
+      // print('Already connected and polling for store: $storeId');
       return;
     }
 
     try {
-      print('Starting polling connection for store: $storeId');
+      // print('Starting polling connection for store: $storeId');
       _isConnected = true;
       _lastStoreId = storeId;
       _startPolling(storeId);
     } catch (e, stackTrace) {
-      print('Polling connection error: $e');
-      print('Stack trace: $stackTrace');
+      // print('Polling connection error: $e');
+      // print('Stack trace: $stackTrace');
       _isConnected = false;
       _waitingListController.addError(e);
     }
@@ -204,7 +204,7 @@ class WaitingService {
     _pollingTimer?.cancel();
     _pollingTimer = Timer.periodic(_currentPollingInterval, (timer) async {
       try {
-        print('Polling for updates (interval: ${_currentPollingInterval.inSeconds}s)...');
+        // print('Polling for updates (interval: ${_currentPollingInterval.inSeconds}s)...');
         final waitingList = await _fetchWaitingListForPolling(storeId);
 
         // 데이터 변경 감지
@@ -215,12 +215,12 @@ class WaitingService {
 
         // 변경된 경우에만 스트림에 데이터 전송
         if (dataChanged) {
-          print('Data changed, sending update (${waitingList.length} items)');
+          // print('Data changed, sending update (${waitingList.length} items)');
           _waitingListController.add(waitingList);
           _lastData = waitingList;
         }
       } catch (e) {
-        print('Error during polling: $e');
+        // print('Error during polling: $e');
         // 에러 발생 시 polling 간격을 최소로 재설정
         _currentPollingInterval = _minPollingInterval;
       }
@@ -228,7 +228,7 @@ class WaitingService {
   }
 
   void stopPolling() {
-    print('Stopping polling service');
+    // print('Stopping polling service');
     _pollingTimer?.cancel();
     _isConnected = false;
     _lastData = null;
@@ -238,7 +238,7 @@ class WaitingService {
   }
 
   void dispose() {
-    print('Disposing waiting service');
+    // print('Disposing waiting service');
     stopPolling();
     _waitingListController.close();
   }
@@ -253,13 +253,13 @@ class WaitingService {
     String storeId = 'store-001',
   }) async {
     try {
-      print('Creating waiting list item with data:');  // Add debug log
-      print('customerName: $customerName');
-      print('partySize: $partySize');
-      print('nationality: $nationality');
-      print('contact: $contact');
-      print('notes: $notes');
-      print('storeId: $storeId');
+      // print('Creating waiting list item with data:');  // Add debug log
+      // print('customerName: $customerName');
+      // print('partySize: $partySize');
+      // print('nationality: $nationality');
+      // print('contact: $contact');
+      // print('notes: $notes');
+      // print('storeId: $storeId');
 
       // Create request body with only required fields
       final Map<String, dynamic> requestBody = {
@@ -278,8 +278,8 @@ class WaitingService {
         body: json.encode(requestBody),
       );
 
-      print('Server response status: ${response.statusCode}');  // Add debug log
-      print('Server response body: ${response.body}');  // Add debug log
+      // print('Server response status: ${response.statusCode}');  // Add debug log
+      // print('Server response body: ${response.body}');  // Add debug log
 
       if (response.statusCode == 201) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
@@ -295,7 +295,7 @@ class WaitingService {
       }
       throw Exception('Failed to create waiting list item: ${response.statusCode}\nResponse: ${response.body}');
     } catch (e) {
-      print('Error creating waiting list item: $e');  // Add debug log
+      // print('Error creating waiting list item: $e');  // Add debug log
       rethrow;
     }
   }
@@ -303,8 +303,8 @@ class WaitingService {
   // 대기 목록 초기화 함수
   Future<void> clearWaitingList({String storeId = 'store-001'}) async {
     try {
-      print('Clearing waiting list for store: $storeId');
-      print('Request URL: $_baseUrl/api/waiting-list?action=clear&store_id=$storeId');
+      // print('Clearing waiting list for store: $storeId');
+      // print('Request URL: $_baseUrl/api/waiting-list?action=clear&store_id=$storeId');
       
       final response = await http.post(
         Uri.parse('$_baseUrl/api/waiting-list?action=clear&store_id=$storeId'),
@@ -312,8 +312,8 @@ class WaitingService {
         body: '{}',  // 빈 JSON 객체 추가
       );
 
-      print('Clear waiting list response status: ${response.statusCode}');
-      print('Clear waiting list response body: ${response.body}');
+      // print('Clear waiting list response status: ${response.statusCode}');
+      // print('Clear waiting list response body: ${response.body}');
 
       if (response.statusCode != 200) {
         throw Exception('Failed to clear waiting list: ${response.statusCode}');
@@ -324,7 +324,7 @@ class WaitingService {
       _waitingListController.add(updatedList);
       _lastData = updatedList;
     } catch (e) {
-      print('Error clearing waiting list: $e');
+      // print('Error clearing waiting list: $e');
       rethrow;
     }
   }
