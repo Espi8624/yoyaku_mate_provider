@@ -1,0 +1,213 @@
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:dotted_border/dotted_border.dart';
+import 'package:yoyaku_mate_provider/models/menu_list.dart';
+
+class EditMenuDialog extends StatefulWidget {
+  final TextEditingController titleController;
+  final TextEditingController descriptionController;
+  final TextEditingController priceController;
+  final MenuListItem menuItem;
+
+  const EditMenuDialog({
+    super.key,
+    required this.titleController,
+    required this.descriptionController,
+    required this.priceController,
+    required this.menuItem,
+  });
+
+  @override
+  _EditMenuDialogState createState() => _EditMenuDialogState();
+}
+
+class _EditMenuDialogState extends State<EditMenuDialog> {
+  Uint8List? tempImageBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    tempImageBytes = widget.menuItem.tempImageBytes;
+    widget.titleController.text = widget.menuItem.title;
+    widget.descriptionController.text = widget.menuItem.description;
+    widget.priceController.text = widget.menuItem.price.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Center(
+        child: Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Container(
+            width: 500,
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "メニュー編集",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: widget.titleController,
+                    decoration: const InputDecoration(
+                      labelText: "メニュー名",
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: widget.descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: "説明",
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: widget.priceController,
+                    decoration: const InputDecoration(
+                      labelText: "価格",
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: () async {
+                      FilePickerResult? result =
+                          await FilePicker.platform.pickFiles(
+                        type: FileType.image,
+                        withData: true,
+                      );
+                      if (result != null && result.files.single.bytes != null) {
+                        setState(() {
+                          tempImageBytes = result.files.single.bytes!;
+                        });
+                      }
+                    },
+                    child: DottedBorder(
+                      borderType: BorderType.RRect,
+                      radius: const Radius.circular(8),
+                      dashPattern: const [6, 3],
+                      color: Colors.grey,
+                      strokeWidth: 1.5,
+                      child: SizedBox(
+                        height: 160,
+                        width: double.infinity,
+                        child: tempImageBytes != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.memory(
+                                  tempImageBytes!,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                ),
+                              )
+                            : widget.menuItem.imageUrl.isNotEmpty
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      widget.menuItem.imageUrl,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Icon(
+                                        Icons.image_not_supported,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  )
+                                : const Center(
+                                    child: Text(
+                                      '+ クリックして画像を選択',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          widget.titleController.clear();
+                          widget.descriptionController.clear();
+                          widget.priceController.clear();
+                        },
+                        child: const Text("キャンセル"),
+                      ),
+                      const SizedBox(width: 16),
+                      SizedBox(
+                        width: 150,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF263238),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () {
+                            if (widget.titleController.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('メニュー名を入力してください。')),
+                              );
+                              return;
+                            }
+                            if (widget.priceController.text.trim().isEmpty ||
+                                double.tryParse(widget.priceController.text) ==
+                                    null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('有効な価格を入力してください。')),
+                              );
+                              return;
+                            }
+                            final updatedMenuItem = MenuListItem(
+                              id: widget.menuItem.id,
+                              storeId: widget.menuItem.storeId,
+                              menuId: widget.menuItem.menuId,
+                              category: widget.menuItem.category,
+                              title: widget.titleController.text,
+                              description: widget.descriptionController.text,
+                              price: double.parse(widget.priceController.text),
+                              imageUrl: widget.menuItem.imageUrl,
+                              createdAt: widget.menuItem.createdAt,
+                              updatedAt: DateTime.now(),
+                              menuStatus: widget.menuItem.menuStatus,
+                              tempImageBytes: tempImageBytes,
+                            );
+                            Navigator.of(context).pop(updatedMenuItem);
+                          },
+                          child: const Text("確認"),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

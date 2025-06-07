@@ -37,15 +37,15 @@ class MenuListItem {
       category: json['category']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
-      price: (json['price'] ?? 0).toDouble(),
+      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
       imageUrl: json['image']?.toString() ?? '',
       createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
+          ? DateTime.parse(json['createdAt'].toString())
           : DateTime.now(),
       updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
+          ? DateTime.parse(json['updatedAt'].toString())
           : DateTime.now(),
-      menuStatus: json['menu_status']?.toString() ?? 'available',
+      menuStatus: json['menuStatus']?.toString() ?? 'available', // 'menu_status' → 'menuStatus'로 일치
       tempImageBytes: null,
     );
   }
@@ -59,7 +59,7 @@ class MenuListItem {
       'title': title,
       'description': description,
       'price': price,
-      'image': imageUrl, // 서버에서는 'image' 키를 사용
+      'image': imageUrl,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'menuStatus': menuStatus,

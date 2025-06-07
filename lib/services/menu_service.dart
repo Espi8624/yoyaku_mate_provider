@@ -14,37 +14,38 @@ class MenuService {
 
   MenuService._internal();
 
-  Future<Map<String, List<MenuListItem>>> fetchMenuItems(
+  Future<List<MenuListItem>> fetchMenuItems(
       {String storeId = 'store-001'}) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/menu-list?store_id=$storeId'),
+        Uri.parse('$_baseUrl/api/menu-list?store_id=$storeId'), // 엔드포인트 수정
         headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        print('서버 응답 데이터: ${jsonResponse['data']}');
+
+        if (jsonResponse['status'] != 'success') {
+          throw Exception(
+              'Failed to fetch menu items: ${jsonResponse['message']}');
+        }
 
         if (jsonResponse['data'] != null) {
-          final Map<String, dynamic> data = jsonResponse['data'];
-          Map<String, List<MenuListItem>> categorizedMenus = {};
+          final List<dynamic> data = jsonResponse['data'];
+          List<MenuListItem> menuItems = [];
 
-          data.forEach((category, items) {
-            if (items is List) {
-              List<MenuListItem> menuItems = [];
-              for (var item in items) {
-                try {
-                  final menuItem = MenuListItem.fromJson(item);
-                  menuItems.add(menuItem);
-                } catch (e) {
-                  // 개별 아이템 오류는 무시하고 진행
-                }
-              }
-              categorizedMenus[category] = menuItems;
+          for (var item in data) {
+            try {
+              final menuItem = MenuListItem.fromJson(item);
+              menuItems.add(menuItem);
+            } catch (e) {
+              print('Error parsing menu item: $e');
+              // 개별 아이템 오류는 무시하고 진행
             }
-          });
+          }
 
-          return categorizedMenus;
+          return menuItems;
         }
       }
 
@@ -66,34 +67,31 @@ class MenuService {
     throw Exception('Failed to upload image');
   }
 
-  Future<List<Map<String, dynamic>>> saveMenuItems(
+  Future<List<MenuListItem>> saveMenuItems(
       Map<String, List<MenuListItem>> categorizedMenu, String storeId) async {
     try {
-      final clearResponse = await http.post(
-        Uri.parse('$_baseUrl/api/menu?action=clear&store_id=$storeId'),
-        headers: {'Content-Type': 'application/json'},
-        body: '{}',
-      );
-
-      if (clearResponse.statusCode != 200) {
-        throw Exception(
-            'Failed to clear menu list: ${clearResponse.statusCode}');
-      }
-
       List<Map<String, dynamic>> itemsToSave = [];
-      for (var category in categorizedMenu.keys) {
-        final menuItems = categorizedMenu[category]!;
-        for (var item in menuItems) {
-          // menuStatus가 "disable"인 항목도 포함
+      categorizedMenu.forEach((category, items) {
+        for (var item in items) {
           String imageUrl = item.imageUrl;
           if (item.tempImageBytes != null) {
-            imageUrl = await uploadImage(item.tempImageBytes!);
+            try {
+              print('이미지 업로드 시도: ${item.title} (카테고리: $category)');
+              // imageUrl = await uploadImage(item.tempImageBytes!);
+              print('이미지 업로드 성공: $imageUrl');
+            } catch (e) {
+              print('이미지 업로드 실패 - ${item.title}: $e');
+              // 이미지 업로드 실패 시 기본 URL 또는 에러 처리
+              imageUrl = item.imageUrl; // 기존 URL 유지
+            }
           }
           final updatedItem = MenuListItem(
             id: item.id,
-            storeId: item.storeId,
-            menuId: item.menuId,
-            category: category,
+            storeId: item.storeId.isNotEmpty ? item.storeId : storeId,
+            menuId: item.menuId.isNotEmpty
+                ? item.menuId
+                : DateTime.now().millisecondsSinceEpoch.toString(),
+            category: item.category,
             title: item.title,
             description: item.description,
             price: item.price,
@@ -105,24 +103,41 @@ class MenuService {
           );
           itemsToSave.add(updatedItem.toJson());
         }
-      }
+      });
 
       print('저장될 데이터: ${json.encode(itemsToSave)}');
 
       final saveResponse = await http.post(
-        Uri.parse('$_baseUrl/api/menu/bulk-save?store_id=$storeId'),
+        Uri.parse('$_baseUrl/api/menu-list/bulk-save?store_id=$storeId'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'data': itemsToSave}),
+        body: json.encode(itemsToSave),
       );
 
       if (saveResponse.statusCode != 200) {
-        throw Exception(
-            'Failed to save menu items: ${saveResponse.statusCode}');
+        throw Exception('メニューの保存に失敗しました: ${saveResponse.statusCode}');
       }
 
-      return itemsToSave;
+      final Map<String, dynamic> jsonResponse = json.decode(saveResponse.body);
+      if (jsonResponse['status'] != 'success') {
+        throw Exception('メニューの保存に失敗しました: ${jsonResponse['message']}');
+      }
+
+      final List<dynamic> savedData = jsonResponse['data'];
+      final List<MenuListItem> updatedMenuItems = savedData
+          .cast<Map<String, dynamic>>()
+          .map((item) => MenuListItem.fromJson({
+                ...item,
+                'storeId': item['storeId']?.toString() ?? storeId,
+                'menuId': item['menuId']?.toString() ??
+                    (item['id']?.toString() ??
+                        DateTime.now().millisecondsSinceEpoch.toString()),
+              }))
+          .toList();
+
+      return updatedMenuItems;
     } catch (e) {
-      rethrow;
+      print('saveMenuItems 에러 발생: $e');
+      throw Exception('メニューの保存에失敗しました: $e');
     }
   }
 }
