@@ -63,7 +63,7 @@ class WaitingService {
         }
       }
       throw Exception('Server returned ${response.statusCode}: ${response.body}');
-    } catch (e, stackTrace) {
+    } catch (e, _) {
       // print('Error fetching waiting customers: $e');
       // print('Stack trace: $stackTrace');
       rethrow;
@@ -103,7 +103,7 @@ class WaitingService {
         }
       }
       throw Exception('Failed to fetch waiting list: ${response.statusCode}');
-    } catch (e, stackTrace) {
+    } catch (e, _) {
       // print('Error fetching waiting list: $e');
       // print('Polling stack trace: $stackTrace');
       rethrow;
@@ -192,7 +192,7 @@ class WaitingService {
       _isConnected = true;
       _lastStoreId = storeId;
       _startPolling(storeId);
-    } catch (e, stackTrace) {
+    } catch (e, _) {
       // print('Polling connection error: $e');
       // print('Stack trace: $stackTrace');
       _isConnected = false;

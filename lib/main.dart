@@ -36,13 +36,14 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isExpanded = false; // 사이드바 확장 여부
 
   static const List<Widget> _pages = <Widget>[
-    ShopStatusPage(),
-    ProfilePage(),
     WaitingPage(),
+    MenuManagementPage(),
+    ProfilePage(),
+    SettingPage(),
+
+    ShopStatusPage(),
     SalesEntryPage(),
     SalesOverviewPage(),
-    MenuManagementPage(),
-    SettingPage(),
   ];
 
   void _onItemTapped(int index) {

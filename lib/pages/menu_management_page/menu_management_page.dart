@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/add_category_dialog.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/add_menu_dialog.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/edit_category_dialog.dart';
+import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/menu_management_page_loading.dart';
 import '../../models/menu_list.dart';
 import '../../services/menu_service.dart';
 import '../menu_management_page/widgets/edit_menu_dialog.dart';
@@ -183,47 +185,21 @@ class _MenuManagementPageState extends State<MenuManagementPage>
   }
 
   void _showEditCategoryDialog(int index) {
-  _categoryNameController.text = categories[index];
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    barrierColor: Colors.black54,
-    builder: (BuildContext context) {
-      return EditCategoryDialog(
-        controller: _categoryNameController,
-        onEditCategory: (newCategoryName) {
-          setState(() {
-            final oldCategoryName = categories[index];
-            categories[index] = newCategoryName;
-            final menuList = categorizedMenu[oldCategoryName] ?? [];
-            categorizedMenu[newCategoryName] = menuList.map((item) {
-              return MenuListItem(
-                id: item.id,
-                storeId: item.storeId,
-                menuId: item.menuId,
-                category: newCategoryName,
-                title: item.title,
-                description: item.description,
-                price: item.price,
-                imageUrl: item.imageUrl,
-                createdAt: item.createdAt,
-                updatedAt: DateTime.now(),
-                menuStatus: item.menuStatus,
-                tempImageBytes: item.tempImageBytes,
-              );
-            }).toList();
-            categorizedMenu.remove(oldCategoryName);
-
-            // _originalMenuData 동기화
-            final originalMenuList = _originalMenuData[oldCategoryName] ?? [];
-            _originalMenuData[newCategoryName] = originalMenuList;
-            _originalMenuData.remove(oldCategoryName);
-
-            // menuItems 동기화
-            for (var item in menuItems) {
-              if (item.category == oldCategoryName) {
-                final itemIndex = menuItems.indexOf(item);
-                menuItems[itemIndex] = MenuListItem(
+    _categoryNameController.text = categories[index];
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+      builder: (BuildContext context) {
+        return EditCategoryDialog(
+          controller: _categoryNameController,
+          onEditCategory: (newCategoryName) {
+            setState(() {
+              final oldCategoryName = categories[index];
+              categories[index] = newCategoryName;
+              final menuList = categorizedMenu[oldCategoryName] ?? [];
+              categorizedMenu[newCategoryName] = menuList.map((item) {
+                return MenuListItem(
                   id: item.id,
                   storeId: item.storeId,
                   menuId: item.menuId,
@@ -237,18 +213,44 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                   menuStatus: item.menuStatus,
                   tempImageBytes: item.tempImageBytes,
                 );
-              }
-            }
+              }).toList();
+              categorizedMenu.remove(oldCategoryName);
 
-            _updateTabController();
-          });
-        },
-        existingCategories: categories,
-        currentCategoryName: categories[index],
-      );
-    },
-  );
-}
+              // _originalMenuData 동기화
+              final originalMenuList = _originalMenuData[oldCategoryName] ?? [];
+              _originalMenuData[newCategoryName] = originalMenuList;
+              _originalMenuData.remove(oldCategoryName);
+
+              // menuItems 동기화
+              for (var item in menuItems) {
+                if (item.category == oldCategoryName) {
+                  final itemIndex = menuItems.indexOf(item);
+                  menuItems[itemIndex] = MenuListItem(
+                    id: item.id,
+                    storeId: item.storeId,
+                    menuId: item.menuId,
+                    category: newCategoryName,
+                    title: item.title,
+                    description: item.description,
+                    price: item.price,
+                    imageUrl: item.imageUrl,
+                    createdAt: item.createdAt,
+                    updatedAt: DateTime.now(),
+                    menuStatus: item.menuStatus,
+                    tempImageBytes: item.tempImageBytes,
+                  );
+                }
+              }
+
+              _updateTabController();
+            });
+          },
+          existingCategories: categories,
+          currentCategoryName: categories[index],
+        );
+      },
+    );
+  }
 
   Future<void> _addMenu() async {
     if (categories.isEmpty) {
@@ -807,10 +809,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
               ],
             ),
             if (_isLoading)
-              Container(
-                color: Colors.black54,
-                child: const Center(child: CircularProgressIndicator()),
-              ),
+              const MenuManagementPageLoading(),
           ],
         ),
       ),

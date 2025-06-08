@@ -70,7 +70,7 @@ class SideNavigationBar extends StatelessWidget {
             ),
           ] else ...[
             InkWell(
-              onTap: () => onItemTapped(1),
+              onTap: () => onItemTapped(2),
               child: CircleAvatar(
                 radius: 20,
                 backgroundColor: Colors.grey[300],
@@ -90,11 +90,31 @@ class SideNavigationBar extends StatelessWidget {
           ),
           const SizedBox(height: 15),
 
-          // 店舗状況
+          // // 店舗状況
+          // isExpanded
+          //     ? _NavItem(
+          //         icon: Icons.newspaper_rounded,
+          //         label: '店舗状況',
+          //         selected: selectedIndex == 0,
+          //         onTap: () {
+          //           onItemTapped(0);
+          //           onToggle();
+          //         },
+          //       )
+          //     : _NavIcon(
+          //         icon: Icons.newspaper_rounded,
+          //         selected: selectedIndex == 0,
+          //         label: '店舗状況',
+          //         onTap: () => onItemTapped(0),
+          //         isExpanded: isExpanded,
+          //       ),
+          // const SizedBox(height: 15),
+
+          // 待機リスト
           isExpanded
               ? _NavItem(
-                  icon: Icons.newspaper_rounded,
-                  label: '店舗状況',
+                  icon: Icons.list_alt_rounded,
+                  label: '待機リスト',
                   selected: selectedIndex == 0,
                   onTap: () {
                     onItemTapped(0);
@@ -102,90 +122,70 @@ class SideNavigationBar extends StatelessWidget {
                   },
                 )
               : _NavIcon(
-                  icon: Icons.newspaper_rounded,
+                  icon: Icons.list_alt_rounded,
                   selected: selectedIndex == 0,
-                  label: '店舗状況',
+                  label: '待機リスト',
                   onTap: () => onItemTapped(0),
                   isExpanded: isExpanded,
                 ),
           const SizedBox(height: 15),
 
-          // 待機リスト
-          isExpanded
-              ? _NavItem(
-                  icon: Icons.list_alt_rounded,
-                  label: '待機リスト',
-                  selected: selectedIndex == 2,
-                  onTap: () {
-                    onItemTapped(2);
-                    onToggle();
-                  },
-                )
-              : _NavIcon(
-                  icon: Icons.list_alt_rounded,
-                  selected: selectedIndex == 2,
-                  label: '待機リスト',
-                  onTap: () => onItemTapped(2),
-                  isExpanded: isExpanded,
-                ),
-          const SizedBox(height: 15),
+          // // 売上入力
+          // isExpanded
+          //     ? _NavItem(
+          //         icon: Icons.library_books_rounded,
+          //         label: '売出入力',
+          //         selected: selectedIndex == 3,
+          //         onTap: () {
+          //           onItemTapped(3);
+          //           onToggle();
+          //         },
+          //       )
+          //     : _NavIcon(
+          //         icon: Icons.library_books_rounded,
+          //         selected: selectedIndex == 3,
+          //         label: '売上入力',
+          //         onTap: () => onItemTapped(3),
+          //         isExpanded: isExpanded,
+          //       ),
+          // const SizedBox(height: 15),
 
-          // 売上入力
-          isExpanded
-              ? _NavItem(
-                  icon: Icons.library_books_rounded,
-                  label: '売出入力',
-                  selected: selectedIndex == 3,
-                  onTap: () {
-                    onItemTapped(3);
-                    onToggle();
-                  },
-                )
-              : _NavIcon(
-                  icon: Icons.library_books_rounded,
-                  selected: selectedIndex == 3,
-                  label: '売上入力',
-                  onTap: () => onItemTapped(3),
-                  isExpanded: isExpanded,
-                ),
-          const SizedBox(height: 15),
-
-          // 売上管理
-          isExpanded
-              ? _NavItem(
-                  icon: Icons.bar_chart_rounded,
-                  label: '売出管理',
-                  selected: selectedIndex == 4,
-                  onTap: () {
-                    onItemTapped(4);
-                    onToggle();
-                  },
-                )
-              : _NavIcon(
-                  icon: Icons.bar_chart_rounded,
-                  selected: selectedIndex == 4,
-                  label: '売上管理',
-                  onTap: () => onItemTapped(4),
-                  isExpanded: isExpanded,
-                ),
-          const SizedBox(height: 15),
+          // // 売上管理
+          // isExpanded
+          //     ? _NavItem(
+          //         icon: Icons.bar_chart_rounded,
+          //         label: '売出管理',
+          //         selected: selectedIndex == 4,
+          //         onTap: () {
+          //           onItemTapped(4);
+          //           onToggle();
+          //         },
+          //       )
+          //     : _NavIcon(
+          //         icon: Icons.bar_chart_rounded,
+          //         selected: selectedIndex == 4,
+          //         label: '売上管理',
+          //         onTap: () => onItemTapped(4),
+          //         isExpanded: isExpanded,
+          //       ),
+          // const SizedBox(height: 15),
 
           // メニュー管理
           isExpanded
               ? _NavItem(
                   icon: Icons.table_view_rounded,
                   label: 'メニュー管理',
-                  selected: selectedIndex == 5,
+                  selected: selectedIndex == 1,
                   onTap: () {
-                    onItemTapped(5);
+                    onItemTapped(1);
                     onToggle();
                   },
                 )
               : _NavIcon(
                   icon: Icons.table_view_rounded,
-                  selected: selectedIndex == 5,
+                  selected: selectedIndex == 1,
                   label: 'メニュー管理',
-                  onTap: () => onItemTapped(5),
+                  onTap: () => onItemTapped(1),
                   isExpanded: isExpanded,
                 ),
           const SizedBox(height: 15),
@@ -197,17 +197,17 @@ class SideNavigationBar extends StatelessWidget {
               ? _NavItem(
                   icon: Icons.settings,
                   label: '設定',
-                  selected: selectedIndex == 6,
+                  selected: selectedIndex == 3,
                   onTap: () {
-                    onItemTapped(6);
+                    onItemTapped(3);
                     onToggle();
                   },
                 )
               : _NavIcon(
                   icon: Icons.settings,
-                  selected: selectedIndex == 6,
+                  selected: selectedIndex == 3,
                   label: '設定',
-                  onTap: () => onItemTapped(6),
+                  onTap: () => onItemTapped(3),
                   isExpanded: isExpanded,
                 ),
           const SizedBox(height: 15),

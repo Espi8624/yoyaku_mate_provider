@@ -159,7 +159,7 @@ class _WaitingPageState extends State<WaitingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const QRCodeButton(),
+                  const QRCodeButton(data: 'https://example.com'),
                   const SizedBox(height: 10),
                   Expanded(
                     child: WaitingStatusArea(waitingCount: _waitingList.length),
