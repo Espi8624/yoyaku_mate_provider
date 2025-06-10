@@ -24,7 +24,7 @@ class MenuService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        print('서버 응답 데이터: ${jsonResponse['data']}');
+        // print('서버 응답 데이터: ${jsonResponse['data']}');
 
         if (jsonResponse['status'] != 'success') {
           throw Exception(
@@ -104,8 +104,7 @@ class MenuService {
           itemsToSave.add(updatedItem.toJson());
         }
       });
-
-      print('저장될 데이터: ${json.encode(itemsToSave)}');
+      // print('저장될 데이터: ${json.encode(itemsToSave)}');
 
       final saveResponse = await http.post(
         Uri.parse('$_baseUrl/api/menu-list/bulk-save?store_id=$storeId'),

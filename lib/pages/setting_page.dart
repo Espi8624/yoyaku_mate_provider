@@ -14,7 +14,7 @@ class _SettingPageState extends State<SettingPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       setState(() {});
     });
@@ -74,10 +74,10 @@ class _SettingPageState extends State<SettingPage>
                 tabs: const [
                   Tab(text: '運営設定'),
                   Tab(text: '待機リスト設定'),
-                  Tab(text: '売上設定'),
-                  Tab(text: 'メニュー設定'),
-                  Tab(text: '使用者及び権限設定'),
-                  Tab(text: 'システム及び統合設定'),
+                  // Tab(text: '売上設定'),
+                  // Tab(text: 'メニュー設定'),
+                  // Tab(text: '使用者及び権限設定'),
+                  Tab(text: 'システム設定'),
                 ],
               ),
             ),
@@ -90,9 +90,9 @@ class _SettingPageState extends State<SettingPage>
                   children: [
                     _buildOperationSettings(),
                     _buildWaitingSettings(),
-                    _buildSalesSettings(),
-                    _buildMenuSettings(),
-                    _buildUserSettings(),
+                    // _buildSalesSettings(),
+                    // _buildMenuSettings(),
+                    // _buildUserSettings(),
                     _buildSystemSettings(),
                   ],
                 ),
@@ -121,18 +121,18 @@ class _SettingPageState extends State<SettingPage>
               ],
             ),
           ),
-          const SizedBox(height: 24),
-          _buildSectionTitle('座席'),
-          _sectionBox(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSettingItem('テーブル管理', 'テーブル数設定', null,
-                    onTap: () {}),
-                // _buildSettingItem('予約時間設定', '最大予約時間設定', null, onTap: () {}),
-              ],
-            ),
-          ),
+          // const SizedBox(height: 24),
+          // _buildSectionTitle('座席'),
+          // _sectionBox(
+          //   child: Column(
+          //     crossAxisAlignment: CrossAxisAlignment.start,
+          //     children: [
+          //       _buildSettingItem('テーブル管理', 'テーブル数設定', null,
+          //           onTap: () {}),
+          //       // _buildSettingItem('予約時間設定', '最大予約時間設定', null, onTap: () {}),
+          //     ],
+          //   ),
+          // ),
           const SizedBox(height: 24),
           _buildSectionTitle('お知らせ'),
           _sectionBox(
@@ -354,17 +354,17 @@ void _showBusinessHoursDialog() async {
               ],
             ),
           ),
-          const SizedBox(height: 24),
-          _buildSectionTitle('顧客コミュニケーション'),
-          _sectionBox(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSettingItem('お知らせテンプレート', '入場お知らせメッセージ設定', null, onTap: () {}),
+          // const SizedBox(height: 24),
+          // _buildSectionTitle('顧客コミュニケーション'),
+          // _sectionBox(
+          //   child: Column(
+          //     crossAxisAlignment: CrossAxisAlignment.start,
+          //     children: [
+          //       _buildSettingItem('お知らせテンプレート', '入場お知らせメッセージ設定', null, onTap: () {}),
                 
-              ],
-            ),
-          ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
     );
@@ -487,16 +487,16 @@ void _showBusinessHoursDialog() async {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('外部システム連動'),
-          _sectionBox(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSettingItem('POS 連動', 'POS システム連動', null, onTap: () {}),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
+          // _buildSectionTitle('外部システム連動'),
+          // _sectionBox(
+          //   child: Column(
+          //     crossAxisAlignment: CrossAxisAlignment.start,
+          //     children: [
+          //       _buildSettingItem('POS 連動', 'POS システム連動', null, onTap: () {}),
+          //     ],
+          //   ),
+          // ),
+          // const SizedBox(height: 24),
           _buildSectionTitle('データバックアップ'),
           _sectionBox(
             child: Column(

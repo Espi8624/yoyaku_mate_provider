@@ -87,7 +87,7 @@ class _WaitingPageState extends State<WaitingPage> {
 
   @override
   void dispose() {
-    print('Disposing WaitingPage');
+    // print('Disposing WaitingPage');
     _waitingService.dispose();
     super.dispose();
   }
@@ -159,7 +159,7 @@ class _WaitingPageState extends State<WaitingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const QRCodeButton(data: 'https://example.com'),
+                  const QRCodeButton(data: 'https://1411-240b-10-bf67-3000-b4fa-8469-f2e4-80df.ngrok-free.app/wating-screen'),
                   const SizedBox(height: 10),
                   Expanded(
                     child: WaitingStatusArea(waitingCount: _waitingList.length),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/add_category_dialog.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/add_menu_dialog.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/edit_category_dialog.dart';

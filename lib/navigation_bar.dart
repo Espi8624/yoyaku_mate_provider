@@ -43,7 +43,7 @@ class SideNavigationBar extends StatelessWidget {
           if (isExpanded) ...[
             InkWell(
               onTap: () {
-                onItemTapped(1);
+                onItemTapped(2);
                 onToggle();
               },
               child: Padding(
