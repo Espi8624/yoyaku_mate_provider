@@ -136,8 +136,13 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     }
     setState(() => _isLoading = true);
     try {
+      // 메뉴 저장
+      await MenuService().saveMenuItems(categorizedMenu, 'store-001');
+
+      // 서버에서 최신 데이터 가져오기 (새로고침)
       final updatedMenuItems =
-          await MenuService().saveMenuItems(categorizedMenu, 'store-001');
+          await MenuService().fetchMenuItems(storeId: 'store-001');
+
       setState(() {
         menuItems = updatedMenuItems;
         _updateCategorizedMenu();
@@ -145,11 +150,11 @@ class _MenuManagementPageState extends State<MenuManagementPage>
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('全てのメニューが保存されました。')),
+        const SnackBar(content: Text('全てのメニューが保存され、更新されました。')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('メニューの保存に失敗しました: $e')),
+        SnackBar(content: Text('メニューの保存または更新に失敗しました: $e')),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -319,44 +324,69 @@ class _MenuManagementPageState extends State<MenuManagementPage>
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text("確認"),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ),
+            const Text(
+              "確認",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
         content: const Text("本当にこのメニューを削除しますか？"),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text("キャンセル"),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                final category = categories[categoryIndex];
-                final menuItem = categorizedMenu[category]![menuIndex];
-                final menuItemIndex = menuItems.indexWhere((item) =>
-                    item.id == menuItem.id && item.menuId == menuItem.menuId);
-                if (menuItemIndex != -1) {
-                  menuItems[menuItemIndex] = MenuListItem(
-                    id: menuItem.id,
-                    storeId: menuItem.storeId,
-                    menuId: menuItem.menuId,
-                    category: menuItem.category,
-                    title: menuItem.title,
-                    description: menuItem.description,
-                    price: menuItem.price,
-                    imageUrl: menuItem.imageUrl,
-                    createdAt: menuItem.createdAt,
-                    updatedAt: DateTime.now(),
-                    menuStatus: 'disable',
-                    tempImageBytes: menuItem.tempImageBytes,
-                  );
-                  _updateCategorizedMenu();
-                }
-              });
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('メニューが無効化されました。')),
-              );
-            },
-            child: const Text("削除"),
+          Center(
+            child: TextButton(
+              onPressed: () {
+                setState(() {
+                  final category = categories[categoryIndex];
+                  final menuItem = categorizedMenu[category]![menuIndex];
+                  final menuItemIndex = menuItems.indexWhere((item) =>
+                      item.id == menuItem.id && item.menuId == menuItem.menuId);
+                  if (menuItemIndex != -1) {
+                    menuItems[menuItemIndex] = MenuListItem(
+                      id: menuItem.id,
+                      storeId: menuItem.storeId,
+                      menuId: menuItem.menuId,
+                      category: menuItem.category,
+                      title: menuItem.title,
+                      description: menuItem.description,
+                      price: menuItem.price,
+                      imageUrl: menuItem.imageUrl,
+                      createdAt: menuItem.createdAt,
+                      updatedAt: DateTime.now(),
+                      menuStatus: 'disable',
+                      tempImageBytes: menuItem.tempImageBytes,
+                    );
+                    _updateCategorizedMenu();
+                  }
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('メニューが無効化されました。')),
+                );
+              },
+              child: const Text(
+                "削除",
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
           ),
         ],
       ),
@@ -369,42 +399,66 @@ class _MenuManagementPageState extends State<MenuManagementPage>
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text("確認"),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ),
+            const Text(
+              "確認",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
         content: const Text("本当にこのメニューを削除しますか？"),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text("キャンセル"),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                // 모든 menuItems의 menuStatus를 'disable'로 설정
-                for (int i = 0; i < menuItems.length; i++) {
-                  menuItems[i] = MenuListItem(
-                    id: menuItems[i].id,
-                    storeId: menuItems[i].storeId,
-                    menuId: menuItems[i].menuId,
-                    category: menuItems[i].category,
-                    title: menuItems[i].title,
-                    description: menuItems[i].description,
-                    price: menuItems[i].price,
-                    imageUrl: menuItems[i].imageUrl,
-                    createdAt: menuItems[i].createdAt,
-                    updatedAt: DateTime.now(), // 업데이트 시간을 현재로 설정
-                    menuStatus: 'disable',
-                    tempImageBytes: menuItems[i].tempImageBytes,
-                  );
-                }
-                _updateCategorizedMenu(); // categorizedMenu를 업데이트
-              });
-
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('メニューが無効化されました。')),
-              );
-            },
-            child: const Text("削除"),
+          Center(
+            child: TextButton(
+              onPressed: () {
+                setState(() {
+                  // 모든 menuItems의 menuStatus를 'disable'로 설정
+                  for (int i = 0; i < menuItems.length; i++) {
+                    menuItems[i] = MenuListItem(
+                      id: menuItems[i].id,
+                      storeId: menuItems[i].storeId,
+                      menuId: menuItems[i].menuId,
+                      category: menuItems[i].category,
+                      title: menuItems[i].title,
+                      description: menuItems[i].description,
+                      price: menuItems[i].price,
+                      imageUrl: menuItems[i].imageUrl,
+                      createdAt: menuItems[i].createdAt,
+                      updatedAt: DateTime.now(), // 업데이트 시간을 현재로 설정
+                      menuStatus: 'disable',
+                      tempImageBytes: menuItems[i].tempImageBytes,
+                    );
+                  }
+                  _updateCategorizedMenu(); // categorizedMenu를 업데이트
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('メニューが無効化されました。')),
+                );
+              },
+              child: const Text(
+                "削除",
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
           ),
         ],
       ),
@@ -416,33 +470,58 @@ class _MenuManagementPageState extends State<MenuManagementPage>
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text("削除"),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ),
+            const Text(
+              "確認",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
         content: const Text("このカテゴリーを削除しますか？"),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text("キャンセル"),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                final category = categories[index];
-                menuItems.removeWhere((item) => item.category == category);
-                categories.removeAt(index);
-                categorizedMenu.remove(category);
-                _originalMenuData.remove(category);
-                _updateTabController();
-                if (_tabController.index >= categories.length &&
-                    categories.isNotEmpty) {
-                  _tabController.index = categories.length - 1;
-                }
-              });
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('カテゴリーが削除されました。')),
-              );
-            },
-            child: const Text("削除", style: TextStyle(color: Colors.red)),
+          Center(
+            child: TextButton(
+              onPressed: () {
+                setState(() {
+                  final category = categories[index];
+                  menuItems.removeWhere((item) => item.category == category);
+                  categories.removeAt(index);
+                  categorizedMenu.remove(category);
+                  _originalMenuData.remove(category);
+                  _updateTabController();
+                  if (_tabController.index >= categories.length &&
+                      categories.isNotEmpty) {
+                    _tabController.index = categories.length - 1;
+                  }
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('カテゴリーが削除されました。')),
+                );
+              },
+              child: const Text(
+                "削除",
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
           ),
         ],
       ),
@@ -807,8 +886,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                 ),
               ],
             ),
-            if (_isLoading)
-              const MenuManagementPageLoading(),
+            if (_isLoading) const MenuManagementPageLoading(),
           ],
         ),
       ),

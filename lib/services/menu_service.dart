@@ -18,13 +18,12 @@ class MenuService {
       {String storeId = 'store-001'}) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/menu-list?store_id=$storeId'), // 엔드포인트 수정
+        Uri.parse('$_baseUrl/api/menu-list?store_id=$storeId'),
         headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        // print('서버 응답 데이터: ${jsonResponse['data']}');
 
         if (jsonResponse['status'] != 'success') {
           throw Exception(
@@ -41,7 +40,6 @@ class MenuService {
               menuItems.add(menuItem);
             } catch (e) {
               print('Error parsing menu item: $e');
-              // 개별 아이템 오류는 무시하고 진행
             }
           }
 
@@ -71,17 +69,18 @@ class MenuService {
       Map<String, List<MenuListItem>> categorizedMenu, String storeId) async {
     try {
       List<Map<String, dynamic>> itemsToSave = [];
-      categorizedMenu.forEach((category, items) {
+      for (var entry in categorizedMenu.entries) {
+        final category = entry.key;
+        final items = entry.value;
         for (var item in items) {
           String imageUrl = item.imageUrl;
           if (item.tempImageBytes != null) {
             try {
               print('이미지 업로드 시도: ${item.title} (카테고리: $category)');
-              // imageUrl = await uploadImage(item.tempImageBytes!);
+              imageUrl = await uploadImage(item.tempImageBytes!);
               print('이미지 업로드 성공: $imageUrl');
             } catch (e) {
               print('이미지 업로드 실패 - ${item.title}: $e');
-              // 이미지 업로드 실패 시 기본 URL 또는 에러 처리
               imageUrl = item.imageUrl; // 기존 URL 유지
             }
           }
@@ -103,8 +102,7 @@ class MenuService {
           );
           itemsToSave.add(updatedItem.toJson());
         }
-      });
-      // print('저장될 데이터: ${json.encode(itemsToSave)}');
+      }
 
       final saveResponse = await http.post(
         Uri.parse('$_baseUrl/api/menu-list/bulk-save?store_id=$storeId'),
@@ -136,7 +134,7 @@ class MenuService {
       return updatedMenuItems;
     } catch (e) {
       print('saveMenuItems 에러 발생: $e');
-      throw Exception('メニューの保存에失敗しました: $e');
+      throw Exception('メニューの保存に失敗しました: $e');
     }
   }
 }

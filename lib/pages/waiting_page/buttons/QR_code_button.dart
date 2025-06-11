@@ -1,10 +1,91 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'dart:typed_data';
 
 class QRCodeButton extends StatelessWidget {
-  final String data; // QR 코드에 포함할 데이터
+  final String data;
 
   const QRCodeButton({super.key, required this.data});
+
+  Future<void> _generateAndSavePDF(BuildContext context) async {
+    try {
+      final pdf = pw.Document();
+
+      final qrImage = await QrPainter(
+        data: data,
+        version: QrVersions.auto,
+        gapless: false,
+        errorCorrectionLevel: QrErrorCorrectLevel.M,
+      ).toImageData(400.0);
+
+      if (qrImage != null) {
+        pdf.addPage(
+          pw.Page(
+            pageFormat: PdfPageFormat.a4,
+            build: (pw.Context context) {
+              return pw.Center(
+                child: pw.Image(
+                  pw.MemoryImage(qrImage.buffer.asUint8List()),
+                  width: 200,
+                  height: 200,
+                  fit: pw.BoxFit.contain,
+                ),
+              );
+            },
+          ),
+        );
+      }
+
+      final Uint8List pdfBytes = await pdf.save();
+      String fileName = 'QRCode_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+        final directory = await getDownloadsDirectory();
+        if (directory != null) {
+          final filePath = '${directory.path}/$fileName';
+          final file = File(filePath);
+          await file.writeAsBytes(pdfBytes);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('PDFが保存されました。ダウンロードファイルをご確認ください。'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        try {
+          await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
+        } catch (e) {
+          final directory = await getApplicationDocumentsDirectory();
+          final filePath = '${directory.path}/$fileName';
+          final file = File(filePath);
+          await file.writeAsBytes(pdfBytes);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('PDFが保存されました。ダウンロードファイルをご確認ください。'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('PDF 생성 중 오류가 발생했습니다: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +94,6 @@ class QRCodeButton extends StatelessWidget {
       children: [
         ElevatedButton(
           onPressed: () {
-            // 버튼 클릭 시 다이얼로그 표시
             showDialog(
               context: context,
               builder: (BuildContext context) {
@@ -21,21 +101,16 @@ class QRCodeButton extends StatelessWidget {
                   backgroundColor: const Color(0xffffffff),
                   title: const Text(
                     'QRコード',
-                    style: TextStyle(
-                      fontSize: 20.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.left,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  contentPadding: const EdgeInsets.all(20.0),
                   content: SizedBox(
-                    width: 250,
-                    height: 250,
+                    width: 200,
+                    height: 200,
                     child: Center(
                       child: QrImageView(
                         data: data,
                         version: QrVersions.auto,
-                        size: 200.0,
+                        size: 180,
                         gapless: false,
                         errorCorrectionLevel: QrErrorCorrectLevel.M,
                       ),
@@ -43,39 +118,21 @@ class QRCodeButton extends StatelessWidget {
                   ),
                   actionsAlignment: MainAxisAlignment.center,
                   actions: [
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            print('出力');
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF6F61), // 요청한 배경색
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.local_printshop_rounded,
-                                color: Colors.white,
-                              ),
-                              SizedBox(width: 16),
-                              Text(
-                                '出力',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // const SizedBox(height: 8), // 세로 간격
-                        // TextButton(
-                        //   onPressed: () {
-                        //     Navigator.of(context).pop();
-                        //   },
-                        //   child: const Text('閉じる'),
-                        // ),
-                      ],
+                    ElevatedButton(
+                      onPressed: () async {
+                        await _generateAndSavePDF(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF6F61),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.local_printshop_rounded, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text('出力', style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
                     ),
                   ],
                 );
@@ -86,13 +143,11 @@ class QRCodeButton extends StatelessWidget {
             backgroundColor: const Color(0xFF263238),
           ),
           child: const Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.qr_code, color: Colors.white),
               SizedBox(width: 8),
-              Text(
-                "QRコード",
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
+              Text('QRコード', style: TextStyle(color: Colors.white)),
             ],
           ),
         ),

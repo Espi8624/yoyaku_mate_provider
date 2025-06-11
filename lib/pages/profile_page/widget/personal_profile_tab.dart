@@ -12,7 +12,7 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
   // 개인 프로필 정보
   Map<String, dynamic> personalProfile = {
     'name': 'テスト太郎',
-    'email': 'tanaka@example.com',
+    'email': 'test@example.com',
     'phone': '090-1234-5678',
     'avatar': null,
   };

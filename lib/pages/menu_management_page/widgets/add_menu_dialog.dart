@@ -41,6 +41,7 @@ class _AddMenuDialogState extends State<AddMenuDialog> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Center(
         child: Dialog(
+          backgroundColor: const Color(0xffffffff),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Container(
@@ -51,6 +52,20 @@ class _AddMenuDialogState extends State<AddMenuDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: IconButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        widget.titleController.clear();
+                        widget.descriptionController.clear();
+                        widget.priceController.clear();
+                      },
+                      icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
                   const Text(
                     "メニュー追加",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -130,27 +145,17 @@ class _AddMenuDialogState extends State<AddMenuDialog> {
                   ),
                   const SizedBox(height: 24),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          widget.titleController.clear();
-                          widget.descriptionController.clear();
-                          widget.priceController.clear();
-                        },
-                        child: const Text("キャンセル"),
-                      ),
-                      const SizedBox(width: 16),
-                      SizedBox(
-                        width: 150,
+                      Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF263238),
+                            backgroundColor: const Color(0xFFFF6F61),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                           onPressed: () {
                             if (widget.titleController.text.trim().isEmpty) {

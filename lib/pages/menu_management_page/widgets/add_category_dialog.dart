@@ -18,6 +18,7 @@ class AddCategoryDialog extends StatelessWidget {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Center(
         child: Dialog(
+          backgroundColor: const Color(0xffffffff),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Container(
@@ -62,7 +63,7 @@ class AddCategoryDialog extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF263238),
+                      backgroundColor: const Color(0xFFFF6F61),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
