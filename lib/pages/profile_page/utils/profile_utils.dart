@@ -16,7 +16,8 @@ class ProfileUtils {
   }
 
   // 설정 항목 위젯
-  static Widget buildSettingItem(String title, String subtitle, Widget? trailing,
+  static Widget buildSettingItem(
+      String title, String subtitle, Widget? trailing,
       {VoidCallback? onTap}) {
     return ListTile(
       title: Text(title,
@@ -62,13 +63,30 @@ class ProfileUtils {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(
-          title,
-          style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF263238)),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                icon: const Icon(Icons.close, size: 24, color: Color(0xFF263238)),
+                onPressed: () => Navigator.of(context).pop(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF263238),
+              ),
+            ),
+          ],
         ),
         content: TextField(
           controller: controller,
@@ -81,31 +99,31 @@ class ProfileUtils {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消', style: TextStyle(color: Color(0xFF263238))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF263238),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () {
-              if (controller.text.isEmpty) {
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF6F61),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () {
+                if (controller.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('値を入力してください。')),
+                  );
+                  return;
+                }
+                onSave(controller.text);
+                Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('値を入力してください。')),
+                  const SnackBar(content: Text('変更事項を保存しました。')),
                 );
-                return;
-              }
-              onSave(controller.text);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('変更事項を保存しました。')),
-              );
-            },
-            child: const Text('確認'),
+              },
+              child: const Text('確認'),
+            ),
           ),
         ],
       ),

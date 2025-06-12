@@ -40,7 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
     MenuManagementPage(),
     ProfilePage(),
     SettingPage(),
-
     ShopStatusPage(),
     SalesEntryPage(),
     SalesOverviewPage(),
@@ -110,6 +109,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   selectedIndex: _selectedIndex,
                   onItemTapped: _onItemTapped,
                   onToggle: _toggleSidebar,
+                  userName: "テスト太郎", // 유저명
+                  storeName: "川崎食堂", // 가게명
+                  userRole: "管理者", // 직급
                 ),
               ),
             ),
