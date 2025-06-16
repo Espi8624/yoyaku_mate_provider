@@ -243,6 +243,19 @@ class WaitingService {
     _waitingListController.close();
   }
 
+   // 웨이팅 ID 생성 함수
+  String _generateWaitingId() {
+    final now = DateTime.now();
+    final year = now.year.toString();
+    final month = now.month.toString().padLeft(2, '0');
+    final day = now.day.toString().padLeft(2, '0');
+    final hour = now.hour.toString().padLeft(2, '0');
+    final minute = now.minute.toString().padLeft(2, '0');
+    final second = now.second.toString().padLeft(2, '0');
+    
+    return '$year$month$day-$hour$minute$second';
+  }
+
   // 새로운 대기 추가 함수
   Future<WaitingList> createWaitingListItem({
     required String customerName,
@@ -259,11 +272,13 @@ class WaitingService {
       // print('nationality: $nationality');
       // print('contact: $contact');
       // print('notes: $notes');
-      // print('storeId: $storeId');
+      // print('storeId: $storeId');      // Generate waiting_id
+      final waitingId = _generateWaitingId();
 
-      // Create request body with only required fields
+      // Create request body with required fields and waiting_id
       final Map<String, dynamic> requestBody = {
         'store_id': storeId,
+        'waiting_id': waitingId,
         'customer_name': customerName,
         'party_size': partySize,
         'nationality': nationality,
