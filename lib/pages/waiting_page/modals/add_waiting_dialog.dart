@@ -106,13 +106,31 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '新しい待機追加',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF263238),
-                ),
+              Row(
+                children: [
+                  const Text(
+                    '新しい待機追加',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF263238),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _customerNameController.clear();
+                      _partySizeController.clear();
+                      _nationalityController.clear();
+                      _contactController.clear();
+                      _notesController.clear();
+                    },
+                    icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               DropdownSearch<String>(
@@ -191,11 +209,6 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
                     physics: ClampingScrollPhysics(),
                     cacheExtent: 1000.0,
                   ),
-                  // dialogProps: const DialogProps(
-                  //   shape: RoundedRectangleBorder(
-                  //     borderRadius: BorderRadius.all(Radius.circular(12)),
-                  //   ),
-                  // ),
                   emptyBuilder: (context, searchEntry) => const Center(
                     child: Text('データが見つかりません'),
                   ),
@@ -344,54 +357,30 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
                 ),
                 const SizedBox(height: 16),
               ],
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed:
-                        _isLoading ? null : () => Navigator.of(context).pop(),
-                    style: ButtonStyle(
-                      overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                        (Set<WidgetState> states) {
-                          if (states.contains(WidgetState.hovered)) {
-                            return Colors.grey[200];
-                          }
-                          return null;
-                        },
-                      ),
-                      foregroundColor: WidgetStateProperty.resolveWith<Color>(
-                        (Set<WidgetState> states) {
-                          if (states.contains(WidgetState.hovered)) {
-                            return Colors.grey[600] ?? Colors.grey;
-                          }
-                          return Colors.grey[400] ?? Colors.grey;
-                        },
-                      ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _submitForm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF6F61),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text('キャンセル'),
                   ),
-                  const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _submitForm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6F61),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Text(
-                            '追加',
-                            style: TextStyle(color: Colors.white),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
-                  ),
-                ],
+                        )
+                      : const Text('追加'),
+                ),
               ),
             ],
           ),

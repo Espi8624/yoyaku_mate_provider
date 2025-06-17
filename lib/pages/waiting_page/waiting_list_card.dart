@@ -61,14 +61,30 @@ class _WaitingListCardState extends State<WaitingListCard> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          title: const Text(
-            '呼出',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '呼出',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF263238),
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 8),
               Text('予約番号: ${item.waitingId}'),
               Row(
                 children: [
@@ -99,48 +115,23 @@ class _WaitingListCardState extends State<WaitingListCard> {
             ],
           ),
           actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); // 모달 닫기
-                  },
-                  style: ButtonStyle(
-                    overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                      (Set<WidgetState> states) {
-                        if (states.contains(WidgetState.hovered)) {
-                          return Colors.grey[200];
-                        }
-                        return null;
-                      },
-                    ),
-                    foregroundColor: WidgetStateProperty.resolveWith<Color>(
-                      (Set<WidgetState> states) {
-                        if (states.contains(WidgetState.hovered)) {
-                          return Colors.grey[600] ?? Colors.grey;
-                        }
-                        return Colors.grey[400] ?? Colors.grey;
-                      },
-                    ),
-                  ),
-                  child: const Text('キャンセル'),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    // 추가할 로직이 있다면 여기에 작성
-                    Navigator.of(context).pop(); // 모달 닫기
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6F61),
-                  ),
-                  child: const Text(
-                    '呼出',
-                    style: TextStyle(color: Colors.white),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  // 추가할 로직이 있다면 여기에 작성
+                  Navigator.of(context).pop(); // 모달 닫기
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF6F61),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-              ],
+                child: const Text('呼出'),
+              ),
             ),
           ],
         );

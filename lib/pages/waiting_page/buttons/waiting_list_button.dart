@@ -39,35 +39,36 @@ class WaitingListButtons extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                title: const Text(
-                  '待機目録初期化',
-                  style: TextStyle(
-                      color: Color(0xFF263238), fontWeight: FontWeight.bold),
+                title: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "待機目録初期化",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF263238),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon:
+                              const Icon(Icons.close, color: Color(0xFF263238)),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                 ),
                 content: const Text('現在の待機目録を全て初期化しますか？\nこの操作は取り消しできません。'),
+                actionsAlignment: MainAxisAlignment.center, // actions를 가운데 정렬
                 actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ButtonStyle(
-                      overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                        (Set<WidgetState> states) {
-                          if (states.contains(WidgetState.hovered)) {
-                            return Colors.grey[200];
-                          }
-                          return null;
-                        },
-                      ),
-                      foregroundColor: WidgetStateProperty.resolveWith<Color>(
-                        (Set<WidgetState> states) {
-                          if (states.contains(WidgetState.hovered)) {
-                            return Colors.grey[600] ?? Colors.grey;
-                          }
-                          return Colors.grey[400] ?? Colors.grey;
-                        },
-                      ),
-                    ),
-                    child: const Text('キャンセル'),
-                  ),
                   TextButton(
                     onPressed: () async {
                       Navigator.of(context).pop();

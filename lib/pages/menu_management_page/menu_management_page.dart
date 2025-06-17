@@ -332,24 +332,28 @@ class _MenuManagementPageState extends State<MenuManagementPage>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                icon: const Icon(Icons.close, color: Color(0xFF263238)),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "メニュー削除",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
-            const Text(
-              "確認",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const SizedBox(height: 8),
           ],
         ),
-        content: const Text("本当にこのメニューを削除しますか？"),
+        content:
+            const Text("本当にこのメニューを削除しますか？", style: TextStyle(fontSize: 16)),
         actions: [
           Center(
             child: TextButton(
@@ -407,24 +411,28 @@ class _MenuManagementPageState extends State<MenuManagementPage>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                icon: const Icon(Icons.close, color: Color(0xFF263238)),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "メニュー全削除",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
-            const Text(
-              "確認",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const SizedBox(height: 8),
           ],
         ),
-        content: const Text("本当にこのメニューを削除しますか？"),
+        content:
+            const Text("本当にこのメニューを削除しますか？", style: TextStyle(fontSize: 16)),
         actions: [
           Center(
             child: TextButton(
@@ -478,24 +486,27 @@ class _MenuManagementPageState extends State<MenuManagementPage>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                icon: const Icon(Icons.close, color: Color(0xFF263238)),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "カテゴリー削除",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
-            const Text(
-              "確認",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const SizedBox(height: 8),
           ],
         ),
-        content: const Text("このカテゴリーを削除しますか？"),
+        content: const Text("このカテゴリーを削除しますか？", style: TextStyle(fontSize: 16)),
         actions: [
           Center(
             child: TextButton(

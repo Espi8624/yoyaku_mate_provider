@@ -52,57 +52,28 @@ class _AddMenuDialogState extends State<AddMenuDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: IconButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        widget.titleController.clear();
-                        widget.descriptionController.clear();
-                        widget.priceController.clear();
-                      },
-                      icon: const Icon(Icons.close, color: Color(0xFF263238)),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "メニュー追加",
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          widget.titleController.clear();
+                          widget.descriptionController.clear();
+                          widget.priceController.clear();
+                        },
+                        icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
-                  const Text(
-                    "メニュー追加",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: widget.titleController,
-                    decoration: const InputDecoration(
-                      labelText: "メニュー名",
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: widget.descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: "説明",
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: widget.priceController,
-                    decoration: const InputDecoration(
-                      labelText: "価格",
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   GestureDetector(
                     onTap: () async {
                       FilePickerResult? result =
@@ -143,7 +114,39 @@ class _AddMenuDialogState extends State<AddMenuDialog> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: widget.titleController,
+                    decoration: const InputDecoration(
+                      labelText: "メニュー名",
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: widget.descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: "説明",
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: widget.priceController,
+                    decoration: const InputDecoration(
+                      labelText: "価格 (¥)",
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
