@@ -6,8 +6,7 @@ class WaitingList {
   final String customerName;
   final int partySize;
   final String nationality;
-  final DateTime registrationTime;
-  final String contact;
+  final DateTime registrationTime;  final String? contact;
   final String status;
   final String? notes;
   final DateTime? calledTime;
@@ -22,28 +21,35 @@ class WaitingList {
     required this.partySize,
     required this.nationality,
     required this.registrationTime,
-    required this.contact,
+    this.contact,
     required this.status,
     this.notes,
     this.calledTime,
     this.entryTime,
   });
-
   factory WaitingList.fromJson(Map<String, dynamic> json) {
-    return WaitingList(
-      id: json['id'],
-      storeId: json['store_id'],
-      waitingId: json['waiting_id'],
-      queueNumber: json['queue_number'],
-      customerName: json['customer_name'],
-      partySize: json['party_size'],
-      nationality: json['nationality'],
-      registrationTime: DateTime.parse(json['registration_time']),
-      contact: json['contact'],
-      status: json['status'],
-      notes: json['notes'],
-      calledTime: json['called_time'] != null ? DateTime.parse(json['called_time']) : null,
-      entryTime: json['entry_time'] != null ? DateTime.parse(json['entry_time']) : null,
-    );
+    try {
+      return WaitingList(
+        id: json['id'],
+        storeId: json['store_id'] ?? '',
+        waitingId: json['waiting_id'] ?? '',
+        queueNumber: json['queue_number'] ?? 0,
+        customerName: json['customer_name'] ?? '',
+        partySize: json['party_size'] ?? 1,
+        nationality: json['nationality'] ?? '',
+        registrationTime: json['registration_time'] != null 
+            ? DateTime.parse(json['registration_time']) 
+            : DateTime.now(),
+        contact: json['contact'],
+        status: json['status'] ?? 'waiting',
+        notes: json['notes'],
+        calledTime: json['called_time'] != null ? DateTime.parse(json['called_time']) : null,
+        entryTime: json['entry_time'] != null ? DateTime.parse(json['entry_time']) : null,
+      );
+    } catch (e) {
+      print('Error parsing JSON: $e');
+      print('Received JSON: $json');
+      rethrow;
+    }
   }
 }

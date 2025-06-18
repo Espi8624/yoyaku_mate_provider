@@ -315,6 +315,43 @@ class WaitingService {
     }
   }
 
+  // 웨이팅 상태 업데이트 함수
+  Future<void> updateWaitingStatus({
+    required String waitingId,
+    required String status,
+    required String storeId,
+  }) async {
+    try {
+      print('Updating waiting status - waitingId: $waitingId, status: $status, storeId: $storeId');
+      
+      final response = await http.patch(
+        Uri.parse('$_baseUrl/api/waiting-list?action=status'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'store_id': storeId,
+          'waiting_id': waitingId,
+          'status': status,
+        }),
+      );
+
+      print('Server response status: ${response.statusCode}');
+      print('Server response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to update status: ${response.statusCode}');
+      }
+
+      // 강제로 다음 폴링에서 새로운 데이터를 가져오도록 함
+      _lastData = null;
+      if (_pollingTimer != null) {
+        _restartPolling(storeId);
+      }
+    } catch (e) {
+      print('Error in updateWaitingStatus: $e');
+      rethrow;
+    }
+  }
+
   // 대기 목록 초기화 함수
   Future<void> clearWaitingList({String storeId = 'store-001'}) async {
     try {
