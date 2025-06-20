@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:yoyaku_mate_provider/models/waiting_list.dart';
 import 'package:yoyaku_mate_provider/services/waiting_service.dart';
+import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 
 class WaitingListCard extends StatefulWidget {
   final List<WaitingList> waitingList;
@@ -127,22 +128,20 @@ class _WaitingListCardState extends State<WaitingListCard> {
                       status: 'notified',
                     );
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('お客様を呼び出しました'),
-                          backgroundColor: Color(0xFF263238),
-                        ),
+                      CustomSnackBar.show(
+                        context,
+                        message: 'お客様を呼び出しました',
+                        status: SnackBarStatus.success,
                       );
                       Navigator.of(context).pop();
                       widget.onRefresh(); // 리스트 새로고침
                     }
                   } catch (e) {
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('エラーが発生しました: $e'),
-                          backgroundColor: Colors.red,
-                        ),
+                      CustomSnackBar.show(
+                        context,
+                        message: 'エラーが発生しました: $e',
+                        status: SnackBarStatus.error,
                       );
                     }
                   }
@@ -437,22 +436,20 @@ class _WaitingListCardState extends State<WaitingListCard> {
                           status: 'completed',
                         );
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('入店処理が完了しました'),
-                              backgroundColor: Color(0xFF263238),
-                            ),
+                          CustomSnackBar.show(
+                            context,
+                            message: '入店処理が完了しました',
+                            status: SnackBarStatus.success,
                           );
                           Navigator.of(context).pop();
                           widget.onRefresh();
                         }
                       } catch (e) {
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('エラーが発生しました: $e'),
-                              backgroundColor: Colors.red,
-                            ),
+                          CustomSnackBar.show(
+                            context,
+                            message: 'エラーが発生しました: $e', // 하드코딩된 일본어 메시지
+                            status: SnackBarStatus.error,
                           );
                         }
                       }

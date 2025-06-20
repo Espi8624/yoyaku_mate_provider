@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/modals/add_waiting_dialog.dart';
 import 'package:yoyaku_mate_provider/services/waiting_service.dart';
+import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 
 class WaitingListButtons extends StatelessWidget {
   final VoidCallback onRefresh; // 새로고침 콜백 추가
@@ -78,21 +79,19 @@ class WaitingListButtons extends StatelessWidget {
 
                         // UI 업데이트 전에 context가 유효한지 확인
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('待機目録を初期化しました。'),
-                              backgroundColor: Colors.green,
-                            ),
+                          CustomSnackBar.show(
+                            context,
+                            message: '待機目録を初期化しました',
+                            status: SnackBarStatus.success,
                           );
                           onRefresh(); // 초기화 후 새로고침
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('待機目録の初期化に失敗しました。'),
-                              backgroundColor: Colors.red,
-                            ),
+                          CustomSnackBar.show(
+                            context,
+                            message: '待機目録の初期化に失敗しました',
+                            status: SnackBarStatus.error,
                           );
                         }
                       }

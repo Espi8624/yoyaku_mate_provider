@@ -3,6 +3,7 @@ import 'package:dropdown_search/dropdown_search.dart';
 import 'dart:convert';
 
 import 'package:yoyaku_mate_provider/services/waiting_service.dart';
+import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 
 class AddWaitingDialog extends StatefulWidget {
   final VoidCallback onAddSuccess;
@@ -64,11 +65,10 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
 
       widget.onAddSuccess();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('待機が正常に追加されました。'),
-          backgroundColor: Colors.green,
-        ),
+      CustomSnackBar.show(
+        context,
+        message: '待機が正常に追加されました',
+        status: SnackBarStatus.success,
       );
 
       Navigator.of(context).pop();

@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
+
 class QRCodeButton extends StatelessWidget {
   final String data;
 
@@ -51,12 +53,10 @@ class QRCodeButton extends StatelessWidget {
           final file = File(filePath);
           await file.writeAsBytes(pdfBytes);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('PDFが保存されました。ダウンロードファイルをご確認ください。'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ),
+          CustomSnackBar.show(
+            context,
+            message: 'PDFが保存されました。ダウンロードファイルをご確認ください',
+            status: SnackBarStatus.success,
           );
         }
       } else {
@@ -68,21 +68,18 @@ class QRCodeButton extends StatelessWidget {
           final file = File(filePath);
           await file.writeAsBytes(pdfBytes);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('PDFが保存されました。ダウンロードファイルをご確認ください。'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ),
+          CustomSnackBar.show(
+            context,
+            message: 'PDFが保存されました。ダウンロードファイルをご確認ください',
+            status: SnackBarStatus.success,
           );
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('PDF 생성 중 오류가 발생했습니다: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomSnackBar.show(
+        context,
+        message: 'PDF生成中にエラーが発生しました: $e',
+        status: SnackBarStatus.error,
       );
     }
   }
@@ -128,7 +125,8 @@ class QRCodeButton extends StatelessWidget {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.local_printshop_rounded, color: Colors.white),
+                          Icon(Icons.local_printshop_rounded,
+                              color: Colors.white),
                           SizedBox(width: 8),
                           Text('出力', style: TextStyle(color: Colors.white)),
                         ],

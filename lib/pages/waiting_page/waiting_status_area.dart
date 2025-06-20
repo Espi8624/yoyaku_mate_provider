@@ -1,11 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/models/waiting_list.dart';
 
 class WaitingStatusArea extends StatelessWidget {
   final int waitingCount;
-  const WaitingStatusArea({super.key, required this.waitingCount});
+  final List<WaitingList> waitingList;
+
+  const WaitingStatusArea({
+    super.key,
+    required this.waitingCount,
+    required this.waitingList,
+  });
+
+  String _formatLastEntryTime() {
+    final lastEntry = waitingList
+        .where((item) => item.entryTime != null)
+        .map((item) => item.entryTime!)
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    if (lastEntry.isEmpty) return "--:--";
+
+    // 오늘 날짜만 고려
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final lastEntryTime = lastEntry.firstWhere(
+      (time) => DateTime(time.year, time.month, time.day).isAtSameMomentAs(today),
+      orElse: () => DateTime(0),
+    );
+
+    if (lastEntryTime.year == 0) return "--:--";
+
+    // UTC를 JST로 변환
+    final jst = lastEntryTime.toUtc().add(const Duration(hours: 9));
+    return "${jst.hour.toString().padLeft(2, '0')}:${jst.minute.toString().padLeft(2, '0')}";
+  }
 
   @override
   Widget build(BuildContext context) {
+    final lastEntryTime = _formatLastEntryTime();
+
     return Container(
       padding: const EdgeInsets.all(24),
       margin: const EdgeInsets.only(bottom: 16),
@@ -34,17 +67,17 @@ class WaitingStatusArea extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           // 상태 정보
-          const Column(
+          Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _StatusInfo(label: "本日混雑予想時間帯", value: "13時"),
-              SizedBox(height: 8),
-              _StatusInfo(label: "直前入場時間", value: "12:40"),
-              SizedBox(height: 8),
-              _StatusInfo(label: "平均待機時間", value: "10分"),
-              SizedBox(height: 8),
-              _StatusInfo(label: "現在時間帯回転率", value: ""),
-              Align(
+              const _StatusInfo(label: "本日混雑予想時間帯", value: "13時"),
+              const SizedBox(height: 8),
+              _StatusInfo(label: "直前入場時間", value: lastEntryTime),
+              const SizedBox(height: 8),
+              const _StatusInfo(label: "平均待機時間", value: "10分"),
+              const SizedBox(height: 8),
+              const _StatusInfo(label: "現在時間帯回転率", value: ""),
+              const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
                   "今後追加される予定です",

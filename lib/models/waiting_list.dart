@@ -52,4 +52,23 @@ class WaitingList {
       rethrow;
     }
   }
+
+  // 오늘 마지막 입장 시간을 구하는 static 메서드
+  static DateTime? getLastEntryTime(List<WaitingList> waitingList) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    DateTime? lastEntryTime;
+    for (var item in waitingList) {
+      if (item.entryTime != null) {
+        final entryDate = DateTime(item.entryTime!.year, item.entryTime!.month, item.entryTime!.day);
+        if (entryDate.isAtSameMomentAs(today)) {
+          if (lastEntryTime == null || item.entryTime!.isAfter(lastEntryTime)) {
+            lastEntryTime = item.entryTime;
+          }
+        }
+      }
+    }
+    return lastEntryTime;
+  }
 }
