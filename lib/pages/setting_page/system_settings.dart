@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'setting_section_widgets.dart';
+import 'widget/setting_section_widgets.dart';
 
 class SystemSettings extends StatelessWidget {
   const SystemSettings({super.key});

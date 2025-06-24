@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'operation_settings.dart';
 import 'waiting_settings.dart';
 import 'system_settings.dart';
+import 'dialogs/business_hours_dialog.dart';
+import '../../models/store_settings.dart';
+import '../../services/store_settings_service.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -13,14 +16,47 @@ class SettingPage extends StatefulWidget {
 class _SettingPageState extends State<SettingPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  StoreSettings? _storeSettings;
+  final _service = StoreSettingsService(baseUrl: 'http://localhost:8080'); // 실제 주소로 변경
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {});
     });
+    _fetchSettings();
+  }
+
+  Future<void> _fetchSettings() async {
+    try {
+      final settings = await _service.fetchStoreSettings('store-001');
+      setState(() {
+        _storeSettings = settings;
+      });
+    } catch (e) {
+      // 에러 처리 (간단히 스낵바)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('설정 정보를 불러오지 못했습니다: $e')),
+      );
+    }
+  }
+
+  Future<void> _saveSettings(StoreSettings updated) async {
+    try {
+      await _service.updateStoreSettings(updated);
+      setState(() {
+        _storeSettings = updated;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('저장되었습니다.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('저장 실패: $e')),
+      );
+    }
   }
 
   @override
@@ -31,6 +67,9 @@ class _SettingPageState extends State<SettingPage>
 
   @override
   Widget build(BuildContext context) {
+    if (_storeSettings == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: Container(
@@ -77,10 +116,6 @@ class _SettingPageState extends State<SettingPage>
                 tabs: const [
                   Tab(text: '運営設定'),
                   Tab(text: '待機リスト設定'),
-                  // Tab(text: '売上設定'),
-                  // Tab(text: 'メニュー設定'),
-                  // Tab(text: '使用者及び権限設定'),
-                  Tab(text: 'システム設定'),
                 ],
               ),
             ),
@@ -91,8 +126,15 @@ class _SettingPageState extends State<SettingPage>
                 child: IndexedStack(
                   index: _tabController.index,
                   children: [
-                    OperationSettings(showBusinessHoursDialog: _showBusinessHoursDialog),
-                    const WaitingSettings(),
+                    OperationSettings(
+                      storeSettings: _storeSettings!,
+                      onChanged: _saveSettings,
+                      showBusinessHoursDialog: _showBusinessHoursDialog,
+                    ),
+                    WaitingSettings(
+                      storeSettings: _storeSettings!,
+                      onChanged: _saveSettings,
+                    ),
                     const SystemSettings(),
                   ],
                 ),
@@ -105,203 +147,90 @@ class _SettingPageState extends State<SettingPage>
   }
 
   void _showBusinessHoursDialog() async {
-    // 요일별 초기값
-    final List<String> days = ['月', '火', '水', '木', '金', '土', '日'];
-    Map<String, Map<String, int>> businessHours = {
-      for (var day in days)
-        day: {'startHour': 9, 'startMinute': 0, 'endHour': 22, 'endMinute': 0},
-    };
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: const Text(
-            '営業時間設定',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF263238)),
-          ),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 360),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (var day in days) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 30,
-                            child: Text(day, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          ),
-                          const SizedBox(width: 8),
-                          // 시작 시
-                          Expanded(
-                            child: DropdownButton<int>(
-                              value: businessHours[day]!['startHour'],
-                              items: List.generate(24, (index) => DropdownMenuItem(
-                                    value: index,
-                                    child: Text('$index時', style: const TextStyle(fontSize: 14, color: Color(0xFF263238))),
-                                  )),
-                              onChanged: (value) {
-                                setDialogState(() {
-                                  businessHours[day]!['startHour'] = value!;
-                                });
-                              },
-                              isExpanded: true,
-                              underline: Container(height: 1, color: const Color(0xFF263238)),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          // 시작 분
-                          Expanded(
-                            child: DropdownButton<int>(
-                              value: businessHours[day]!['startMinute'],
-                              items: List.generate(4, (index) => DropdownMenuItem(
-                                    value: index * 15,
-                                    child: Text('${index * 15}分', style: const TextStyle(fontSize: 14, color: Color(0xFF263238))),
-                                  )),
-                              onChanged: (value) {
-                                setDialogState(() {
-                                  businessHours[day]!['startMinute'] = value!;
-                                });
-                              },
-                              isExpanded: true,
-                              underline: Container(height: 1, color: const Color(0xFF263238)),
-                            ),
-                          ),
-                          const Text(' ~ '),
-                          // 종료 시
-                          Expanded(
-                            child: DropdownButton<int>(
-                              value: businessHours[day]!['endHour'],
-                              items: List.generate(24, (index) => DropdownMenuItem(
-                                    value: index,
-                                    child: Text('$index時', style: const TextStyle(fontSize: 14, color: Color(0xFF263238))),
-                                  )),
-                              onChanged: (value) {
-                                setDialogState(() {
-                                  businessHours[day]!['endHour'] = value!;
-                                });
-                              },
-                              isExpanded: true,
-                              underline: Container(height: 1, color: const Color(0xFF263238)),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          // 종료 분
-                          Expanded(
-                            child: DropdownButton<int>(
-                              value: businessHours[day]!['endMinute'],
-                              items: List.generate(4, (index) => DropdownMenuItem(
-                                    value: index * 15,
-                                    child: Text('${index * 15}分', style: const TextStyle(fontSize: 14, color: Color(0xFF263238))),
-                                  )),
-                              onChanged: (value) {
-                                setDialogState(() {
-                                  businessHours[day]!['endMinute'] = value!;
-                                });
-                              },
-                              isExpanded: true,
-                              underline: Container(height: 1, color: const Color(0xFF263238)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('取消', style: TextStyle(color: Color(0xFF263238))),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF6F61),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () {
-                // 유효성 검사: 각 요일별로 시작 < 종료인지 확인
-                bool isValid = true;
-                businessHours.forEach((day, times) {
-                  final startHour = times['startHour']!;
-                  final startMinute = times['startMinute']!;
-                  final endHour = times['endHour']!;
-                  final endMinute = times['endMinute']!;
-                  if (startHour > endHour || (startHour == endHour && startMinute >= endMinute)) {
-                    isValid = false;
-                  }
-                });
-                if (!isValid) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('閉店時間は開店時間より早くできません。')),
-                  );
-                  return;
-                }
-                // 저장 로직 (TODO: 실제 저장 구현)
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('営業時間が設定されました。')),
-                );
-              },
-              child: const Text('確認'),
-            ),
-          ],
-        ),
-      ),
+    // DB에서 실제 영업시간 값 사용
+    final days = ['월', '화', '수', '목', '금', '토', '일'];
+    // storeSettings의 operatingHours를 시간/분 형태로 변환
+    final Map<String, Map<String, int>> businessHours = {};
+    final dayKeys = [
+      'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+    ];
+    for (int i = 0; i < days.length; i++) {
+      final key = dayKeys[i];
+      final start = _storeSettings!.operatingHours[key]?['start'] ?? '09:00';
+      final end = _storeSettings!.operatingHours[key]?['end'] ?? '22:00';
+      final startParts = start.split(':');
+      final endParts = end.split(':');
+      businessHours[days[i]] = {
+        'startHour': int.tryParse(startParts[0]) ?? 9,
+        'startMinute': int.tryParse(startParts[1]) ?? 0,
+        'endHour': int.tryParse(endParts[0]) ?? 22,
+        'endMinute': int.tryParse(endParts[1]) ?? 0,
+      };
+    }
+    await showBusinessHoursDialog(
+      context,
+      businessHours,
+      days,
+      onConfirm: () {
+        // 다이얼로그에서 수정된 businessHours를 StoreSettings에 반영
+        final newOperatingHours = <String, Map<String, String>>{};
+        for (int i = 0; i < days.length; i++) {
+          final key = dayKeys[i];
+          final bh = businessHours[days[i]]!;
+          newOperatingHours[key] = {
+            'start':
+                '${bh['startHour'].toString().padLeft(2, '0')}:${bh['startMinute'].toString().padLeft(2, '0')}',
+            'end':
+                '${bh['endHour'].toString().padLeft(2, '0')}:${bh['endMinute'].toString().padLeft(2, '0')}',
+          };
+        }
+        final updated = _storeSettings!.copyWith(operatingHours: newOperatingHours);
+        _saveSettings(updated);
+      },
     );
   }
 
-  // 섹션 제목 위젯
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF263238),
-        ),
-      ),
-    );
-  }
+  // // 섹션 제목 위젯
+  // Widget _buildSectionTitle(String title) {
+  //   return Padding(
+  //     padding: const EdgeInsets.all(16.0),
+  //     child: Text(
+  //       title,
+  //       style: const TextStyle(
+  //         fontSize: 20,
+  //         fontWeight: FontWeight.bold,
+  //         color: Color(0xFF263238),
+  //       ),
+  //     ),
+  //   );
+  // }
 
-  // 설정 항목 위젯
-  Widget _buildSettingItem(String title, String subtitle, Widget? trailing,
-      {VoidCallback? onTap}) {
-    return ListTile(
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 16, color: Color(0xFF263238)),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(fontSize: 13, color: Colors.grey),
-      ),
-      trailing: trailing,
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    );
-  }
+  // // 설정 항목 위젯
+  // Widget _buildSettingItem(String title, String subtitle, Widget? trailing,
+  //     {VoidCallback? onTap}) {
+  //   return ListTile(
+  //     title: Text(
+  //       title,
+  //       style: const TextStyle(fontSize: 16, color: Color(0xFF263238)),
+  //     ),
+  //     subtitle: Text(
+  //       subtitle,
+  //       style: const TextStyle(fontSize: 13, color: Colors.grey),
+  //     ),
+  //     trailing: trailing,
+  //     onTap: onTap,
+  //     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  //   );
+  // }
 
-  // 섹션 박스 위젯
-  Widget _sectionBox({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      decoration: _boxDecoration(),
-      child: child,
-    );
-  }
+  // // 섹션 박스 위젯
+  // Widget _sectionBox({required Widget child}) {
+  //   return Container(
+  //     width: double.infinity,
+  //     decoration: _boxDecoration(),
+  //     child: child,
+  //   );
+  // }
 
   // 박스 데코레이션
   BoxDecoration _boxDecoration() {
