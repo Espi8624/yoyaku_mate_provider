@@ -165,7 +165,7 @@ class _WaitingPageState extends State<WaitingPage> {
                   const SizedBox(height: 10),
                   Expanded(
                     child: WaitingStatusArea(
-                      waitingCount: _waitingList.length,
+                      waitingCount: _waitingList.where((item) => item.status == 'waiting' || item.status == 'notified').length,
                       waitingList: _waitingList,
                     ),
                   ),

@@ -7,7 +7,7 @@ import 'package:yoyaku_mate_provider/pages/sales_entry_page.dart';
 import 'package:yoyaku_mate_provider/pages/sales_overview_page.dart';
 import 'package:yoyaku_mate_provider/pages/shop_status_page.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_page.dart';
-import 'package:yoyaku_mate_provider/pages/setting_page.dart';
+import 'package:yoyaku_mate_provider/pages/setting_page/setting_page.dart';
 
 void main() {
   runApp(const MyApp());

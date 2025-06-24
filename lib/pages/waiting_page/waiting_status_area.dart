@@ -74,7 +74,7 @@ class WaitingStatusArea extends StatelessWidget {
               const SizedBox(height: 8),
               _StatusInfo(label: "直前入場時間", value: lastEntryTime),
               const SizedBox(height: 8),
-              const _StatusInfo(label: "平均待機時間", value: "10分"),
+              const _StatusInfo(label: "予想待機時間", value: "10分"),
               const SizedBox(height: 8),
               const _StatusInfo(label: "現在時間帯回転率", value: ""),
               const Align(
