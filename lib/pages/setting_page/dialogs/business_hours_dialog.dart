@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../widgets/custom_snack_bar.dart';
+
 Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<String, int>> businessHours, List<String> days, {VoidCallback? onConfirm}) async {
   await showDialog(
     context: context,
@@ -131,15 +133,25 @@ Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<Strin
                 }
               });
               if (!isValid) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('閉店時間は開店時間より早くできません。')),
+                // ScaffoldMessenger.of(context).showSnackBar(
+                //   const SnackBar(content: Text('閉店時間は開店時間より早くできません。')),
+                // );
+                CustomSnackBar.show(
+                  context,
+                  message: '閉店時間は開店時間より早くできません',
+                  status: SnackBarStatus.error,
                 );
                 return;
               }
               Navigator.pop(context);
               if (onConfirm != null) onConfirm();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('営業時間が設定されました。')),
+              // ScaffoldMessenger.of(context).showSnackBar(
+              //   const SnackBar(content: Text('営業時間が設定されました。')),
+              // );
+              CustomSnackBar.show(
+                context,
+                message: '営業時間が設定されました',
+                status: SnackBarStatus.info,
               );
             },
             child: const Text('確認'),

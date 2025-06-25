@@ -5,6 +5,7 @@ import 'system_settings.dart';
 import 'dialogs/business_hours_dialog.dart';
 import '../../models/store_settings.dart';
 import '../../services/store_settings_service.dart';
+import '../../widgets/custom_snack_bar.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -36,9 +37,10 @@ class _SettingPageState extends State<SettingPage>
         _storeSettings = settings;
       });
     } catch (e) {
-      // 에러 처리 (간단히 스낵바)
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('설정 정보를 불러오지 못했습니다: $e')),
+      CustomSnackBar.show(
+        context,
+        message: '設定情報を呼出できませんでした: $e',
+        status: SnackBarStatus.error,
       );
     }
   }
@@ -49,12 +51,16 @@ class _SettingPageState extends State<SettingPage>
       setState(() {
         _storeSettings = updated;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('저장되었습니다.')),
-      );
+      // CustomSnackBar.show(
+      //   context,
+      //   message: '設定情報を保存しました',
+      //   status: SnackBarStatus.success,
+      // );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('저장 실패: $e')),
+      CustomSnackBar.show(
+        context,
+        message: '設定情報を保存できませんでした: $e',
+        status: SnackBarStatus.error,
       );
     }
   }
@@ -148,7 +154,7 @@ class _SettingPageState extends State<SettingPage>
 
   void _showBusinessHoursDialog() async {
     // DB에서 실제 영업시간 값 사용
-    final days = ['월', '화', '수', '목', '금', '토', '일'];
+    final days = ['月', '火', '水', '木', '金', '土', '日'];
     // storeSettings의 operatingHours를 시간/분 형태로 변환
     final Map<String, Map<String, int>> businessHours = {};
     final dayKeys = [

@@ -9,20 +9,20 @@ class CustomSnackBar {
     switch (status) {
       case SnackBarStatus.success:
         return isDarkMode
-            ? Colors.green.shade700.withOpacity(0.3)
-            : Colors.green.shade200.withOpacity(0.3);
+            ? Colors.green.shade800.withOpacity(0.85)
+            : Colors.green.shade100.withOpacity(0.9);
       case SnackBarStatus.error:
         return isDarkMode
-            ? Colors.red.shade700.withOpacity(0.3)
-            : Colors.red.shade200.withOpacity(0.3);
+            ? Colors.red.shade800.withOpacity(0.85)
+            : Colors.red.shade100.withOpacity(0.9);
       case SnackBarStatus.warning:
         return isDarkMode
-            ? Colors.orange.shade700.withOpacity(0.3)
-            : Colors.orange.shade200.withOpacity(0.3);
+            ? Colors.orange.shade800.withOpacity(0.85)
+            : Colors.orange.shade100.withOpacity(0.9);
       case SnackBarStatus.info:
         return isDarkMode
-            ? Colors.blue.shade700.withOpacity(0.3)
-            : Colors.blue.shade200.withOpacity(0.3);
+            ? const Color(0xFF263238).withOpacity(0.85)
+            : const Color(0xFF263238).withOpacity(0.9);
     }
   }
 
@@ -30,32 +30,32 @@ class CustomSnackBar {
     final isDarkMode = theme.brightness == Brightness.dark;
     switch (status) {
       case SnackBarStatus.success:
-        return isDarkMode ? Colors.green.shade100 : Colors.green.shade900;
+        return isDarkMode ? Colors.green.shade50 : Colors.green.shade900;
       case SnackBarStatus.error:
-        return isDarkMode ? Colors.red.shade100 : Colors.red.shade900;
+        return isDarkMode ? Colors.red.shade50 : Colors.red.shade900;
       case SnackBarStatus.warning:
-        return isDarkMode ? Colors.orange.shade100 : Colors.orange.shade900;
+        return isDarkMode ? Colors.orange.shade50 : Colors.orange.shade900;
       case SnackBarStatus.info:
-        return isDarkMode ? Colors.blue.shade100 : Colors.blue.shade900;
+        return isDarkMode ? Colors.white : Colors.grey.shade50;
     }
   }
 
-  static IconData? _getIcon(SnackBarStatus status) {
+  static IconData _getIcon(SnackBarStatus status) {
     switch (status) {
       case SnackBarStatus.success:
-        return Icons.check_circle_outline;
+        return Icons.check_circle_rounded;
       case SnackBarStatus.error:
-        return Icons.error_outline;
+        return Icons.error_rounded;
       case SnackBarStatus.warning:
-        return Icons.warning_amber_outlined;
+        return Icons.warning_rounded;
       case SnackBarStatus.info:
-        return Icons.info_outline;
+        return Icons.info_rounded;
     }
   }
 
   static void show(
     BuildContext context, {
-    required String message, // messageKey 대신 message로 변경, 하드코딩된 문자열 사용
+    required String message,
     required SnackBarStatus status,
     Duration duration = const Duration(seconds: 3),
     SnackBarAction? action,
@@ -69,6 +69,9 @@ class CustomSnackBar {
         case SnackBarStatus.error:
           HapticFeedback.heavyImpact();
           break;
+        case SnackBarStatus.warning:
+          HapticFeedback.mediumImpact();
+          break;
         default:
           HapticFeedback.lightImpact();
       }
@@ -78,27 +81,35 @@ class CustomSnackBar {
       // TODO: flutter_tts 패키지로 음성 피드백 구현 가능
     }
 
+    ScaffoldMessenger.of(context).removeCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Semantics(
-          label: '${status.toString().split('.').last} SnackBar: $message',
+          label: '${status.toString().split('.').last}: $message',
           child: Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             decoration: BoxDecoration(
               color: _getBackgroundColor(status, theme),
-              borderRadius: BorderRadius.circular(16.0),
+              borderRadius: BorderRadius.circular(12.0),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  spreadRadius: 1,
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.black.withOpacity(0.2)
+                      : Colors.grey.shade400.withOpacity(0.2),
+                  blurRadius: 8.0,
+                  spreadRadius: 1.0,
+                  offset: const Offset(2, 2),
+                ),
+                BoxShadow(
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.white.withOpacity(0.5),
+                  blurRadius: 8.0,
+                  spreadRadius: 1.0,
+                  offset: const Offset(-2, -2),
                 ),
               ],
-              border: Border.all(
-                color: _getBackgroundColor(status, theme).withOpacity(0.3),
-                width: 1.5,
-              ),
             ),
             child: Row(
               children: [
@@ -111,11 +122,10 @@ class CustomSnackBar {
                 Expanded(
                   child: Text(
                     message,
-                    style: TextStyle(
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       color: _getTextColor(status, theme),
-                      fontSize: 16.0,
                       fontWeight: FontWeight.w600,
-                      fontFamily: 'Roboto',
+                      fontSize: 16.0,
                     ),
                     textScaler: const TextScaler.linear(1.0),
                   ),
@@ -126,12 +136,12 @@ class CustomSnackBar {
         ),
         backgroundColor: Colors.transparent,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16.0),
+        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
         elevation: 0,
         duration: duration,
         animation: CurvedAnimation(
           parent: kAlwaysCompleteAnimation,
-          curve: Curves.easeInOutCubic,
+          curve: Curves.elasticOut,
         ),
         action: action,
       ),

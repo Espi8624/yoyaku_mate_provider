@@ -49,28 +49,27 @@ class OperationSettings extends StatelessWidget {
   String _buildBusinessHoursSummary(Map<String, Map<String, String>> hours) {
     // 예시: 월~금 09:00-18:00, 토/일 10:00-15:00
     final weekday = hours['monday']?['start'] == hours['friday']?['start'] && hours['monday']?['end'] == hours['friday']?['end']
-      ? '월~금 ${hours['monday']?['start'] ?? ''}-${hours['monday']?['end'] ?? ''}' : '';
+      ? '月~金 ${hours['monday']?['start'] ?? ''}-${hours['monday']?['end'] ?? ''}' : '';
     final weekend = hours['saturday'] != null && hours['sunday'] != null
-      ? '토/일 ${hours['saturday']?['start'] ?? ''}-${hours['saturday']?['end'] ?? ''}' : '';
+      ? '土/日 ${hours['saturday']?['start'] ?? ''}-${hours['saturday']?['end'] ?? ''}' : '';
     return [weekday, weekend].where((s) => s.isNotEmpty).join(', ');
   }
 
   String _buildClosedDaysSummary(ClosedDays closedDays) {
     final List<String> parts = [];
     if (closedDays.regularWeekly.isNotEmpty) {
-      parts.add('정기휴무: ${closedDays.regularWeekly.join(", ")}');
+      parts.add('定期休業日: ${closedDays.regularWeekly.join(", ")}');
     }
     if (closedDays.specificDates.isNotEmpty) {
-      parts.add('특정일: ${closedDays.specificDates.join(", ")}');
+      parts.add('特定休業日: ${closedDays.specificDates.join(", ")}');
     }
     if (closedDays.holidayClosure) {
-      parts.add('공휴일 휴무');
+      parts.add('祝日休業');
     }
-    return parts.isEmpty ? '없음' : parts.join(' / ');
+    return parts.isEmpty ? 'なし' : parts.join(' / ');
   }
 
   void _showHolidayDialog(BuildContext context) async {
-    // DB 값 반영: 실제 storeSettings.closedDays 값으로 초기화
     final closedDays = storeSettings.closedDays;
     bool publicHolidayEnabled = closedDays.holidayClosure;
     DateTime? selectedDate;
@@ -119,7 +118,24 @@ class OperationSettings extends StatelessWidget {
       tempWeekday: tempWeekday,
       tempMonthDay: tempMonthDay,
       now: now,
-      onConfirm: () {},
+      onConfirm: ({
+        required bool publicHolidayEnabled,
+        required List<String> selectedWeekdays,
+        required List<int> selectedMonthDays,
+        required List<int> selectedSpecialDays,
+      }) {
+        final updatedClosedDays = ClosedDays(
+          specificDates: selectedSpecialDays.map((d) {
+            final date = DateTime(now.year, now.month, d);
+            return date.toIso8601String().split('T').first;
+          }).toList(),
+          regularWeekly: List.from(selectedWeekdays),
+          regularMonthly: selectedMonthDays.map((d) => d.toString()).toList(),
+          holidayClosure: publicHolidayEnabled,
+        );
+        final updated = storeSettings.copyWith(closedDays: updatedClosedDays);
+        onChanged(updated);
+      },
     );
   }
 }
