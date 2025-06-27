@@ -12,7 +12,9 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
   // 개인 프로필 정보
   Map<String, dynamic> personalProfile = {
     'name': 'テスト太郎',
+    'user_role': 'manager', // 'manager' 또는 'staff'
     'email': 'test@example.com',
+    'password': 'password123',
     'phone': '090-1234-5678',
     'avatar': null,
   };
@@ -70,6 +72,18 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
                   ),
                 ),
               ),
+              // 권한 표시
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text(
+                  personalProfile['user_role'] == 'manager' ? '管理者' : '職員',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -85,6 +99,13 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
                 personalProfile['email'],
                 const Icon(Icons.chevron_right),
                 onTap: () => _showEditDialog('email', 'メールアドレス'),
+              ),
+              // 비밀번호 변경
+              ProfileUtils.buildSettingItem(
+                'パスワード',
+                '********',
+                const Icon(Icons.chevron_right),
+                onTap: _showPasswordChangeDialog,
               ),
               ProfileUtils.buildSettingItem(
                 '電話番号',
@@ -102,7 +123,7 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
   void _showEditDialog(String key, String title) async {
     TextEditingController controller =
         TextEditingController(text: personalProfile[key]);
-    
+
     await ProfileUtils.showEditDialog(
       context: context,
       title: title,
@@ -110,6 +131,21 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
       onSave: (value) {
         setState(() {
           personalProfile[key] = value;
+        });
+      },
+    );
+  }
+
+  void _showPasswordChangeDialog() async {
+    TextEditingController controller = TextEditingController();
+    await ProfileUtils.showEditDialog(
+      context: context,
+      title: 'パスワード変更',
+      controller: controller,
+      isPassword: true,
+      onSave: (value) {
+        setState(() {
+          personalProfile['password'] = value;
         });
       },
     );

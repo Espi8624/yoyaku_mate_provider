@@ -59,6 +59,7 @@ class ProfileUtils {
     required String title,
     required TextEditingController controller,
     required Function(String) onSave,
+    bool isPassword = false,
   }) async {
     await showDialog(
       context: context,
@@ -90,6 +91,7 @@ class ProfileUtils {
         ),
         content: TextField(
           controller: controller,
+          obscureText: isPassword,
           decoration: InputDecoration(
             hintText: title,
             border: const OutlineInputBorder(),
