@@ -1,26 +1,81 @@
 import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
 import '../utils/profile_utils.dart';
 
 class PersonalProfileTab extends StatefulWidget {
-  const PersonalProfileTab({super.key});
+  final ProviderProfileService profileService;
+  final String userId;
+  const PersonalProfileTab({super.key, required this.profileService, required this.userId});
 
   @override
   _PersonalProfileTabState createState() => _PersonalProfileTabState();
 }
 
 class _PersonalProfileTabState extends State<PersonalProfileTab> {
-  // 개인 프로필 정보
-  Map<String, dynamic> personalProfile = {
-    'name': 'テスト太郎',
-    'user_role': 'manager', // 'manager' 또는 'staff'
-    'email': 'test@example.com',
-    'password': 'password123',
-    'phone': '090-1234-5678',
-    'avatar': null,
-  };
+  Map<String, dynamic>? personalProfile;
+  bool isLoading = true;
+  String? errorMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() {
+      isLoading = true;
+      errorMsg = null;
+    });
+    try {
+      final data = await widget.profileService.fetchUserProfile(widget.userId);
+      // 백엔드 응답 필드명을 내부에서 매핑
+      setState(() {
+        personalProfile = {
+          'name': data['user_name'] ?? '',
+          'user_role': data['role'] ?? '',
+          'email': data['email'] ?? '',
+          'phone': data['phone'] ?? '',
+          'avatar': null, // 필요시 data['Avatar'] 등으로 확장
+        };
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMsg = 'プロフィール情報の読み込みに失敗しました。';
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateProfileField(String key, String value) async {
+    if (personalProfile == null) return;
+    final updated = Map<String, dynamic>.from(personalProfile!);
+    updated[key] = value;
+    setState(() { isLoading = true; });
+    try {
+      await widget.profileService.updateUserProfile(widget.userId, {key: value});
+      setState(() {
+        personalProfile = updated;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() { isLoading = false; });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('プロフィールの更新に失敗しました。')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (errorMsg != null) {
+      return Center(child: Text(errorMsg!));
+    }
+    final profile = personalProfile!;
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       children: [
@@ -36,17 +91,17 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
                 child: CircleAvatar(
                   radius: 40,
                   backgroundColor: Colors.grey[300],
-                  backgroundImage: personalProfile['avatar'] != null
-                      ? NetworkImage(personalProfile['avatar'])
+                  backgroundImage: profile['avatar'] != null
+                      ? NetworkImage(profile['avatar'])
                       : null,
-                  child: personalProfile['avatar'] == null
+                  child: profile['avatar'] == null
                       ? const Icon(Icons.person, color: Colors.white, size: 30)
                       : null,
                 ),
               ),
               const SizedBox(height: 12),
               GestureDetector(
-                onTap: () => _showEditDialog('name', '名前'),
+                onTap: () => _showEditDialog('name', 'お名前', profile['name']),
                 child: Center(
                   child: IntrinsicWidth(
                     child: Row(
@@ -54,7 +109,7 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          personalProfile['name'],
+                          profile['name'] ?? '',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -72,11 +127,10 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
                   ),
                 ),
               ),
-              // 권한 표시
               Padding(
                 padding: const EdgeInsets.only(top: 4.0),
                 child: Text(
-                  personalProfile['user_role'] == 'manager' ? '管理者' : '職員',
+                  profile['user_role'] == 'manager' ? '管理者' : '職員',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Colors.grey,
@@ -88,19 +142,17 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
           ),
         ),
         const SizedBox(height: 32),
-
         ProfileUtils.buildSectionTitle('基本情報'),
         ProfileUtils.sectionBox(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ProfileUtils.buildSettingItem(
-                'メールアドレス',
-                personalProfile['email'],
+                'E-mail',
+                profile['email'] ?? '',
                 const Icon(Icons.chevron_right),
-                onTap: () => _showEditDialog('email', 'メールアドレス'),
+                onTap: () => _showEditDialog('email', 'E-mail', profile['email']),
               ),
-              // 비밀번호 변경
               ProfileUtils.buildSettingItem(
                 'パスワード',
                 '********',
@@ -109,9 +161,9 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
               ),
               ProfileUtils.buildSettingItem(
                 '電話番号',
-                personalProfile['phone'],
+                profile['phone'] ?? '',
                 const Icon(Icons.chevron_right),
-                onTap: () => _showEditDialog('phone', '電話番号'),
+                onTap: () => _showEditDialog('phone', '電話番号', profile['phone']),
               ),
             ],
           ),
@@ -120,18 +172,14 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
     );
   }
 
-  void _showEditDialog(String key, String title) async {
-    TextEditingController controller =
-        TextEditingController(text: personalProfile[key]);
-
+  void _showEditDialog(String key, String title, String? currentValue) async {
+    TextEditingController controller = TextEditingController(text: currentValue ?? '');
     await ProfileUtils.showEditDialog(
       context: context,
       title: title,
       controller: controller,
       onSave: (value) {
-        setState(() {
-          personalProfile[key] = value;
-        });
+        _updateProfileField(key, value);
       },
     );
   }
@@ -144,9 +192,7 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
       controller: controller,
       isPassword: true,
       onSave: (value) {
-        setState(() {
-          personalProfile['password'] = value;
-        });
+        _updateProfileField('password', value);
       },
     );
   }

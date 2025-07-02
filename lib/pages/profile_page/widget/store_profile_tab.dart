@@ -1,25 +1,74 @@
 import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
 import '../utils/profile_utils.dart';
 
 class StoreProfileTab extends StatefulWidget {
-  const StoreProfileTab({super.key});
+  final ProviderProfileService profileService;
+  final String storeId;
+  const StoreProfileTab({super.key, required this.profileService, required this.storeId});
 
   @override
   _StoreProfileTabState createState() => _StoreProfileTabState();
 }
 
 class _StoreProfileTabState extends State<StoreProfileTab> {
-  // 가게 프로필 정보
-  Map<String, dynamic> storeProfile = {
-    'name': '川崎食堂',
-    'address': '川崎市中原区新丸子町1-1',
-    'phone': '02-1234-5678',
-    'logo': null,
-    'businessId': '',
-  };
+  Map<String, dynamic>? storeProfile;
+  bool isLoading = true;
+  String? errorMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() {
+      isLoading = true;
+      errorMsg = null;
+    });
+    try {
+      final data = await widget.profileService.fetchStoreProfile(widget.storeId);
+      setState(() {
+        storeProfile = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMsg = '店舗情報の読み込みに失敗しました。';
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateProfileField(String key, String value) async {
+    if (storeProfile == null) return;
+    final updated = Map<String, dynamic>.from(storeProfile!);
+    updated[key] = value;
+    setState(() { isLoading = true; });
+    try {
+      await widget.profileService.updateStoreProfile(widget.storeId, {key: value});
+      setState(() {
+        storeProfile = updated;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() { isLoading = false; });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('店舗情報の更新に失敗しました。')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (errorMsg != null) {
+      return Center(child: Text(errorMsg!));
+    }
+    final profile = storeProfile!;
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       children: [
@@ -35,17 +84,17 @@ class _StoreProfileTabState extends State<StoreProfileTab> {
                 child: CircleAvatar(
                   radius: 40,
                   backgroundColor: Colors.grey[300],
-                  backgroundImage: storeProfile['logo'] != null
-                      ? NetworkImage(storeProfile['logo'])
+                  backgroundImage: profile['logo'] != null
+                      ? NetworkImage(profile['logo'])
                       : null,
-                  child: storeProfile['logo'] == null
+                  child: profile['logo'] == null
                       ? const Icon(Icons.store, color: Colors.white, size: 30)
                       : null,
                 ),
               ),
               const SizedBox(height: 12),
               GestureDetector(
-                onTap: () => _showEditDialog('name', '店名'),
+                onTap: () => _showEditDialog('store_name', '店舗名', profile['store_name']),
                 child: Center(
                   child: IntrinsicWidth(
                     child: Row(
@@ -53,7 +102,7 @@ class _StoreProfileTabState extends State<StoreProfileTab> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          storeProfile['name'],
+                          profile['store_name'] ?? '',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -75,7 +124,6 @@ class _StoreProfileTabState extends State<StoreProfileTab> {
           ),
         ),
         const SizedBox(height: 32),
-
         ProfileUtils.buildSectionTitle('基本情報'),
         ProfileUtils.sectionBox(
           child: Column(
@@ -83,34 +131,30 @@ class _StoreProfileTabState extends State<StoreProfileTab> {
             children: [
               ProfileUtils.buildSettingItem(
                 '住所',
-                storeProfile['address'],
+                profile['address'] ?? '',
                 const Icon(Icons.chevron_right),
-                onTap: () => _showEditDialog('address', '住所'),
+                onTap: () => _showEditDialog('address', '住所', profile['address']),
               ),
               ProfileUtils.buildSettingItem(
                 '電話番号',
-                storeProfile['phone'],
+                profile['phone'] ?? '',
                 const Icon(Icons.chevron_right),
-                onTap: () => _showEditDialog('phone', '電話番号'),
+                onTap: () => _showEditDialog('phone', '電話番号', profile['phone']),
               ),
             ],
           ),
         ),
-
         const SizedBox(height: 24),
-
         ProfileUtils.buildSectionTitle('事業者情報'),
         ProfileUtils.sectionBox(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ProfileUtils.buildSettingItem(
-                '事業者登録番号',
-                (storeProfile['businessId'] ?? '').isEmpty
-                    ? '未登録'
-                    : storeProfile['businessId'],
+                '事業者登録情報',
+                (profile['biz_number'] ?? '').isEmpty ? '未登録' : profile['biz_number'],
                 const Icon(Icons.chevron_right),
-                onTap: () => _showEditDialog('businessId', '事業者登録番号'),
+                onTap: () => _showEditDialog('biz_number', '事業者登録番号', profile['biz_number']),
               ),
             ],
           ),
@@ -119,18 +163,14 @@ class _StoreProfileTabState extends State<StoreProfileTab> {
     );
   }
 
-  void _showEditDialog(String key, String title) async {
-    TextEditingController controller =
-        TextEditingController(text: storeProfile[key]);
-    
+  void _showEditDialog(String key, String title, String? currentValue) async {
+    TextEditingController controller = TextEditingController(text: currentValue ?? '');
     await ProfileUtils.showEditDialog(
       context: context,
       title: title,
       controller: controller,
       onSave: (value) {
-        setState(() {
-          storeProfile[key] = value;
-        });
+        _updateProfileField(key, value);
       },
     );
   }
