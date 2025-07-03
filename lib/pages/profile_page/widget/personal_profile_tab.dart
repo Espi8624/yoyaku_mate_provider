@@ -5,7 +5,8 @@ import '../utils/profile_utils.dart';
 class PersonalProfileTab extends StatefulWidget {
   final ProviderProfileService profileService;
   final String userId;
-  const PersonalProfileTab({super.key, required this.profileService, required this.userId});
+  final VoidCallback? onProfileChanged;
+  const PersonalProfileTab({super.key, required this.profileService, required this.userId, this.onProfileChanged});
 
   @override
   _PersonalProfileTabState createState() => _PersonalProfileTabState();
@@ -33,7 +34,7 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
       setState(() {
         personalProfile = {
           'name': data['user_name'] ?? '',
-          'user_role': data['role'] ?? '',
+          'role': data['role'] ?? '',
           'email': data['email'] ?? '',
           'phone': data['phone'] ?? '',
           'avatar': null, // 필요시 data['Avatar'] 등으로 확장
@@ -50,15 +51,11 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
 
   Future<void> _updateProfileField(String key, String value) async {
     if (personalProfile == null) return;
-    final updated = Map<String, dynamic>.from(personalProfile!);
-    updated[key] = value;
     setState(() { isLoading = true; });
     try {
       await widget.profileService.updateUserProfile(widget.userId, {key: value});
-      setState(() {
-        personalProfile = updated;
-        isLoading = false;
-      });
+      await _loadProfile();
+      if (widget.onProfileChanged != null) widget.onProfileChanged!();
     } catch (e) {
       setState(() { isLoading = false; });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -101,7 +98,7 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
               ),
               const SizedBox(height: 12),
               GestureDetector(
-                onTap: () => _showEditDialog('name', 'お名前', profile['name']),
+                onTap: () => _showEditDialog('user_name', 'お名前', profile['name']),
                 child: Center(
                   child: IntrinsicWidth(
                     child: Row(
@@ -130,7 +127,7 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
               Padding(
                 padding: const EdgeInsets.only(top: 4.0),
                 child: Text(
-                  profile['user_role'] == 'manager' ? '管理者' : '職員',
+                  profile['role'] == 'manager' ? '管理者' : '職員',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Colors.grey,

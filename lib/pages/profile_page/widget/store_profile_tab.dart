@@ -5,7 +5,8 @@ import '../utils/profile_utils.dart';
 class StoreProfileTab extends StatefulWidget {
   final ProviderProfileService profileService;
   final String storeId;
-  const StoreProfileTab({super.key, required this.profileService, required this.storeId});
+  final VoidCallback? onProfileChanged;
+  const StoreProfileTab({super.key, required this.profileService, required this.storeId, this.onProfileChanged});
 
   @override
   _StoreProfileTabState createState() => _StoreProfileTabState();
@@ -43,15 +44,11 @@ class _StoreProfileTabState extends State<StoreProfileTab> {
 
   Future<void> _updateProfileField(String key, String value) async {
     if (storeProfile == null) return;
-    final updated = Map<String, dynamic>.from(storeProfile!);
-    updated[key] = value;
     setState(() { isLoading = true; });
     try {
       await widget.profileService.updateStoreProfile(widget.storeId, {key: value});
-      setState(() {
-        storeProfile = updated;
-        isLoading = false;
-      });
+      await _loadProfile();
+      if (widget.onProfileChanged != null) widget.onProfileChanged!();
     } catch (e) {
       setState(() { isLoading = false; });
       ScaffoldMessenger.of(context).showSnackBar(

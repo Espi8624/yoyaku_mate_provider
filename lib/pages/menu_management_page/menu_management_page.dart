@@ -322,7 +322,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
   void _showDeleteMenuDialog(int categoryIndex, int menuIndex) {
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true, // 바깥 클릭 시 닫힘 적용
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
@@ -401,7 +401,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
   void _showDeleteALLMenuDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true, // 바깥 클릭 시 닫힘 적용
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
@@ -476,7 +476,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
   void _showDeleteCategoryDialog(int index) {
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true, // 바깥 클릭 시 닫힘 적용
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(

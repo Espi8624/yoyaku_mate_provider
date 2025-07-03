@@ -116,15 +116,15 @@ class SideNavigationBar extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: userRole == "管理者"
+                                    color: userRole == "manager"
                                         ? const Color(0xFFEF5350)
                                         : const Color(0xFF42A5F5),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
-                                    userRole,
+                                    userRole == "manager" ? "管理者" : "職員",
                                     style: const TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.white,
                                     ),
@@ -185,21 +185,21 @@ class SideNavigationBar extends StatelessWidget {
                         right: 0,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                              horizontal: 8, vertical: 8),
                           decoration: BoxDecoration(
-                            color: userRole == "管理者"
+                            color: userRole == "manager"
                                 ? const Color(0xFFEF5350)
                                 : const Color(0xFF42A5F5),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text(
-                            userRole == "管理者" ? "M" : "S",
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
+                          // child: Text(
+                          //   userRole == "manager" ? "管" : "職",
+                          //   style: const TextStyle(
+                          //     fontSize: 11,
+                          //     fontWeight: FontWeight.w700,
+                          //     color: Colors.white,
+                          //   ),
+                          // ),
                         ),
                       ),
                     ],

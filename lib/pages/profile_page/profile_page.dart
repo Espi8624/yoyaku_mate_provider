@@ -4,7 +4,8 @@ import 'package:yoyaku_mate_provider/pages/profile_page/widget/store_profile_tab
 import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final VoidCallback? onProfileChanged;
+  const ProfilePage({super.key, this.onProfileChanged});
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -120,11 +121,23 @@ class _ProfilePageState extends State<ProfilePage>
                   ? TabBarView(
                       controller: _tabController,
                       children: [
-                        PersonalProfileTab(profileService: profileService, userId: userId),
-                        StoreProfileTab(profileService: profileService, storeId: storeId),
+                        PersonalProfileTab(
+                          profileService: profileService,
+                          userId: userId,
+                          onProfileChanged: widget.onProfileChanged,
+                        ),
+                        StoreProfileTab(
+                          profileService: profileService,
+                          storeId: storeId,
+                          onProfileChanged: widget.onProfileChanged,
+                        ),
                       ],
                     )
-                  : PersonalProfileTab(profileService: profileService, userId: userId),
+                  : PersonalProfileTab(
+                      profileService: profileService,
+                      userId: userId,
+                      onProfileChanged: widget.onProfileChanged,
+                    ),
             ),
           ],
         ),
