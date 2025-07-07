@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
+import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 import '../utils/profile_utils.dart';
 
 class StoreProfileTab extends StatefulWidget {
@@ -51,8 +52,10 @@ class _StoreProfileTabState extends State<StoreProfileTab> {
       if (widget.onProfileChanged != null) widget.onProfileChanged!();
     } catch (e) {
       setState(() { isLoading = false; });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('店舗情報の更新に失敗しました。')),
+      CustomSnackBar.show(
+        context,
+        message: '店舗情報の更新に失敗しました: $e',
+        status: SnackBarStatus.error,
       );
     }
   }
@@ -74,8 +77,10 @@ class _StoreProfileTabState extends State<StoreProfileTab> {
             children: [
               GestureDetector(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('ロゴアップロード機能は準備中です。')),
+                  CustomSnackBar.show(
+                    context,
+                    message: 'ロゴアップロード機能は準備中です',
+                    status: SnackBarStatus.info,
                   );
                 },
                 child: CircleAvatar(

@@ -4,6 +4,7 @@ import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/add_cate
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/add_menu_dialog.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/edit_category_dialog.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/menu_management_page_loading.dart';
+import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 import '../../models/menu_list.dart';
 import '../../services/menu_service.dart';
 import '../menu_management_page/widgets/edit_menu_dialog.dart';
@@ -53,8 +54,10 @@ class _MenuManagementPageState extends State<MenuManagementPage>
         _updateTabController();
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('メニューの取得に失敗しました: $e')),
+      CustomSnackBar.show(
+        context,
+        message: 'メニューの取得に失敗しました: $e',
+        status: SnackBarStatus.error,
       );
     } finally {
       setState(() => _isLoading = false);
@@ -129,8 +132,10 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     bool changesDetected = hasChanges();
     print('Changes detected: $changesDetected');
     if (!changesDetected) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('変更がありません。')),
+      CustomSnackBar.show(
+        context,
+        message: '変更がありません',
+        status: SnackBarStatus.info,
       );
       return;
     }
@@ -149,12 +154,16 @@ class _MenuManagementPageState extends State<MenuManagementPage>
         _updateTabController();
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('全てのメニューが保存され、更新されました。')),
+      CustomSnackBar.show(
+        context,
+        message: 'メニューが保存されました',
+        status: SnackBarStatus.success,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('メニューの保存または更新に失敗しました: $e')),
+      CustomSnackBar.show(
+        context,
+        message: 'メニューの保存または更新に失敗しました: $e',
+        status: SnackBarStatus.error,
       );
     } finally {
       setState(() => _isLoading = false);
@@ -258,8 +267,10 @@ class _MenuManagementPageState extends State<MenuManagementPage>
 
   Future<void> _addMenu() async {
     if (categories.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('先にカテゴリーを追加してください。')),
+      CustomSnackBar.show(
+        context,
+        message: '先にカテゴリーを追加してください',
+        status: SnackBarStatus.info,
       );
       return;
     }
@@ -382,8 +393,10 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                   }
                 });
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('メニューが無効化されました。')),
+                CustomSnackBar.show(
+                  context,
+                  message: 'メニューが削除されました',
+                  status: SnackBarStatus.success,
                 );
               },
               child: const Text(
@@ -458,8 +471,10 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                   _updateCategorizedMenu(); // categorizedMenu를 업데이트
                 });
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('メニューが無効化されました。')),
+                CustomSnackBar.show(
+                  context,
+                  message: 'メニューが削除されました',
+                  status: SnackBarStatus.success,
                 );
               },
               child: const Text(
@@ -524,8 +539,10 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                   }
                 });
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('カテゴリーが削除されました。')),
+                CustomSnackBar.show(
+                  context,
+                  message: 'カテゴリーが削除されました',
+                  status: SnackBarStatus.success,
                 );
               },
               child: const Text(

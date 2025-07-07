@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 
 class ProfileUtils {
   // 섹션 제목 위젯
@@ -66,19 +67,9 @@ class ProfileUtils {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                icon: const Icon(Icons.close, size: 24, color: Color(0xFF263238)),
-                onPressed: () => Navigator.of(context).pop(),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ),
             Text(
               title,
               style: const TextStyle(
@@ -86,6 +77,14 @@ class ProfileUtils {
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF263238),
               ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 24, color: Color(0xFF263238)),
+              onPressed: () => Navigator.of(context).pop(),
+              splashRadius: 20,
+              tooltip: '닫기',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
             ),
           ],
         ),
@@ -113,15 +112,19 @@ class ProfileUtils {
               ),
               onPressed: () {
                 if (controller.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('値を入力してください。')),
+                  CustomSnackBar.show(
+                    context,
+                    message: '値を入力してください',
+                    status: SnackBarStatus.error,
                   );
                   return;
                 }
                 onSave(controller.text);
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('変更事項を保存しました。')),
+                CustomSnackBar.show(
+                  context,
+                  message: '変更事項を保存しました',
+                  status: SnackBarStatus.success,
                 );
               },
               child: const Text('確認'),

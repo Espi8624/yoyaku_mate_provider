@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
+import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 import '../utils/profile_utils.dart';
 
 class PersonalProfileTab extends StatefulWidget {
@@ -58,8 +59,10 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
       if (widget.onProfileChanged != null) widget.onProfileChanged!();
     } catch (e) {
       setState(() { isLoading = false; });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('プロフィールの更新に失敗しました。')),
+      CustomSnackBar.show(
+        context,
+        message: 'プロフィールの更新に失敗しました: $e',
+        status: SnackBarStatus.error,
       );
     }
   }
@@ -81,8 +84,10 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
             children: [
               GestureDetector(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('プロフィール画像アップロード機能は準備中です。')),
+                  CustomSnackBar.show(
+                    context,
+                    message: 'プロフィール画像アップロード機能は準備中です',
+                    status: SnackBarStatus.info,
                   );
                 },
                 child: CircleAvatar(

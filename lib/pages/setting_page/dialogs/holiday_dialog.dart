@@ -32,11 +32,22 @@ Future<void> showHolidayDialog({
       builder: (context, setDialogState) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('休業日設定',
-            style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF263238))),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('休業日設定',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF263238))),
+            IconButton(
+              icon: const Icon(Icons.close, color: Color(0xFF263238)),
+              onPressed: () => Navigator.pop(context),
+              splashRadius: 20,
+              tooltip: '닫기',
+            ),
+          ],
+        ),
         content: SizedBox(
           width: 800,
           height: 400,
@@ -286,36 +297,34 @@ Future<void> showHolidayDialog({
             ],
           ),
         ),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消', style: TextStyle(color: Color(0xFF263238))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6F61),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+          FractionallySizedBox(
+            widthFactor: 0.75,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF6F61),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                onConfirm(
+                  publicHolidayEnabled: publicHolidayEnabled0,
+                  selectedWeekdays: selectedWeekdays,
+                  selectedMonthDays: selectedMonthDays,
+                  selectedSpecialDays: selectedSpecialDays,
+                );
+                CustomSnackBar.show(
+                  context,
+                  message: '休業日が設定されました。',
+                  status: SnackBarStatus.info,
+                );
+              },
+              child: const Text('確認'),
             ),
-            onPressed: () {
-              Navigator.pop(context);
-              onConfirm(
-                publicHolidayEnabled: publicHolidayEnabled0,
-                selectedWeekdays: selectedWeekdays,
-                selectedMonthDays: selectedMonthDays,
-                selectedSpecialDays: selectedSpecialDays,
-              );
-              // ScaffoldMessenger.of(context).showSnackBar(
-              //   const SnackBar(content: Text('休業日が設定されました。')),
-              // );
-              CustomSnackBar.show(
-                context,
-                message: '休業日が設定されました。',
-                status: SnackBarStatus.info,
-              );
-            },
-            child: const Text('確認'),
           ),
         ],
       ),

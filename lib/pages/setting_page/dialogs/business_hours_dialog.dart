@@ -9,9 +9,20 @@ Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<Strin
       builder: (context, setDialogState) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text(
-          '営業時間設定',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF263238)),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              '営業時間設定',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF263238)),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, color: Color(0xFF263238)),
+              onPressed: () => Navigator.pop(context),
+              splashRadius: 20,
+              tooltip: '닫기',
+            ),
+          ],
         ),
         content: ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 360),
@@ -104,57 +115,58 @@ Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<Strin
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
               ],
             ),
           ),
         ),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消', style: TextStyle(color: Color(0xFF263238))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6F61),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () {
-              // 유효성 검사: 각 요일별로 시작 < 종료인지 확인
-              bool isValid = true;
-              businessHours.forEach((day, times) {
-                final startHour = times['startHour']!;
-                final startMinute = times['startMinute']!;
-                final endHour = times['endHour']!;
-                final endMinute = times['endMinute']!;
-                if (startHour > endHour || (startHour == endHour && startMinute >= endMinute)) {
-                  isValid = false;
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF6F61),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              onPressed: () {
+                // 유효성 검사: 각 요일별로 시작 < 종료인지 확인
+                bool isValid = true;
+                businessHours.forEach((day, times) {
+                  final startHour = times['startHour']!;
+                  final startMinute = times['startMinute']!;
+                  final endHour = times['endHour']!;
+                  final endMinute = times['endMinute']!;
+                  if (startHour > endHour || (startHour == endHour && startMinute >= endMinute)) {
+                    isValid = false;
+                  }
+                });
+                if (!isValid) {
+                  // ScaffoldMessenger.of(context).showSnackBar(
+                  //   const SnackBar(content: Text('閉店時間は開店時間より早くできません。')),
+                  // );
+                  CustomSnackBar.show(
+                    context,
+                    message: '閉店時間は開店時間より早くできません',
+                    status: SnackBarStatus.error,
+                  );
+                  return;
                 }
-              });
-              if (!isValid) {
+                Navigator.pop(context);
+                if (onConfirm != null) onConfirm();
                 // ScaffoldMessenger.of(context).showSnackBar(
-                //   const SnackBar(content: Text('閉店時間は開店時間より早くできません。')),
+                //   const SnackBar(content: Text('営業時間が設定されました。')),
                 // );
                 CustomSnackBar.show(
                   context,
-                  message: '閉店時間は開店時間より早くできません',
-                  status: SnackBarStatus.error,
+                  message: '営業時間が設定されました',
+                  status: SnackBarStatus.info,
                 );
-                return;
-              }
-              Navigator.pop(context);
-              if (onConfirm != null) onConfirm();
-              // ScaffoldMessenger.of(context).showSnackBar(
-              //   const SnackBar(content: Text('営業時間が設定されました。')),
-              // );
-              CustomSnackBar.show(
-                context,
-                message: '営業時間が設定されました',
-                status: SnackBarStatus.info,
-              );
-            },
-            child: const Text('確認'),
+              },
+              child: const Text('確認'),
+            ),
           ),
         ],
       ),
