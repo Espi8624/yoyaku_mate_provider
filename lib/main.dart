@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
+import 'package:yoyaku_mate_provider/login_page.dart';
 
 import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_page.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_page.dart';
@@ -14,13 +15,25 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _isLoggedIn = false;
+
+  void _onLoginSuccess() {
+    setState(() {
+      _isLoggedIn = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: HomeScreen(),
+    return MaterialApp(
+      home: _isLoggedIn ? const HomeScreen() : LoginPage(onLoginSuccess: _onLoginSuccess),
     );
   }
 }
