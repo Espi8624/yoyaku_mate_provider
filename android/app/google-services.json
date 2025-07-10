@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "545178034865",
+    "project_id": "yoyaku-mate-provider",
+    "storage_bucket": "yoyaku-mate-provider.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:545178034865:android:c795902d2255409b3df890",
+        "android_client_info": {
+          "package_name": "com.example.yoyaku_mate_provider"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2TuBl5sbMk6Kcxy7ih3shLA1H_wW-JGI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

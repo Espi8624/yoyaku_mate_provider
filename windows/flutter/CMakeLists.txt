@@ -1,5 +1,5 @@
 # This file controls Flutter-level build steps. It should not be edited.
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.5)
 
 set(EPHEMERAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ephemeral")
 
@@ -107,3 +107,6 @@ add_custom_target(flutter_assemble DEPENDS
   ${CPP_WRAPPER_SOURCES_PLUGIN}
   ${CPP_WRAPPER_SOURCES_APP}
 )
+
+add_compile_options("/wd4996")
+add_compile_options("/WX-") 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -16,12 +17,20 @@ class _LoginPageState extends State<LoginPage> {
 
   void _tryLogin() async {
     setState(() { _isLoading = true; _errorMsg = null; });
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (_idController.text == 'test@example.com' && _pwController.text == '1234') {
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _idController.text.trim(),
+        password: _pwController.text,
+      );
       widget.onLoginSuccess();
-    } else {
+    } on FirebaseAuthException catch (e) {
       setState(() {
-        _errorMsg = 'IDまたはパスワードが正しくありません。';
+        _errorMsg = e.message ?? 'IDまたはパスワードが正しくありません。';
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMsg = 'ログイン中にエラーが発生しました。';
         _isLoading = false;
       });
     }

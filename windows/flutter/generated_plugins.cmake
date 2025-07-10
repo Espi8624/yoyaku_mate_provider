@@ -4,6 +4,8 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   bitsdojo_window_windows
+  firebase_auth
+  firebase_core
   printing
   screen_retriever
   url_launcher_windows
