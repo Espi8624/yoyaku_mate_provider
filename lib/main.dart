@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
@@ -11,7 +12,9 @@ import 'package:yoyaku_mate_provider/pages/shop_status_page.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_page.dart';
 import 'package:yoyaku_mate_provider/pages/setting_page/setting_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -166,6 +169,50 @@ class _HomeScreenState extends State<HomeScreen> {
                         userName: userName,
                         storeName: storeName,
                         userRole: userRole,
+                        onLogout: () async {
+                          final result = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              backgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              title: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('本当にログアウトしますか？', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                                    onPressed: () => Navigator.pop(context, false),
+                                    splashRadius: 20,
+                                    tooltip: 'キャンセル',
+                                  ),
+                                ],
+                              ),
+                              actionsAlignment: MainAxisAlignment.center,
+                              actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              actions: [
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFF6F61),
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                    ),
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: const Text('ログアウト'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (result == true) {
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (_) => const MyApp()),
+                              (route) => false,
+                            );
+                          }
+                        },
                       ),
               ),
             ),

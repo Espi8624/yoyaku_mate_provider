@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 
 class SideNavigationBar extends StatelessWidget {
   final bool isExpanded;
@@ -8,6 +9,7 @@ class SideNavigationBar extends StatelessWidget {
   final String userName;
   final String storeName;
   final String userRole; // "管理者" 또는 "スタッフ"
+  final VoidCallback? onLogout;
 
   const SideNavigationBar({
     super.key,
@@ -18,6 +20,7 @@ class SideNavigationBar extends StatelessWidget {
     required this.userName,
     required this.storeName,
     required this.userRole,
+    this.onLogout,
   });
 
   @override
@@ -298,9 +301,15 @@ class SideNavigationBar extends StatelessWidget {
                     label: 'ログアウト',
                     selected: false,
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('ログアウトしました')),
-                      );
+                      if (onLogout != null) {
+                        onLogout!();
+                      } else {
+                        CustomSnackBar.show(
+                          context,
+                          message: 'ログアウトしました',
+                          status: SnackBarStatus.info,
+                        );
+                      }
                     },
                   )
                 : _NavIcon(
@@ -308,9 +317,15 @@ class SideNavigationBar extends StatelessWidget {
                     selected: false,
                     label: 'ログアウト',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('ログアウトしました')),
-                      );
+                      if (onLogout != null) {
+                        onLogout!();
+                      } else {
+                        CustomSnackBar.show(
+                          context,
+                          message: 'ログアウトしました',
+                          status: SnackBarStatus.info,
+                        );
+                      }
                     },
                     isExpanded: isExpanded,
                   ),
