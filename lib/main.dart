@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/firebase_options.dart';
 import 'package:yoyaku_mate_provider/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
 import 'package:yoyaku_mate_provider/login_page.dart';
@@ -14,7 +15,6 @@ import 'package:yoyaku_mate_provider/pages/setting_page/setting_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -35,8 +35,29 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: _isLoggedIn ? const HomeScreen() : LoginPage(onLoginSuccess: _onLoginSuccess),
+    return FutureBuilder(
+      future: Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          return MaterialApp(
+            home: _isLoggedIn ? const HomeScreen() : LoginPage(onLoginSuccess: _onLoginSuccess),
+          );
+        }
+        if (snapshot.hasError) {
+          return MaterialApp(
+            home: Scaffold(
+              body: Center(child: Text('Firebase 초기화 오류:\n	${snapshot.error}')),
+            ),
+          );
+        }
+        return const MaterialApp(
+          home: Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ),
+        );
+      },
     );
   }
 }

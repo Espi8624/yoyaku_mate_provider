@@ -29,6 +29,7 @@ class _LoginPageState extends State<LoginPage> {
         _isLoading = false;
       });
     } catch (e) {
+      print('로그인 예외: $e');
       setState(() {
         _errorMsg = 'ログイン中にエラーが発生しました。';
         _isLoading = false;
