@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'sign_up_page.dart'; // SignUpPage를 위한 import 추가
+import 'package:provider/provider.dart';
+import 'services/sign_in_service.dart';
+import 'user_provider.dart';
+import 'dart:convert'; // http 패키지를 사용하기 위한 import
+import 'package:http/http.dart' as http; // http 패키지 사용
 
 class LoginPage extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -18,11 +24,24 @@ class _LoginPageState extends State<LoginPage> {
   void _tryLogin() async {
     setState(() { _isLoading = true; _errorMsg = null; });
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _idController.text.trim(),
-        password: _pwController.text,
+      await loginAndFetchUserInfo(
+        _idController.text.trim(),
+        _pwController.text,
+        (userInfo) async {
+          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          userProvider.setUserInfo(userInfo);
+          final userId = userInfo['data']['_id'] ?? userInfo['data']['id'];
+          // store_info 조회
+          final storeResponse = await http.get(
+            Uri.parse('http://localhost:8080/api/provider_store?user_id=$userId'),
+          );
+          if (storeResponse.statusCode == 200) {
+            final storeInfo = jsonDecode(storeResponse.body);
+            userProvider.setStoreInfo(storeInfo);
+          }
+          widget.onLoginSuccess();
+        },
       );
-      widget.onLoginSuccess();
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorMsg = e.message ?? 'IDまたはパスワードが正しくありません。';
@@ -31,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       print('로그인 예외: $e');
       setState(() {
-        _errorMsg = 'ログイン中にエラーが発生しました。';
+        _errorMsg = 'ログイン中にエラー가 발생했습니다。';
         _isLoading = false;
       });
     }
@@ -110,6 +129,24 @@ class _LoginPageState extends State<LoginPage> {
                     child: _isLoading
                         ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Text('ログイン'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 48,
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF6B7280),
+                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SignUpPage()),
+                      );
+                    },
+                    child: const Text('まだアカウントを持っていませんか？'),
                   ),
                 ),
               ],
