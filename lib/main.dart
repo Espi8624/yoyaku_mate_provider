@@ -2,7 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/firebase_options.dart';
 import 'package:yoyaku_mate_provider/navigation_bar.dart';
-import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
+import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/login_page.dart';
 
 import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_page.dart';
@@ -12,10 +12,19 @@ import 'package:yoyaku_mate_provider/pages/sales_overview_page.dart';
 import 'package:yoyaku_mate_provider/pages/shop_status_page.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_page.dart';
 import 'package:yoyaku_mate_provider/pages/setting_page/setting_page.dart';
+import 'package:provider/provider.dart';
+import 'user_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -73,48 +82,22 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   bool _isExpanded = false;
 
-  // DB에서 가져올 값들
-  String userName = '';
-  String storeName = '';
-  String userRole = '';
-  bool isProfileLoading = true;
-
-  // 실제 환경에서는 로그인 정보를 통해 아래 값들을 받아와야 합니다.
-  final String userId = "685e89bf4104bb1e3dadab42";
-  final String storeId = "store-001";
   final ProviderProfileService profileService = ProviderProfileService(baseUrl: "http://localhost:8080");
 
-  static List<Widget> _pagesWithCallback(VoidCallback? onProfileChanged, ProviderProfileService profileService, String userId, String storeId) => [
+  List<Widget> _pagesWithCallback(VoidCallback? onProfileChanged, ProviderProfileService profileService, String userId, String userRole, String storeId) => [
     const WaitingPage(),
     const MenuManagementPage(),
-    ProfilePage(onProfileChanged: onProfileChanged),
+    ProfilePage(
+      userId: userId,
+      userRole: userRole,
+      storeId: storeId,
+      onProfileChanged: onProfileChanged,
+    ),
     const SettingPage(),
     const ShopStatusPage(),
     const SalesEntryPage(),
     const SalesOverviewPage(),
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchProfileInfo();
-  }
-
-  Future<void> _fetchProfileInfo() async {
-    setState(() { isProfileLoading = true; });
-    try {
-      final user = await profileService.fetchUserProfile(userId);
-      final store = await profileService.fetchStoreProfile(storeId);
-      setState(() {
-        userName = user['user_name'] ?? '';
-        userRole = user['role'] ?? '';
-        storeName = store['store_name'] ?? '';
-        isProfileLoading = false;
-      });
-    } catch (e) {
-      setState(() { isProfileLoading = false; });
-    }
-  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -128,13 +111,12 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // ProfilePage에서 이름/가게명 변경 시 네비게이션바 정보도 새로고침
-  void refreshProfileInfo() {
-    _fetchProfileInfo();
-  }
-
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+    final userId = userProvider.userId ?? '';
+    final userRole = userProvider.userRole ?? '';
+    final storeId = userProvider.storeId ?? '';
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: Padding(
@@ -157,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: _pagesWithCallback(refreshProfileInfo, profileService, userId, storeId)[_selectedIndex],
+                  child: _pagesWithCallback(null, profileService, userId, userRole, storeId)[_selectedIndex],
                 ),
               ),
             ),
@@ -180,61 +162,60 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                child: isProfileLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : SideNavigationBar(
-                        isExpanded: _isExpanded,
-                        selectedIndex: _selectedIndex,
-                        onItemTapped: _onItemTapped,
-                        onToggle: _toggleSidebar,
-                        userName: userName,
-                        storeName: storeName,
-                        userRole: userRole,
-                        onLogout: () async {
-                          final result = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              backgroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              title: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('本当にログアウトしますか？', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                                  IconButton(
-                                    icon: const Icon(Icons.close, color: Color(0xFF263238)),
-                                    onPressed: () => Navigator.pop(context, false),
-                                    splashRadius: 20,
-                                    tooltip: 'キャンセル',
-                                  ),
-                                ],
-                              ),
-                              actionsAlignment: MainAxisAlignment.center,
-                              actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              actions: [
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFFFF6F61),
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                    ),
-                                    onPressed: () => Navigator.pop(context, true),
-                                    child: const Text('ログアウト'),
-                                  ),
-                                ),
-                              ],
+                child: SideNavigationBar(
+                  isExpanded: _isExpanded,
+                  selectedIndex: _selectedIndex,
+                  onItemTapped: _onItemTapped,
+                  onToggle: _toggleSidebar,
+                  userName: userProvider.userName ?? '',
+                  storeName: userProvider.storeId ?? '',
+                  userRole: userRole,
+                  onLogout: () async {
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('本当にログアウトしますか？', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                            IconButton(
+                              icon: const Icon(Icons.close, color: Color(0xFF263238)),
+                              onPressed: () => Navigator.pop(context, false),
+                              splashRadius: 20,
+                              tooltip: 'キャンセル',
                             ),
-                          );
-                          if (result == true) {
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(builder: (_) => const MyApp()),
-                              (route) => false,
-                            );
-                          }
-                        },
+                          ],
+                        ),
+                        actionsAlignment: MainAxisAlignment.center,
+                        actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        actions: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFF6F61),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('ログアウト'),
+                            ),
+                          ),
+                        ],
                       ),
+                    );
+                    if (result == true) {
+                      Provider.of<UserProvider>(context, listen: false).clear();
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const MyApp()),
+                        (route) => false,
+                      );
+                    }
+                  },
+                ),
               ),
             ),
           ],

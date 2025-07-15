@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/widget/personal_profile_tab.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/widget/store_profile_tab.dart';
-import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
+import 'package:yoyaku_mate_provider/services/profile_service.dart';
 
 class ProfilePage extends StatefulWidget {
+  final String userId;
+  final String userRole;
+  final String storeId;
   final VoidCallback? onProfileChanged;
-  const ProfilePage({super.key, this.onProfileChanged});
+  const ProfilePage({super.key, required this.userId, required this.userRole, required this.storeId, this.onProfileChanged});
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -14,18 +17,13 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  // 실제 환경에서는 로그인 정보를 통해 아래 값들을 받아와야 합니다.
-  final String userRole = "manager"; // "manager" 또는 "staff"
-  final String userId = "685e89bf4104bb1e3dadab42"; // 실제 사용자 ID로 대체 필요
-  final String storeId = "store-001"; // 실제 매장 ID로 대체 필요
-  final ProviderProfileService profileService = ProviderProfileService(baseUrl: "http://localhost:8080"); // 실제 baseUrl로 대체 필요
+  final ProviderProfileService profileService = ProviderProfileService(baseUrl: "http://localhost:8080");
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: userRole == "manager" ? 2 : 1,
+      length: widget.userRole == "manager" ? 2 : 1,
       vsync: this,
     );
   }
@@ -60,7 +58,7 @@ class _ProfilePageState extends State<ProfilePage>
             ),
 
             // 탭 바 (사장 권한일 때만 표시)
-            if (userRole == "manager")
+            if (widget.userRole == "manager")
               Container(
                 height: 34,
                 width: 190,
@@ -117,25 +115,25 @@ class _ProfilePageState extends State<ProfilePage>
 
             // 탭 뷰
             Expanded(
-              child: userRole == "manager"
+              child: widget.userRole == "manager"
                   ? TabBarView(
                       controller: _tabController,
                       children: [
                         PersonalProfileTab(
                           profileService: profileService,
-                          userId: userId,
+                          userId: widget.userId,
                           onProfileChanged: widget.onProfileChanged,
                         ),
                         StoreProfileTab(
                           profileService: profileService,
-                          storeId: storeId,
+                          storeId: widget.storeId,
                           onProfileChanged: widget.onProfileChanged,
                         ),
                       ],
                     )
                   : PersonalProfileTab(
                       profileService: profileService,
-                      userId: userId,
+                      userId: widget.userId,
                       onProfileChanged: widget.onProfileChanged,
                     ),
             ),

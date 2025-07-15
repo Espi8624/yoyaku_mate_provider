@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
+import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 import '../utils/profile_utils.dart';
 
@@ -32,7 +32,7 @@ class _StoreProfileTabState extends State<StoreProfileTab> {
     try {
       final data = await widget.profileService.fetchStoreProfile(widget.storeId);
       setState(() {
-        storeProfile = data;
+        storeProfile = data['data'];
         isLoading = false;
       });
     } catch (e) {

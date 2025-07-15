@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:yoyaku_mate_provider/services/provider_profile_service.dart';
+import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 import '../utils/profile_utils.dart';
 
@@ -34,10 +34,10 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
       // 백엔드 응답 필드명을 내부에서 매핑
       setState(() {
         personalProfile = {
-          'name': data['user_name'] ?? '',
-          'role': data['role'] ?? '',
-          'email': data['email'] ?? '',
-          'phone': data['phone'] ?? '',
+          'name': data['data']['user_name'] ?? '',
+          'role': data['data']['role'] ?? '',
+          'email': data['data']['email'] ?? '',
+          'phone': data['data']['phone'] ?? '',
           'avatar': null, // 필요시 data['Avatar'] 등으로 확장
         };
         isLoading = false;
