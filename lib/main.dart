@@ -116,7 +116,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final userProvider = Provider.of<UserProvider>(context);
     final userId = userProvider.userId ?? '';
     final userRole = userProvider.userRole ?? '';
-    final storeId = userProvider.storeId ?? '';
+    final storeId = userProvider.storeInfo?['data']['store_id'] ?? '';
+    final storeName = userProvider.storeInfo?['data']['store_name'] ?? '';
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: Padding(
@@ -168,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onItemTapped: _onItemTapped,
                   onToggle: _toggleSidebar,
                   userName: userProvider.userName ?? '',
-                  storeName: userProvider.storeId ?? '',
+                  storeName: storeName ?? '',
                   userRole: userRole,
                   onLogout: () async {
                     final result = await showDialog<bool>(
