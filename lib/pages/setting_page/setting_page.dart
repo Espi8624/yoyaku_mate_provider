@@ -8,7 +8,8 @@ import '../../services/store_settings_service.dart';
 import '../../widgets/custom_snack_bar.dart';
 
 class SettingPage extends StatefulWidget {
-  const SettingPage({super.key});
+  final String storeId;
+  const SettingPage({super.key, required this.storeId});
 
   @override
   _SettingPageState createState() => _SettingPageState();
@@ -32,7 +33,7 @@ class _SettingPageState extends State<SettingPage>
 
   Future<void> _fetchSettings() async {
     try {
-      final settings = await _service.fetchStoreSettings('store-001');
+      final settings = await _service.fetchStoreSettings(widget.storeId);
       setState(() {
         _storeSettings = settings;
       });

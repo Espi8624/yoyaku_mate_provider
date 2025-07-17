@@ -10,7 +10,8 @@ import '../../services/menu_service.dart';
 import '../menu_management_page/widgets/edit_menu_dialog.dart';
 
 class MenuManagementPage extends StatefulWidget {
-  const MenuManagementPage({super.key});
+  final String storeId;
+  const MenuManagementPage({super.key, required this.storeId});
 
   @override
   State<MenuManagementPage> createState() => _MenuManagementPageState();
@@ -47,7 +48,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     setState(() => _isLoading = true);
     try {
       final fetchedMenuItems =
-          await MenuService().fetchMenuItems(storeId: 'store-001');
+          await MenuService().fetchMenuItems(widget.storeId);
       setState(() {
         menuItems = fetchedMenuItems;
         _updateCategorizedMenu();
@@ -142,11 +143,11 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     setState(() => _isLoading = true);
     try {
       // 메뉴 저장
-      await MenuService().saveMenuItems(categorizedMenu, 'store-001');
+      await MenuService().saveMenuItems(categorizedMenu, widget.storeId);
 
       // 서버에서 최신 데이터 가져오기 (새로고침)
       final updatedMenuItems =
-          await MenuService().fetchMenuItems(storeId: 'store-001');
+          await MenuService().fetchMenuItems(widget.storeId);
 
       setState(() {
         menuItems = updatedMenuItems;
@@ -284,7 +285,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
           descriptionController: descriptionController,
           priceController: priceController,
           category: categories[_tabController.index],
-          storeId: 'store-001',
+          storeId: widget.storeId,
         );
       },
     );

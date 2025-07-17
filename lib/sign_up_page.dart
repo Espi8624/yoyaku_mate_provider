@@ -13,7 +13,7 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   int _step = 0; // 0: 권한선택, 1: 사장-유저정보, 2: 사장-가게정보, 1: 직원-가게번호, 2: 직원-유저정보
-  String? _role; // 'owner' or 'staff'
+  String? _role; // 'manager' or 'staff'
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -80,7 +80,7 @@ class _SignUpPageState extends State<SignUpPage> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () {
-              setState(() { _role = 'owner'; _step = 1; });
+              setState(() { _role = 'manager'; _step = 1; });
             },
             child: const Text('사장', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
@@ -99,7 +99,7 @@ class _SignUpPageState extends State<SignUpPage> {
         ],
       );
     }
-    if (_role == 'owner' && _step == 1) {
+    if (_role == 'manager' && _step == 1) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -142,7 +142,7 @@ class _SignUpPageState extends State<SignUpPage> {
         ],
       );
     }
-    if (_role == 'owner' && _step == 2) {
+    if (_role == 'manager' && _step == 2) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -305,7 +305,7 @@ class _SignUpPageState extends State<SignUpPage> {
         email: ownerEmailController.text,
         phoneNumber: ownerPhoneController.text,
         name: ownerNameController.text,
-        role: 'owner',
+        role: 'manager',
         storeName: storeNameController.text,
         storeAddress: storeAddressController.text,
         storeTelNumber: storePhoneController.text,
@@ -315,6 +315,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
       final profileService = ProviderProfileService(baseUrl: 'http://localhost:8080'); // Adjust the base URL as needed
       await profileService.signUp(profile);
+
+      // 회원가입 후 명시적으로 로그아웃 처리
+      await FirebaseAuth.instance.signOut();
 
       // Navigate to login page
       if (mounted) {
@@ -366,6 +369,9 @@ class _SignUpPageState extends State<SignUpPage> {
       );
 
       await profileService.signUp(profile);
+
+      // 회원가입 후 명시적으로 로그아웃 처리
+      await FirebaseAuth.instance.signOut();
 
       // Navigate to login page
       if (mounted) {

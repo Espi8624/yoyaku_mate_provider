@@ -14,8 +14,7 @@ class MenuService {
 
   MenuService._internal();
 
-  Future<List<MenuListItem>> fetchMenuItems(
-      {String storeId = 'store-001'}) async {
+  Future<List<MenuListItem>> fetchMenuItems(String storeId) async {
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/api/menu-list?store_id=$storeId'),

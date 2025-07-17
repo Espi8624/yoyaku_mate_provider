@@ -86,14 +86,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _pagesWithCallback(VoidCallback? onProfileChanged, ProviderProfileService profileService, String userId, String userRole, String storeId) => [
     const WaitingPage(),
-    const MenuManagementPage(),
+    MenuManagementPage(storeId: storeId),
     ProfilePage(
       userId: userId,
       userRole: userRole,
       storeId: storeId,
       onProfileChanged: onProfileChanged,
     ),
-    const SettingPage(),
+    SettingPage(storeId: storeId), // 실제 storeId로 변경 필요
     const ShopStatusPage(),
     const SalesEntryPage(),
     const SalesOverviewPage(),
