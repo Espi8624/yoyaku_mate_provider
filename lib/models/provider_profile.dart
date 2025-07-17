@@ -3,7 +3,7 @@ class ProviderProfile {
   final String email;
   final String phoneNumber;
   final String name;
-  final String role;
+  final String role; // 'manager' or 'staff'
   final String? storeName;
   final String? storeAddress;
   final String? storeTelNumber;

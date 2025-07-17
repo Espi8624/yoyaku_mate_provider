@@ -25,12 +25,14 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
   }
 
   Future<void> _loadProfile() async {
+    if (!mounted) return;
     setState(() {
       isLoading = true;
       errorMsg = null;
     });
     try {
       final data = await widget.profileService.fetchUserProfile(widget.userId);
+      if (!mounted) return;
       // 백엔드 응답 필드명을 내부에서 매핑
       setState(() {
         personalProfile = {
@@ -43,6 +45,7 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         errorMsg = 'プロフィール情報の読み込みに失敗しました。';
         isLoading = false;
@@ -52,12 +55,14 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
 
   Future<void> _updateProfileField(String key, String value) async {
     if (personalProfile == null) return;
+    if (!mounted) return;
     setState(() { isLoading = true; });
     try {
       await widget.profileService.updateUserProfile(widget.userId, {key: value});
       await _loadProfile();
       if (widget.onProfileChanged != null) widget.onProfileChanged!();
     } catch (e) {
+      if (!mounted) return;
       setState(() { isLoading = false; });
       CustomSnackBar.show(
         context,
