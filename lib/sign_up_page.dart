@@ -71,7 +71,7 @@ class _SignUpPageState extends State<SignUpPage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('회원 유형을 선택하세요', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+          const Text('どちらで会員加入を進みますか？', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
           const SizedBox(height: 32),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -82,7 +82,7 @@ class _SignUpPageState extends State<SignUpPage> {
             onPressed: () {
               setState(() { _role = 'manager'; _step = 1; });
             },
-            child: const Text('사장', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text('マネージャー', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: 16),
           ElevatedButton(
@@ -94,7 +94,7 @@ class _SignUpPageState extends State<SignUpPage> {
             onPressed: () {
               setState(() { _role = 'staff'; _step = 1; });
             },
-            child: const Text('직원', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text('職員', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       );
@@ -103,29 +103,29 @@ class _SignUpPageState extends State<SignUpPage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('사장 정보 입력', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('ユーザー情報入力', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           TextField(
             controller: ownerEmailController,
-            decoration: const InputDecoration(labelText: '이메일'),
+            decoration: const InputDecoration(labelText: 'メールアドレス'),
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: ownerPasswordController,
-            decoration: const InputDecoration(labelText: '비밀번호'),
+            decoration: const InputDecoration(labelText: 'パスワード'),
             obscureText: true,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: ownerPhoneController,
-            decoration: const InputDecoration(labelText: '휴대전화번호'),
+            decoration: const InputDecoration(labelText: '電話番号'),
             keyboardType: TextInputType.phone,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: ownerNameController,
-            decoration: const InputDecoration(labelText: '유저이름'),
+            decoration: const InputDecoration(labelText: '名前'),
           ),
           const SizedBox(height: 32),
           ElevatedButton(
@@ -137,7 +137,7 @@ class _SignUpPageState extends State<SignUpPage> {
             onPressed: () {
               setState(() { _step = 2; });
             },
-            child: const Text('다음', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text('次へ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       );
@@ -146,27 +146,27 @@ class _SignUpPageState extends State<SignUpPage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('가게 정보 입력', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('店情報入力', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           TextField(
             controller: storeNameController,
-            decoration: const InputDecoration(labelText: '가게이름'),
+            decoration: const InputDecoration(labelText: '店名'),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: storeAddressController,
-            decoration: const InputDecoration(labelText: '가게주소'),
+            decoration: const InputDecoration(labelText: '住所'),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: storePhoneController,
-            decoration: const InputDecoration(labelText: '가게 전화번호'),
+            decoration: const InputDecoration(labelText: '電話番号'),
             keyboardType: TextInputType.phone,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: storeBizNumController,
-            decoration: const InputDecoration(labelText: '사업자번호'),
+            decoration: const InputDecoration(labelText: '事業者番号'),
           ),
           const SizedBox(height: 32),
           if (_errorMessage != null)
@@ -194,7 +194,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       strokeWidth: 2,
                     ),
                   )
-                : const Text('완료', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                : const Text('登録', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       );
@@ -203,11 +203,11 @@ class _SignUpPageState extends State<SignUpPage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('가게번호 입력', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('店番号入力', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           TextField(
             controller: staffStoreIdController,
-            decoration: const InputDecoration(labelText: '가게번호(store_id)'),
+            decoration: const InputDecoration(labelText: '店番号'),
           ),
           const SizedBox(height: 32),
           ElevatedButton(
@@ -219,7 +219,7 @@ class _SignUpPageState extends State<SignUpPage> {
             onPressed: () {
               setState(() { _step = 2; });
             },
-            child: const Text('다음', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text('次へ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       );
@@ -228,29 +228,29 @@ class _SignUpPageState extends State<SignUpPage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('직원 정보 입력', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('情報入力', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           TextField(
             controller: staffEmailController,
-            decoration: const InputDecoration(labelText: '이메일'),
+            decoration: const InputDecoration(labelText: 'メールアドレス'),
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: staffPasswordController,
-            decoration: const InputDecoration(labelText: '비밀번호'),
+            decoration: const InputDecoration(labelText: 'パスワード'),
             obscureText: true,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: staffPhoneController,
-            decoration: const InputDecoration(labelText: '휴대전화번호'),
+            decoration: const InputDecoration(labelText: '電話番号'),
             keyboardType: TextInputType.phone,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: staffNameController,
-            decoration: const InputDecoration(labelText: '유저이름'),
+            decoration: const InputDecoration(labelText: '名前'),
           ),
           const SizedBox(height: 32),
           if (_errorMessage != null)
@@ -278,7 +278,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       strokeWidth: 2,
                     ),
                   )
-                : const Text('완료', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                : const Text('登録', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       );
