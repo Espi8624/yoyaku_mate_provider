@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'sign_up_page.dart'; // SignUpPage를 위한 import 추가
+import 'sign_up_page.dart';
 import 'package:provider/provider.dart';
 import 'services/sign_in_service.dart';
 import 'user_provider.dart';
-import 'dart:convert'; // http 패키지를 사용하기 위한 import
-import 'package:http/http.dart' as http; // http 패키지 사용
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class LoginPage extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -21,8 +21,12 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   String? _errorMsg;
 
-  void _tryLogin() async {
-    setState(() { _isLoading = true; _errorMsg = null; });
+  Future<void> _tryLogin() async {
+    setState(() {
+      _isLoading = true;
+      _errorMsg = null;
+    });
+
     try {
       await loginAndFetchUserInfo(
         _idController.text.trim(),
@@ -31,28 +35,57 @@ class _LoginPageState extends State<LoginPage> {
           final userProvider = Provider.of<UserProvider>(context, listen: false);
           userProvider.setUserInfo(userInfo);
           final userId = userInfo['data']['_id'] ?? userInfo['data']['id'];
-          // store_info 조회
-          final storeResponse = await http.get(
-            Uri.parse('http://localhost:8080/api/provider_store?user_id=$userId'),
-          );
-          if (storeResponse.statusCode == 200) {
-            final storeInfo = jsonDecode(storeResponse.body);
-            userProvider.setStoreInfo(storeInfo);
+
+          // store_info 조회 (최대 3번 재시도)
+          int retries = 0;
+          bool storeFetched = false;
+          Map<String, dynamic>? storeInfo;
+          while (retries < 3 && !storeFetched) {
+            try {
+              final storeResponse = await http.get(
+                Uri.parse('http://localhost:8080/api/provider_store?user_id=$userId'),
+                headers: {'Authorization': 'Bearer ${await FirebaseAuth.instance.currentUser!.getIdToken(true)}'},
+              );
+              if (storeResponse.statusCode == 200) {
+                storeInfo = jsonDecode(storeResponse.body);
+                storeFetched = true;
+              } else {
+                throw Exception('Store info fetch failed: ${storeResponse.statusCode}');
+              }
+            } catch (e) {
+              retries++;
+              if (retries < 3) {
+                await Future.delayed(const Duration(milliseconds: 500));
+              }
+            }
           }
-          widget.onLoginSuccess();
+          if (!storeFetched) {
+            throw Exception('가게 정보 조회 실패');
+          }
+
+          userProvider.setStoreInfo(storeInfo!);
+
+          // 로그인 성공
+          if (mounted) {
+            widget.onLoginSuccess();
+            Navigator.of(context).pushReplacementNamed('/');
+          }
         },
       );
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorMsg = e.message ?? 'IDまたはパスワードが正しくありません。';
-        _isLoading = false;
       });
     } catch (e) {
-      print('로그인 예외: $e');
       setState(() {
-        _errorMsg = 'ログイン中にエラー가 발생했습니다。';
-        _isLoading = false;
+        _errorMsg = '로그인 실패: ${e.toString()}';
       });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
