@@ -33,14 +33,14 @@ class _PersonalProfileTabState extends State<PersonalProfileTab> {
     try {
       final data = await widget.profileService.fetchUserProfile(widget.userId);
       if (!mounted) return;
-      // 백엔드 응답 필드명을 내부에서 매핑
+      // バックエンド応答フィールド名を内部でマッピング
       setState(() {
         personalProfile = {
           'name': data['data']['user_name'] ?? '',
           'role': data['data']['role'] ?? '',
           'email': data['data']['email'] ?? '',
           'phone': data['data']['phone'] ?? '',
-          'avatar': null, // 필요시 data['Avatar'] 등으로 확장
+          'avatar': null, // 必要時、 data['Avatar'] などで拡張
         };
         isLoading = false;
       });

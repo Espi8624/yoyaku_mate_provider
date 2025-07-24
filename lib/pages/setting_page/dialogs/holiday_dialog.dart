@@ -44,7 +44,7 @@ Future<void> showHolidayDialog({
               icon: const Icon(Icons.close, color: Color(0xFF263238)),
               onPressed: () => Navigator.pop(context),
               splashRadius: 20,
-              tooltip: '닫기',
+              tooltip: '閉じる',
             ),
           ],
         ),
@@ -54,7 +54,7 @@ Future<void> showHolidayDialog({
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 좌측: 달력
+              // 左側: カレンダー
               Expanded(
                 flex: 1,
                 child: TableCalendar(
@@ -154,21 +154,21 @@ Future<void> showHolidayDialog({
                 ),
               ),
               const SizedBox(width: 16),
-              // 구분선 추가
+              // 区分線
               Container(
                 width: 1,
                 height: 500,
                 color: Colors.grey[300],
               ),
               const SizedBox(width: 32),
-              // 우측: 설정 UI
+              // 右側: 設定 UI
               Expanded(
                 flex: 1,
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 특정일 지정
+                      // 特定日指定
                       const Text('特定日指定',
                           style: TextStyle(fontWeight: FontWeight.bold)),
                       Wrap(
@@ -205,7 +205,7 @@ Future<void> showHolidayDialog({
                         ],
                       ),
                       const Divider(height: 32),
-                      // 정기휴업일
+                      // 定期休業日
                       const Text('定期休業日',
                           style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
@@ -277,7 +277,7 @@ Future<void> showHolidayDialog({
                         ],
                       ),
                       const Divider(height: 32),
-                      // 공휴일 휴일 지정
+                      // 休業日指定
                       Row(
                         children: [
                           const Text('祝日休業',
@@ -319,7 +319,7 @@ Future<void> showHolidayDialog({
                 );
                 CustomSnackBar.show(
                   context,
-                  message: '休業日が設定されました。',
+                  message: '休業日が設定されました',
                   status: SnackBarStatus.info,
                 );
               },

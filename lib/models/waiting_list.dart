@@ -53,7 +53,7 @@ class WaitingList {
     }
   }
 
-  // 오늘 마지막 입장 시간을 구하는 static 메서드
+  // 本日最後入場時間を取得する static メソッド
   static DateTime? getLastEntryTime(List<WaitingList> waitingList) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);

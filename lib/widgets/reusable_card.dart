@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class ReusableCard extends StatelessWidget {
   final String title;
   final Widget child;
-  final Color? backgroundColor; // 배경색 커스터마이징을 위해 추가
+  final Color? backgroundColor;
 
   const ReusableCard({
     super.key,
@@ -18,7 +18,7 @@ class ReusableCard extends StatelessWidget {
       margin: const EdgeInsets.all(6),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.white, // 기본값은 흰색
+        color: backgroundColor ?? Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(

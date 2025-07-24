@@ -6,7 +6,7 @@ class ProviderProfileService {
   final String baseUrl;
   ProviderProfileService({required this.baseUrl});
 
-  // 사용자 프로필 조회
+  // 使用者プロファイル取得
   Future<Map<String, dynamic>> fetchUserProfile(String userId) async {
     final response = await http.get(Uri.parse('$baseUrl/api/provider_user?user_id=$userId'));
     if (response.statusCode == 200) {
@@ -17,7 +17,7 @@ class ProviderProfileService {
     }
   }
 
-  // 사용자 프로필 수정
+  // 使用者プロファイル更新
   Future<void> updateUserProfile(String userId, Map<String, dynamic> update) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/provider_user?user_id=$userId'),
@@ -29,7 +29,7 @@ class ProviderProfileService {
     }
   }
 
-  // 매장 프로필 조회
+  // 店舗プロファイル取得
   Future<Map<String, dynamic>> fetchStoreProfile(String storeId) async {
     final response = await http.get(Uri.parse('$baseUrl/api/provider_store?store_id=$storeId'));
     if (response.statusCode == 200) {
@@ -40,7 +40,7 @@ class ProviderProfileService {
     }
   }
 
-  // 매장 프로필 수정
+  // 店舗プロファイル更新
   Future<void> updateStoreProfile(String storeId, Map<String, dynamic> update) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/provider_store?store_id=$storeId'),
@@ -52,7 +52,7 @@ class ProviderProfileService {
     }
   }
 
-  // 회원가입
+  // 会員加入
   Future<Map<String, dynamic>> signUp(ProviderProfile profile) async {
     try {
       final response = await http.post(
@@ -71,7 +71,7 @@ class ProviderProfileService {
     }
   }
 
-  // 매장 존재 여부 확인
+  // 店舗存在確認
   Future<bool> checkStoreExists(String storeId) async {
     try {
       final response = await http.get(
@@ -90,7 +90,7 @@ class ProviderProfileService {
     }
   }
 
-  // 이메일 중복 체크
+  // メール中腹チェック
   Future<bool> checkEmailAvailability(String email) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth/check-email'),
@@ -106,7 +106,7 @@ class ProviderProfileService {
     }
   }
 
-  // 전화번호 중복 체크
+  // 電話番号重複チェック
   Future<bool> checkPhoneAvailability(String phoneNumber) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth/check-phone'),

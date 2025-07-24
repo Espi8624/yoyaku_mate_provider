@@ -17,12 +17,12 @@ class EditCategoryDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.of(context).pop(), // 다이얼로그 바깥 클릭 시 닫힘
+      onTap: () => Navigator.of(context).pop(), // Dialog 外クリック時閉じる
       child: Material(
         color: Colors.transparent,
         child: Center(
           child: GestureDetector(
-            onTap: () {}, // 내부 클릭 시 닫히지 않음
+            onTap: () {}, // Dialog 内クリック時、閉じないようにする
             child: Dialog(
               backgroundColor: const Color(0xffffffff),
               shape:

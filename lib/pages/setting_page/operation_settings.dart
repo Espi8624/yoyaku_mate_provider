@@ -47,7 +47,7 @@ class OperationSettings extends StatelessWidget {
   }
 
   String _buildBusinessHoursSummary(Map<String, Map<String, String>> hours) {
-    // 예시: 월~금 09:00-18:00, 토/일 10:00-15:00
+    // 例: 月~金 09:00-18:00, 土/日 10:00-15:00
     final weekday = hours['monday']?['start'] == hours['friday']?['start'] && hours['monday']?['end'] == hours['friday']?['end']
       ? '月~金 ${hours['monday']?['start'] ?? ''}-${hours['monday']?['end'] ?? ''}' : '';
     final weekend = hours['saturday'] != null && hours['sunday'] != null

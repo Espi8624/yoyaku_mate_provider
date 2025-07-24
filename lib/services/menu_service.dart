@@ -75,12 +75,12 @@ class MenuService {
           String imageUrl = item.imageUrl;
           if (item.tempImageBytes != null) {
             try {
-              print('이미지 업로드 시도: ${item.title} (카테고리: $category)');
+              print('イメージアップロード: ${item.title} (カテゴリ: $category)');
               imageUrl = await uploadImage(item.tempImageBytes!);
-              print('이미지 업로드 성공: $imageUrl');
+              print('イメージアップロード成功: $imageUrl');
             } catch (e) {
-              print('이미지 업로드 실패 - ${item.title}: $e');
-              imageUrl = item.imageUrl; // 기존 URL 유지
+              print('イメージアップロード失敗: ${item.title}: $e');
+              imageUrl = item.imageUrl; // 既存 URL 使用
             }
           }
           final updatedItem = MenuListItem(
@@ -132,7 +132,7 @@ class MenuService {
 
       return updatedMenuItems;
     } catch (e) {
-      print('saveMenuItems 에러 발생: $e');
+      print('saveMenuItems エラー発生: $e');
       throw Exception('メニューの保存に失敗しました: $e');
     }
   }

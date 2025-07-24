@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 
 class ProfileUtils {
-  // 섹션 제목 위젯
+  // セクションタイトルウィジェット
   static Widget buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -16,7 +16,7 @@ class ProfileUtils {
     );
   }
 
-  // 설정 항목 위젯
+  // 設定項目ウィジェット
   static Widget buildSettingItem(
       String title, String subtitle, Widget? trailing,
       {VoidCallback? onTap}) {
@@ -31,7 +31,7 @@ class ProfileUtils {
     );
   }
 
-  // 섹션 박스 위젯
+  // セクションボックスウィジェット
   static Widget sectionBox({required Widget child}) {
     return Container(
       width: double.infinity,
@@ -40,7 +40,7 @@ class ProfileUtils {
     );
   }
 
-  // 박스 데코레이션
+  // ボックスデザイン
   static BoxDecoration _boxDecoration() {
     return BoxDecoration(
       color: Colors.white,
@@ -54,7 +54,7 @@ class ProfileUtils {
     );
   }
 
-  // 텍스트 편집 다이얼로그
+  // 編集ダイアログ
   static Future<void> showEditDialog({
     required BuildContext context,
     required String title,

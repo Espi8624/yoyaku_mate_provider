@@ -21,7 +21,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     with TickerProviderStateMixin {
   final TextEditingController _categoryNameController = TextEditingController();
   List<String> categories = [];
-  List<MenuListItem> menuItems = []; // 상태 변수 추가
+  List<MenuListItem> menuItems = []; // メニューアイテムリスト
   Map<String, List<MenuListItem>> categorizedMenu = {};
   late TabController _tabController;
   final TextEditingController titleController = TextEditingController();
@@ -80,20 +80,20 @@ class _MenuManagementPageState extends State<MenuManagementPage>
   }
 
   bool hasChanges() {
-    // 1. 카테고리 키 비교
+    // 1. カテゴリーキー比較
     final originalCategories = _originalMenuData.keys.toSet();
     final currentCategories = categorizedMenu.keys.toSet();
     if (originalCategories != currentCategories) return true;
 
-    // 2. 각 카테고리별 메뉴 항목 비교
+    // 2. 各カテゴリ別メニュー項目比較
     for (var category in categorizedMenu.keys) {
       final originalItems = _originalMenuData[category] ?? [];
       final currentItems = categorizedMenu[category] ?? [];
 
-      // 2.1 메뉴 항목 길이 비교
+      // 2.1 メニュー項目長さ比較 (長さが異なる場合は変更あり)
       if (originalItems.length != currentItems.length) return true;
 
-      // 2.2 메뉴 항목을 ID로 매핑
+      // 2.2 メニュー項目をIDでマッピング
       final originalItemsMap = {
         for (var item in originalItems)
           item.id.isNotEmpty ? item.id : item.menuId: item
@@ -103,17 +103,17 @@ class _MenuManagementPageState extends State<MenuManagementPage>
           item.id.isNotEmpty ? item.id : item.menuId: item
       };
 
-      // 2.3 ID가 다른 경우 (추가/삭제)
+      // 2.3 IDが異なる場合 (追加/削除)
       if (originalItemsMap.keys.toSet() != currentItemsMap.keys.toSet())
         return true;
 
-      // 2.4 각 항목별 속성 비교
+      // 2.4 各項目別属性比較
       for (var id in currentItemsMap.keys) {
         final originalItem = originalItemsMap[id];
         final currentItem = currentItemsMap[id];
         if (originalItem == null || currentItem == null) return true;
 
-        // 새로 추가된 항목 (id가 빈 문자열)
+        // 新たに追加された項目 (idが空文字列の場合)
         if (currentItem.id.isEmpty && currentItem.menuId.isEmpty) return true;
 
         if (currentItem.title != originalItem.title ||
@@ -142,10 +142,10 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     }
     setState(() => _isLoading = true);
     try {
-      // 메뉴 저장
+      // メニューアイテムをカテゴリーごとに整理
       await MenuService().saveMenuItems(categorizedMenu, widget.storeId);
 
-      // 서버에서 최신 데이터 가져오기 (새로고침)
+      // サーバーから最新情報取得 (Refresh)
       final updatedMenuItems =
           await MenuService().fetchMenuItems(widget.storeId);
 
@@ -230,12 +230,12 @@ class _MenuManagementPageState extends State<MenuManagementPage>
               }).toList();
               categorizedMenu.remove(oldCategoryName);
 
-              // _originalMenuData 동기화
+              // _originalMenuData 同期化
               final originalMenuList = _originalMenuData[oldCategoryName] ?? [];
               _originalMenuData[newCategoryName] = originalMenuList;
               _originalMenuData.remove(oldCategoryName);
 
-              // menuItems 동기화
+              // menuItems 同期化
               for (var item in menuItems) {
                 if (item.category == oldCategoryName) {
                   final itemIndex = menuItems.indexOf(item);
@@ -295,13 +295,13 @@ class _MenuManagementPageState extends State<MenuManagementPage>
         menuItems.add(newMenu);
         _updateCategorizedMenu();
       });
-      // 컨트롤러 초기화는 AddMenuDialog에서 처리하므로 여기서 불필요
+      // コントローラー初期化は AddMenuDialog で処理されるため、ここでは不要
     }
   }
 
   Future<void> _editMenu(int categoryIndex, int menuIndex) async {
     final category = categories[categoryIndex];
-    final menuItem = categorizedMenu[category]![menuIndex]; // menuItem 정의 추가
+    final menuItem = categorizedMenu[category]![menuIndex]; // menuItem 定義追加
 
     final updatedMenu = await showDialog<MenuListItem>(
       context: context,
@@ -334,7 +334,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
   void _showDeleteMenuDialog(int categoryIndex, int menuIndex) {
     showDialog(
       context: context,
-      barrierDismissible: true, // 바깥 클릭 시 닫힘 적용
+      barrierDismissible: true, // Dialog 外クリック時閉じる
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
@@ -411,11 +411,11 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     );
   }
 
-  // 새로운 초기화 메서드
+  // 新しい初期化メソッド
   void _showDeleteALLMenuDialog() {
     showDialog(
       context: context,
-      barrierDismissible: true, // 바깥 클릭 시 닫힘 적용
+      barrierDismissible: true, // Dialog 外クリック時閉じる
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
@@ -452,7 +452,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
             child: TextButton(
               onPressed: () {
                 setState(() {
-                  // 모든 menuItems의 menuStatus를 'disable'로 설정
+                  // 全ての menuItems の menuStatus　を 'disable' に設定
                   for (int i = 0; i < menuItems.length; i++) {
                     menuItems[i] = MenuListItem(
                       id: menuItems[i].id,
@@ -464,12 +464,12 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                       price: menuItems[i].price,
                       imageUrl: menuItems[i].imageUrl,
                       createdAt: menuItems[i].createdAt,
-                      updatedAt: DateTime.now(), // 업데이트 시간을 현재로 설정
+                      updatedAt: DateTime.now(), // アップデート時間を現在に設定
                       menuStatus: 'disable',
                       tempImageBytes: menuItems[i].tempImageBytes,
                     );
                   }
-                  _updateCategorizedMenu(); // categorizedMenu를 업데이트
+                  _updateCategorizedMenu(); // categorizedMenu を更新
                 });
                 Navigator.of(context).pop();
                 CustomSnackBar.show(
@@ -492,7 +492,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
   void _showDeleteCategoryDialog(int index) {
     showDialog(
       context: context,
-      barrierDismissible: true, // 바깥 클릭 시 닫힘 적용
+      barrierDismissible: true, // Dialog 外クリック時閉じる
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(

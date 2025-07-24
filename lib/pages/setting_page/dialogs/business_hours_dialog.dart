@@ -20,7 +20,7 @@ Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<Strin
               icon: const Icon(Icons.close, color: Color(0xFF263238)),
               onPressed: () => Navigator.pop(context),
               splashRadius: 20,
-              tooltip: '닫기',
+              tooltip: '閉じる',
             ),
           ],
         ),
@@ -40,7 +40,7 @@ Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<Strin
                           child: Text(day, style: const TextStyle(fontWeight: FontWeight.bold)),
                         ),
                         const SizedBox(width: 8),
-                        // 시작 시
+                        // 開店: 時
                         Expanded(
                           child: DropdownButton<int>(
                             value: businessHours[day]!['startHour'],
@@ -58,7 +58,7 @@ Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<Strin
                           ),
                         ),
                         const SizedBox(width: 4),
-                        // 시작 분
+                        // 開店: 分
                         Expanded(
                           child: DropdownButton<int>(
                             value: businessHours[day]!['startMinute'],
@@ -76,7 +76,7 @@ Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<Strin
                           ),
                         ),
                         const Text(' ~ '),
-                        // 종료 시
+                        // 閉店: 時
                         Expanded(
                           child: DropdownButton<int>(
                             value: businessHours[day]!['endHour'],
@@ -94,7 +94,7 @@ Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<Strin
                           ),
                         ),
                         const SizedBox(width: 4),
-                        // 종료 분
+                        // 閉店: 分
                         Expanded(
                           child: DropdownButton<int>(
                             value: businessHours[day]!['endMinute'],
@@ -132,7 +132,7 @@ Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<Strin
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               onPressed: () {
-                // 유효성 검사: 각 요일별로 시작 < 종료인지 확인
+                // 有効性検査: 各曜日ごとに開始時間 < 終了時間を確認
                 bool isValid = true;
                 businessHours.forEach((day, times) {
                   final startHour = times['startHour']!;
@@ -145,7 +145,7 @@ Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<Strin
                 });
                 if (!isValid) {
                   // ScaffoldMessenger.of(context).showSnackBar(
-                  //   const SnackBar(content: Text('閉店時間は開店時間より早くできません。')),
+                  //   const SnackBar(content: Text('閉店時間は開店時間より早くできません')),
                   // );
                   CustomSnackBar.show(
                     context,
@@ -157,7 +157,7 @@ Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<Strin
                 Navigator.pop(context);
                 if (onConfirm != null) onConfirm();
                 // ScaffoldMessenger.of(context).showSnackBar(
-                //   const SnackBar(content: Text('営業時間が設定されました。')),
+                //   const SnackBar(content: Text('営業時間が設定されました')),
                 // );
                 CustomSnackBar.show(
                   context,
