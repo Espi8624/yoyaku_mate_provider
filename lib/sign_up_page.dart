@@ -321,10 +321,23 @@ class _SignUpPageState extends State<SignUpPage> {
       // 会員加入後、明示的にログアウト処理
       await FirebaseAuth.instance.signOut();
 
+<<<<<<< HEAD
       // ログインページへ遷移
+=======
+      // 인증 상태가 null이 될 때까지 대기 (최대 2초)
+      int waited = 0;
+      while (FirebaseAuth.instance.currentUser != null && waited < 2000) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        waited += 100;
+      }
+
+      // Navigate to login page
+>>>>>>> ffc7e7cd483f683643ac3c17b2a68c958ec23eac
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => LoginPage(onLoginSuccess: () {})),
+          MaterialPageRoute(builder: (context) => LoginPage(onLoginSuccess: () {
+            Navigator.of(context).pushReplacementNamed('/');
+          })),
         );
       }
     } catch (e) {
@@ -373,13 +386,24 @@ class _SignUpPageState extends State<SignUpPage> {
 
       await profileService.signUp(profile);
 
+<<<<<<< HEAD
       // 会員加入後、明示的にログアウト処理
       await FirebaseAuth.instance.signOut();
+=======
+      // 인증 상태가 null이 될 때까지 대기 (최대 2초)
+      int waited = 0;
+      while (FirebaseAuth.instance.currentUser != null && waited < 2000) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        waited += 100;
+      }
+>>>>>>> ffc7e7cd483f683643ac3c17b2a68c958ec23eac
 
       // ログインページへ遷移
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => LoginPage(onLoginSuccess: () {})),
+          MaterialPageRoute(builder: (context) => LoginPage(onLoginSuccess: () {
+            Navigator.of(context).pushReplacementNamed('/');
+          })),
         );
       }
     } catch (e) {
