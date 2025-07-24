@@ -8,7 +8,7 @@ class SideNavigationBar extends StatelessWidget {
   final VoidCallback onToggle;
   final String userName;
   final String storeName;
-  final String userRole; // "管理者" 또는 "スタッフ"
+  final String userRole; // 管理者 or 職員
   final VoidCallback? onLogout;
 
   const SideNavigationBar({
@@ -43,7 +43,7 @@ class SideNavigationBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-            // 토글 버튼
+            // Toggle ボタン
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Align(
@@ -61,7 +61,7 @@ class SideNavigationBar extends StatelessWidget {
             ),
             const SizedBox(height: 15),
 
-            // 프로필 섹션
+            // プロフィール区画
             if (isExpanded) ...[
               InkWell(
                 onTap: () {
@@ -195,14 +195,6 @@ class SideNavigationBar extends StatelessWidget {
                                 : const Color(0xFF42A5F5),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          // child: Text(
-                          //   userRole == "manager" ? "管" : "職",
-                          //   style: const TextStyle(
-                          //     fontSize: 11,
-                          //     fontWeight: FontWeight.w700,
-                          //     color: Colors.white,
-                          //   ),
-                          // ),
                         ),
                       ),
                     ],
@@ -212,7 +204,7 @@ class SideNavigationBar extends StatelessWidget {
             ],
             const SizedBox(height: 15),
 
-            // 구분선
+            // 区分線
             Divider(
               height: 1,
               thickness: 0.5,
@@ -284,7 +276,7 @@ class SideNavigationBar extends StatelessWidget {
                   ),
             const SizedBox(height: 12),
 
-            // 로그아웃 구분선
+            // ログアウト区分線
             Divider(
               height: 1,
               thickness: 0.5,
@@ -294,7 +286,7 @@ class SideNavigationBar extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // 로그아웃
+            // ログアウト
             isExpanded
                 ? _NavItem(
                     icon: Icons.logout_rounded,
@@ -364,7 +356,7 @@ class _NavItem extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: const Color(0xFFFF6F61).withOpacity(0.1), // 프로필과 동일
+                    color: const Color(0xFFFF6F61).withOpacity(0.1),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
@@ -425,7 +417,7 @@ class _NavIcon extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: const Color(0xFFFF6F61).withOpacity(0.1), // 프로필과 동일
+                    color: const Color(0xFFFF6F61).withOpacity(0.1),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),

@@ -10,15 +10,15 @@ class WaitingService {
   Timer? _pollingTimer;
   static const String _baseUrl = 'http://localhost:8080';
   
-  // 기본 polling 간격과 최대 간격 설정
+  // 基本 polling 間隔と最大間隔設定
   static const Duration _minPollingInterval = Duration(seconds: 1);
   static const Duration _maxPollingInterval = Duration(seconds: 5);
   Duration _currentPollingInterval = _minPollingInterval;
   
-  // 이전 데이터 캐시 및 변경 감지용 변수
+  // 以前データキャッシュと変更検出用変数
   List<WaitingList>? _lastData;
   int _unchangedDataCount = 0;
-  static const int _maxUnchangedCount = 5; // 5번 연속 데이터 변경 없으면 interval 증가
+  static const int _maxUnchangedCount = 5; // 5回連続データ変更がない場合、interval 増加
 
   factory WaitingService() {
     return _instance;
@@ -29,7 +29,7 @@ class WaitingService {
   Stream<List<WaitingList>> get waitingListStream => _waitingListController.stream;
   bool get isConnected => _isConnected;
 
-  // 대기 목록 데이터를 한 번만 가져오는 함수
+  // 待機目録データを一度だけ取得する関数
   Future<List<WaitingList>> fetchWaitingCustomers({String storeId = 'store-001'}) async {
     try {
       // print('Fetching waiting customers from: $_baseUrl/api/waiting-list?store_id=$storeId');
@@ -70,7 +70,7 @@ class WaitingService {
     }
   }
 
-  // 폴링용 데이터 가져오기 함수
+  // polling 用データ取得関数
   Future<List<WaitingList>> _fetchWaitingListForPolling(String storeId) async {
     try {
       final response = await http.get(
@@ -115,7 +115,7 @@ class WaitingService {
       return true;
     }
 
-    // 정렬된 리스트로 비교하여 순서 변경도 감지
+    // 整列されたリストで比較し、順序変更も検出
     final sortedLastData = List<WaitingList>.from(_lastData!)
       ..sort((a, b) => (a.waitingId).compareTo(b.waitingId));
     final sortedNewData = List<WaitingList>.from(newData)
@@ -125,7 +125,7 @@ class WaitingService {
       final lastItem = sortedLastData[i];
       final newItem = sortedNewData[i];
       
-      // 모든 필드를 비교하여 변경 사항 감지
+      // 全てのフィールドを比較し、変更を検出
       if (lastItem.waitingId != newItem.waitingId ||
           lastItem.status != newItem.status ||
           lastItem.queueNumber != newItem.queueNumber ||
@@ -144,11 +144,11 @@ class WaitingService {
 
   void _adjustPollingInterval(bool dataChanged) {
     if (dataChanged) {
-      // 데이터가 변경되었으면 즉시 polling 간격을 최소로 설정
+      // データが変更された場合、即座に polling 間隔を最小に設定
       if (_currentPollingInterval != _minPollingInterval) {
         // print('Data changed, reducing polling interval to ${_minPollingInterval.inSeconds}s');
         _currentPollingInterval = _minPollingInterval;
-        // polling 타이머 재시작
+        // polling タイマー再起動
         if (_lastStoreId != null) {
           _restartPolling(_lastStoreId!);
         }
@@ -157,14 +157,14 @@ class WaitingService {
     } else {
       _unchangedDataCount++;
       
-      // 연속 5번 이상 변경이 없으면 polling 간격을 점진적으로 증가
+      // 連続で5回以上変更がない場合、polling 間隔を徐々に増加
       if (_unchangedDataCount >= _maxUnchangedCount && 
           _currentPollingInterval < _maxPollingInterval) {
         final newInterval = _currentPollingInterval + const Duration(seconds: 1);
         if (newInterval <= _maxPollingInterval) {
           // print('No changes detected, increasing polling interval to ${newInterval.inSeconds}s');
           _currentPollingInterval = newInterval;
-          // polling 타이머 재시작
+          // polling タイマー再起動
           if (_lastStoreId != null) {
             _restartPolling(_lastStoreId!);
           }
@@ -207,13 +207,13 @@ class WaitingService {
         // print('Polling for updates (interval: ${_currentPollingInterval.inSeconds}s)...');
         final waitingList = await _fetchWaitingListForPolling(storeId);
 
-        // 데이터 변경 감지
+        // データ変更検出
         final bool dataChanged = _hasDataChanged(waitingList);
         
-        // polling 간격 조정
+        // polling 間隔調整
         _adjustPollingInterval(dataChanged);
 
-        // 변경된 경우에만 스트림에 데이터 전송
+        // 変更された場合のみストリームにデータを送信
         if (dataChanged) {
           // print('Data changed, sending update (${waitingList.length} items)');
           _waitingListController.add(waitingList);
@@ -221,7 +221,7 @@ class WaitingService {
         }
       } catch (e) {
         // print('Error during polling: $e');
-        // 에러 발생 시 polling 간격을 최소로 재설정
+        // エラー発生時、 polling 間隔を最小に再設定
         _currentPollingInterval = _minPollingInterval;
       }
     });
@@ -243,7 +243,7 @@ class WaitingService {
     _waitingListController.close();
   }
 
-   // 웨이팅 ID 생성 함수
+   // 待機 ID 生成関数
   String _generateWaitingId() {
     final now = DateTime.now();
     final year = now.year.toString();
@@ -256,7 +256,7 @@ class WaitingService {
     return '$year$month$day-$hour$minute$second';
   }
 
-  // 새로운 대기 추가 함수
+  // 新規待機追加関数
   Future<WaitingList> createWaitingListItem({
     required String customerName,
     required int partySize,
@@ -300,7 +300,7 @@ class WaitingService {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         final waitingList = WaitingList.fromJson(jsonResponse);
         
-        // 데이터가 변경되었으므로 polling 간격을 최소로 재설정
+        // データが変更されたため、 polling 間隔を最小に再設定
         _currentPollingInterval = _minPollingInterval;
         if (_lastStoreId != null) {
           _restartPolling(_lastStoreId!);
@@ -315,7 +315,7 @@ class WaitingService {
     }
   }
 
-  // 웨이팅 상태 업데이트 함수
+  // 待機状態更新関数
   Future<void> updateWaitingStatus({
     required String waitingId,
     required String status,
@@ -341,7 +341,7 @@ class WaitingService {
         throw Exception('Failed to update status: ${response.statusCode}');
       }
 
-      // 강제로 다음 폴링에서 새로운 데이터를 가져오도록 함
+      // 強制に次に polling で新しいデータを取得するようにする
       _lastData = null;
       if (_pollingTimer != null) {
         _restartPolling(storeId);
@@ -352,7 +352,7 @@ class WaitingService {
     }
   }
 
-  // 대기 목록 초기화 함수
+  // 待機目録初期化関数
   Future<void> clearWaitingList({String storeId = 'store-001'}) async {
     try {
       // print('Clearing waiting list for store: $storeId');
@@ -361,7 +361,7 @@ class WaitingService {
       final response = await http.post(
         Uri.parse('$_baseUrl/api/waiting-list?action=clear&store_id=$storeId'),
         headers: {'Content-Type': 'application/json'},
-        body: '{}',  // 빈 JSON 객체 추가
+        body: '{}',  // 空 JSON Object 追加
       );
 
       // print('Clear waiting list response status: ${response.statusCode}');
@@ -372,6 +372,7 @@ class WaitingService {
       }
 
       // 초기화 후 즉시 데이터를 다시 가져와서 스트림에 전달
+      // 初期化後、即データを再取得し、ストリームに送信
       final updatedList = await fetchWaitingCustomers(storeId: storeId);
       _waitingListController.add(updatedList);
       _lastData = updatedList;

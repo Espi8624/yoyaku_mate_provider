@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/profile_service.dart';
 import '../models/provider_profile.dart';
-import 'login_page.dart'; // Added import for LoginPage
+import 'login_page.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -12,25 +12,25 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
-  int _step = 0; // 0: 권한선택, 1: 사장-유저정보, 2: 사장-가게정보, 1: 직원-가게번호, 2: 직원-유저정보
+  int _step = 0; // 0: 権限選択, 1: 管理者-個人情報, 2: 管理者-店情報, 1: 職員-店番号, 2: 職員-個人情報
   String? _role; // 'manager' or 'staff'
   bool _isLoading = false;
   String? _errorMessage;
 
-  // 사장 정보
-  final TextEditingController ownerEmailController = TextEditingController();
-  final TextEditingController ownerPasswordController = TextEditingController(); // 추가
-  final TextEditingController ownerPhoneController = TextEditingController();
-  final TextEditingController ownerNameController = TextEditingController();
+  // 管理者情報
+  final TextEditingController managerEmailController = TextEditingController();
+  final TextEditingController managerPasswordController = TextEditingController();
+  final TextEditingController managerPhoneController = TextEditingController();
+  final TextEditingController managerNameController = TextEditingController();
   final TextEditingController storeNameController = TextEditingController();
   final TextEditingController storeAddressController = TextEditingController();
   final TextEditingController storePhoneController = TextEditingController();
   final TextEditingController storeBizNumController = TextEditingController();
 
-  // 직원 정보
+  // 職員情報
   final TextEditingController staffStoreIdController = TextEditingController();
   final TextEditingController staffEmailController = TextEditingController();
-  final TextEditingController staffPasswordController = TextEditingController(); // 추가
+  final TextEditingController staffPasswordController = TextEditingController();
   final TextEditingController staffPhoneController = TextEditingController();
   final TextEditingController staffNameController = TextEditingController();
 
@@ -106,25 +106,25 @@ class _SignUpPageState extends State<SignUpPage> {
           const Text('ユーザー情報入力', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           TextField(
-            controller: ownerEmailController,
+            controller: managerEmailController,
             decoration: const InputDecoration(labelText: 'メールアドレス'),
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 16),
           TextField(
-            controller: ownerPasswordController,
+            controller: managerPasswordController,
             decoration: const InputDecoration(labelText: 'パスワード'),
             obscureText: true,
           ),
           const SizedBox(height: 16),
           TextField(
-            controller: ownerPhoneController,
+            controller: managerPhoneController,
             decoration: const InputDecoration(labelText: '電話番号'),
             keyboardType: TextInputType.phone,
           ),
           const SizedBox(height: 16),
           TextField(
-            controller: ownerNameController,
+            controller: managerNameController,
             decoration: const InputDecoration(labelText: '名前'),
           ),
           const SizedBox(height: 32),
@@ -286,6 +286,7 @@ class _SignUpPageState extends State<SignUpPage> {
     return const SizedBox.shrink();
   }
 
+  // 管理者側処理
   Future<void> _handleOwnerSignUp() async {
     setState(() {
       _isLoading = true;
@@ -293,33 +294,34 @@ class _SignUpPageState extends State<SignUpPage> {
     });
 
     try {
-      // Create user with Firebase Auth
+      // Firsebase Auth 使用しユーザー作成
       final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: ownerEmailController.text,
-        password: ownerPasswordController.text, // 입력받은 비밀번호 사용
+        email: managerEmailController.text,
+        password: managerPasswordController.text,
       );
 
       // Create provider profile
       final profile = ProviderProfile(
         firebaseUid: userCredential.user!.uid,
-        email: ownerEmailController.text,
-        phoneNumber: ownerPhoneController.text,
-        name: ownerNameController.text,
+        email: managerEmailController.text,
+        phoneNumber: managerPhoneController.text,
+        name: managerNameController.text,
         role: 'manager',
         storeName: storeNameController.text,
         storeAddress: storeAddressController.text,
         storeTelNumber: storePhoneController.text,
         bizNumber: storeBizNumController.text.isEmpty ? null : storeBizNumController.text,
-        storeEmail: ownerEmailController.text,  // 가게 이메일을 사장님 이메일과 동일하게 설정
+        storeEmail: managerEmailController.text,  // 가게 이메일을 사장님 이메일과 동일하게 설정
       );
 
-      final profileService = ProviderProfileService(baseUrl: 'http://localhost:8080'); // Adjust the base URL as needed
+      // 基盤 URL 指定し、プロファイルサービス初期化
+      final profileService = ProviderProfileService(baseUrl: 'http://localhost:8080');
       await profileService.signUp(profile);
 
-      // 회원가입 후 명시적으로 로그아웃 처리
+      // 会員加入後、明示的にログアウト処理
       await FirebaseAuth.instance.signOut();
 
-      // Navigate to login page
+      // ログインページへ遷移
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => LoginPage(onLoginSuccess: () {})),
@@ -338,6 +340,7 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
+  // 職員側処理
   Future<void> _handleStaffSignUp() async {
     setState(() {
       _isLoading = true;
@@ -347,19 +350,19 @@ class _SignUpPageState extends State<SignUpPage> {
     try {
       final profileService = ProviderProfileService(baseUrl: 'http://localhost:8080');
       
-      // Check if store exists
+      // 店情報照会
       final storeExists = await profileService.checkStoreExists(staffStoreIdController.text);
       if (!storeExists) {
         throw Exception('Store not found');
       }
 
-      // Create user with Firebase Auth
+      // Firebase Auth を使用しユーザー作成
       final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: staffEmailController.text,
-        password: staffPasswordController.text, // 입력받은 비밀번호 사용
+        password: staffPasswordController.text,
       );
 
-      // Create provider profile
+      // profile 作成
       final profile = ProviderProfile(
         firebaseUid: userCredential.user!.uid,
         email: staffEmailController.text,
@@ -370,10 +373,10 @@ class _SignUpPageState extends State<SignUpPage> {
 
       await profileService.signUp(profile);
 
-      // 회원가입 후 명시적으로 로그아웃 처리
+      // 会員加入後、明示的にログアウト処理
       await FirebaseAuth.instance.signOut();
 
-      // Navigate to login page
+      // ログインページへ遷移
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => LoginPage(onLoginSuccess: () {})),

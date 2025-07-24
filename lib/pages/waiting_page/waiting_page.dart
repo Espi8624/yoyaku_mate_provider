@@ -37,7 +37,7 @@ class _WaitingPageState extends State<WaitingPage> {
     });
 
     try {
-      // 초기 데이터 로드
+      // 初期データ取得
       final initialData = await _waitingService.fetchWaitingCustomers();
 
       if (!mounted) return;
@@ -47,7 +47,7 @@ class _WaitingPageState extends State<WaitingPage> {
         _isLoading = false;
       });
 
-      // polling 시작 및 실시간 업데이트 구독
+      // polling 開始及び実時間更新購読
       _waitingService.startPolling();
       _waitingService.waitingListStream.listen(
         (updatedList) {
@@ -61,7 +61,7 @@ class _WaitingPageState extends State<WaitingPage> {
           if (!mounted) return;
           setState(() {
             if (error.toString().contains("data\":null")) {
-              // 데이터가 없는 경우는 에러가 아닌 정상적인 상태로 처리
+              // データがない場合はエラーではなく正常として処理
               _waitingList = [];
               _error = null;
             } else {
@@ -75,7 +75,7 @@ class _WaitingPageState extends State<WaitingPage> {
       setState(() {
         _isLoading = false;
         if (e.toString().contains("data\":null")) {
-          // 데이터가 없는 경우는 에러가 아닌 정상적인 상태로 처리
+          // データがない場合はエラーではなく正常として処理
           _waitingList = [];
           _error = null;
         } else {
@@ -102,7 +102,7 @@ class _WaitingPageState extends State<WaitingPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 좌측: 대기 리스트 (2/3 너비)
+            // 左側: 待機リスト (2/3 幅)
             Expanded(
               flex: 2,
               child: Column(
@@ -130,16 +130,16 @@ class _WaitingPageState extends State<WaitingPage> {
                                       onPressed: _initializeData,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor:
-                                            const Color(0xFF263238), // 배경색
-                                        foregroundColor: Colors.white, // 글자색
+                                            const Color(0xFF263238),
+                                        foregroundColor: Colors.white,
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 20,
-                                            vertical: 10), // 내부 여백
+                                            vertical: 10),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(
-                                              16), // 둥근 모서리
+                                              16),
                                         ),
-                                        elevation: 5, // 그림자 효과
+                                        elevation: 5,
                                       ),
                                       child: const Text('再試行'),
                                     ),
@@ -154,7 +154,7 @@ class _WaitingPageState extends State<WaitingPage> {
               ),
             ),
             const SizedBox(width: 11),
-            // 우측: 웨이팅 상태 (1/3 너비)
+            // 右側: 待機状態 (1/3 幅)
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

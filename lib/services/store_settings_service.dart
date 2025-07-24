@@ -10,7 +10,7 @@ class StoreSettingsService {
     final response = await http.get(Uri.parse('$baseUrl/api/store_settings?store_id=$storeId'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // 서버 응답이 {status: success, data: {...}} 형태일 경우
+      // サーバー応答が {status: success, data: {...}} 形式の場合
       return StoreSettings.fromJson(data['data']);
     } else {
       throw Exception('Failed to load store settings');

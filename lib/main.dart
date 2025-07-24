@@ -57,7 +57,7 @@ class _MyAppState extends State<MyApp> {
         if (snapshot.hasError) {
           return MaterialApp(
             home: Scaffold(
-              body: Center(child: Text('Firebase 초기화 오류:\n	${snapshot.error}')),
+              body: Center(child: Text('Firebase 初期化エラー:\n	${snapshot.error}')),
             ),
           );
         }
@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
       storeId: storeId,
       onProfileChanged: onProfileChanged,
     ),
-    SettingPage(storeId: storeId), // 실제 storeId로 변경 필요
+    SettingPage(storeId: storeId),
     const ShopStatusPage(),
     const SalesEntryPage(),
     const SalesOverviewPage(),
@@ -124,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(12.0),
         child: Stack(
           children: [
-            // 메인 컨텐츠: 항상 같은 위치와 크기
+            // メインコンテンツ区画
             Positioned.fill(
               left: 70,
               child: GestureDetector(
@@ -144,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            // 네비게이션 바: 확장 시 오른쪽으로 겹침
+            // ナビゲーションバー区画
             Positioned(
               top: 0,
               left: 0,

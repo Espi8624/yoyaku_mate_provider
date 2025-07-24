@@ -19,7 +19,7 @@ class _SettingPageState extends State<SettingPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   StoreSettings? _storeSettings;
-  final _service = StoreSettingsService(baseUrl: 'http://localhost:8080'); // 실제 주소로 변경
+  final _service = StoreSettingsService(baseUrl: 'http://localhost:8080'); // 基盤 URL を指定
 
   @override
   void initState() {
@@ -85,7 +85,7 @@ class _SettingPageState extends State<SettingPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 타이틀
+            // ヘッダー
             const Text(
               "設定",
               style: TextStyle(
@@ -95,7 +95,7 @@ class _SettingPageState extends State<SettingPage>
               ),
             ),
             const SizedBox(height: 24),
-            // 탭 메뉴
+            // タブバー
             Container(
               decoration: _boxDecoration(),
               child: TabBar(
@@ -127,7 +127,7 @@ class _SettingPageState extends State<SettingPage>
               ),
             ),
             const SizedBox(height: 24),
-            // 탭 내용
+            // タブ内容
             Expanded(
               child: ClipRRect(
                 child: IndexedStack(
@@ -154,9 +154,9 @@ class _SettingPageState extends State<SettingPage>
   }
 
   void _showBusinessHoursDialog() async {
-    // DB에서 실제 영업시간 값 사용
+    // DBで実際の営業時間使用
     final days = ['月', '火', '水', '木', '金', '土', '日'];
-    // storeSettings의 operatingHours를 시간/분 형태로 변환
+    // storeSettings の operatingHours を「時間/分」形態に変換
     final Map<String, Map<String, int>> businessHours = {};
     final dayKeys = [
       'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
@@ -179,7 +179,7 @@ class _SettingPageState extends State<SettingPage>
       businessHours,
       days,
       onConfirm: () {
-        // 다이얼로그에서 수정된 businessHours를 StoreSettings에 반영
+        // Dialog で修正された businessHours を StoreSettings に反映
         final newOperatingHours = <String, Map<String, String>>{};
         for (int i = 0; i < days.length; i++) {
           final key = dayKeys[i];
@@ -197,7 +197,7 @@ class _SettingPageState extends State<SettingPage>
     );
   }
 
-  // // 섹션 제목 위젯
+  // // ヘッダー Widget
   // Widget _buildSectionTitle(String title) {
   //   return Padding(
   //     padding: const EdgeInsets.all(16.0),
@@ -212,7 +212,7 @@ class _SettingPageState extends State<SettingPage>
   //   );
   // }
 
-  // // 설정 항목 위젯
+  // // 設定項目 Widget
   // Widget _buildSettingItem(String title, String subtitle, Widget? trailing,
   //     {VoidCallback? onTap}) {
   //   return ListTile(
@@ -230,7 +230,7 @@ class _SettingPageState extends State<SettingPage>
   //   );
   // }
 
-  // // 섹션 박스 위젯
+  // // セクションボックス Widget
   // Widget _sectionBox({required Widget child}) {
   //   return Container(
   //     width: double.infinity,
@@ -239,7 +239,7 @@ class _SettingPageState extends State<SettingPage>
   //   );
   // }
 
-  // 박스 데코레이션
+  // ボックスデザイン
   BoxDecoration _boxDecoration() {
     return BoxDecoration(
       color: Colors.white,

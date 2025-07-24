@@ -41,7 +41,7 @@ class _ProfilePageState extends State<ProfilePage>
       body: SafeArea(
         child: Column(
           children: [
-            // 헤더
+            // ヘッダー
             const Padding(
               padding: EdgeInsets.all(24),
               child: Align(
@@ -57,7 +57,7 @@ class _ProfilePageState extends State<ProfilePage>
               ),
             ),
 
-            // 탭 바 (사장 권한일 때만 표시)
+            // タブバー (マネージャー権限時のみ表示)
             if (widget.userRole == "manager")
               Container(
                 height: 34,
@@ -113,7 +113,7 @@ class _ProfilePageState extends State<ProfilePage>
 
             const SizedBox(height: 24),
 
-            // 탭 뷰
+            // タブビュー
             Expanded(
               child: widget.userRole == "manager"
                   ? TabBarView(

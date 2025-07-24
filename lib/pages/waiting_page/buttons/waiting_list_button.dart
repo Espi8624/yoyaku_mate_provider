@@ -4,7 +4,7 @@ import 'package:yoyaku_mate_provider/services/waiting_service.dart';
 import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
 
 class WaitingListButtons extends StatelessWidget {
-  final VoidCallback onRefresh; // 새로고침 콜백 추가
+  final VoidCallback onRefresh; // 待機リストの更新をトリガーするコールバック
 
   const WaitingListButtons({super.key, required this.onRefresh});
 
@@ -18,7 +18,7 @@ class WaitingListButtons extends StatelessWidget {
             showDialog(
               context: context,
               builder: (context) => AddWaitingDialog(
-                onAddSuccess: onRefresh, // 새로고침 콜백 전달
+                onAddSuccess: onRefresh, // 新しい待機追加後にリフレッシュ
               ),
             );
           },
@@ -68,23 +68,23 @@ class WaitingListButtons extends StatelessWidget {
                   ],
                 ),
                 content: const Text('現在の待機目録を全て初期化しますか？\nこの操作は取り消しできません。'),
-                actionsAlignment: MainAxisAlignment.center, // actions를 가운데 정렬
+                actionsAlignment: MainAxisAlignment.center, // actions 配置を中央整列
                 actions: [
                   TextButton(
                     onPressed: () async {
                       Navigator.of(context).pop();
                       try {
                         final waitingService = WaitingService();
-                        await waitingService.clearWaitingList(); // 비동기 작업 완료 대기
+                        await waitingService.clearWaitingList(); // 非同期作業完了待機
 
-                        // UI 업데이트 전에 context가 유효한지 확인
+                        // UI 更新前に context が有効か確認
                         if (context.mounted) {
                           CustomSnackBar.show(
                             context,
                             message: '待機目録を初期化しました',
                             status: SnackBarStatus.success,
                           );
-                          onRefresh(); // 초기화 후 새로고침
+                          onRefresh(); // 待機リストの更新をトリガー
                         }
                       } catch (e) {
                         if (context.mounted) {

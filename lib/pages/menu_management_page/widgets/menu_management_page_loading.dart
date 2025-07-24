@@ -14,16 +14,16 @@ class MenuManagementPageLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16), // 최상위 배경에 둥근 모서리 적용
+      borderRadius: BorderRadius.circular(16), // 最上位背景に丸みを帯びた角を適用
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.1), // 반투명 검은색 배경
+          color: Colors.black.withOpacity(0.1), // 半透明黒背景
         ),
         child: Center(
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8), // 내부 컨테이너 배경색
+              color: Colors.white.withOpacity(0.8), // 内部コンテナ背景色
               // borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(

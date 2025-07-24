@@ -78,7 +78,7 @@ class CustomSnackBar {
     }
 
     if (withVoiceFeedback) {
-      // TODO: flutter_tts 패키지로 음성 피드백 구현 가능
+      // TODO: flutter_tts パッケージで音声フィードバックを実装可能
     }
 
     ScaffoldMessenger.of(context).removeCurrentSnackBar();

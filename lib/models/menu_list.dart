@@ -45,7 +45,7 @@ class MenuListItem {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'].toString())
           : DateTime.now(),
-      menuStatus: json['menuStatus']?.toString() ?? 'available', // 'menu_status' → 'menuStatus'로 일치
+      menuStatus: json['menuStatus']?.toString() ?? 'available',
       tempImageBytes: null,
     );
   }

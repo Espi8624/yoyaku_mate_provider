@@ -20,7 +20,7 @@ class WaitingStatusArea extends StatelessWidget {
 
     if (lastEntry.isEmpty) return "--:--";
 
-    // 오늘 날짜만 고려
+    // 今日の日付のみ考慮
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final lastEntryTime = lastEntry.firstWhere(
@@ -30,7 +30,7 @@ class WaitingStatusArea extends StatelessWidget {
 
     if (lastEntryTime.year == 0) return "--:--";
 
-    // UTC를 JST로 변환
+    // UTC を JST に変換
     final jst = lastEntryTime.toUtc().add(const Duration(hours: 9));
     return "${jst.hour.toString().padLeft(2, '0')}:${jst.minute.toString().padLeft(2, '0')}";
   }
@@ -56,7 +56,7 @@ class WaitingStatusArea extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 타이틀
+          // タイトル
           const Text(
             "現状ウェイティング状況",
             style: TextStyle(
@@ -66,7 +66,7 @@ class WaitingStatusArea extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // 상태 정보
+          // ステータス情報
           Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -91,9 +91,9 @@ class WaitingStatusArea extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          // 현재 웨이팅을 아래로 내리기 위해 Spacer 사용
+          // 現在ウェイティングを下に降ろすために Spacer を使用
           const Spacer(),
-          // 현재 웨이팅 강조 상자
+          // 現在ウェイティング強調ボックス
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 5),
