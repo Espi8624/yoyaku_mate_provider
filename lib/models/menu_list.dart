@@ -1,6 +1,7 @@
 import 'dart:typed_data';
+import 'package:equatable/equatable.dart';
 
-class MenuListItem {
+class MenuListItem extends Equatable {
   final String id;
   final String storeId;
   final String menuId;
@@ -14,7 +15,7 @@ class MenuListItem {
   final String menuStatus;
   final Uint8List? tempImageBytes;
 
-  MenuListItem({
+  const MenuListItem({
     required this.id,
     required this.storeId,
     required this.menuId,
@@ -29,6 +30,40 @@ class MenuListItem {
     this.tempImageBytes,
   });
 
+  @override
+  List<Object?> get props => [id, storeId, menuId, category, title, description, price, imageUrl, createdAt, updatedAt, menuStatus];
+
+  MenuListItem copyWith({
+    String? id,
+    String? storeId,
+    String? menuId,
+    String? category,
+    String? title,
+    String? description,
+    double? price,
+    String? imageUrl,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? menuStatus,
+    Uint8List? tempImageBytes,
+    bool clearTempImage = false,
+  }) {
+    return MenuListItem(
+      id: id ?? this.id,
+      storeId: storeId ?? this.storeId,
+      menuId: menuId ?? this.menuId,
+      category: category ?? this.category,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      price: price ?? this.price,
+      imageUrl: imageUrl ?? this.imageUrl,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      menuStatus: menuStatus ?? this.menuStatus,
+      tempImageBytes: clearTempImage ? null : tempImageBytes ?? this.tempImageBytes,
+    );
+  }
+
   factory MenuListItem.fromJson(Map<String, dynamic> json) {
     return MenuListItem(
       id: json['id']?.toString() ?? '',
@@ -39,12 +74,8 @@ class MenuListItem {
       description: json['description']?.toString() ?? '',
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
       imageUrl: json['image']?.toString() ?? '',
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'].toString())
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'].toString())
-          : DateTime.now(),
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'].toString()) : DateTime.now(),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'].toString()) : DateTime.now(),
       menuStatus: json['menuStatus']?.toString() ?? 'available',
       tempImageBytes: null,
     );

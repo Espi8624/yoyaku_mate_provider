@@ -3,137 +3,98 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../models/menu_list.dart';
+import 'api_exception.dart';
 
 class MenuService {
-  static final MenuService _instance = MenuService._internal();
-  static const String _baseUrl = 'http://localhost:8080';
+  final http.Client _client;
+  final String _baseUrl;
 
-  factory MenuService() {
-    return _instance;
-  }
-
-  MenuService._internal();
+  MenuService({
+    http.Client? client,
+    String baseUrl = 'http://localhost:8080',
+  })  : _client = client ?? http.Client(),
+        _baseUrl = baseUrl;
 
   Future<List<MenuListItem>> fetchMenuItems(String storeId) async {
+    final uri = Uri.parse('$_baseUrl/api/menu-list?store_id=$storeId');
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/menu-list?store_id=$storeId'),
-        headers: {'Content-Type': 'application/json'},
-      );
+      final response = await _client.get(uri, headers: {'Content-Type': 'application/json'});
+      final decodedBody = utf8.decode(response.bodyBytes);
+      final jsonResponse = json.decode(decodedBody);
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = json.decode(response.body);
-
         if (jsonResponse['status'] != 'success') {
-          throw Exception(
-              'Failed to fetch menu items: ${jsonResponse['message']}');
+          throw ApiException(jsonResponse['message'] ?? 'Failed to fetch menu items');
         }
-
-        if (jsonResponse['data'] != null) {
-          final List<dynamic> data = jsonResponse['data'];
-          List<MenuListItem> menuItems = [];
-
-          for (var item in data) {
-            try {
-              final menuItem = MenuListItem.fromJson(item);
-              menuItems.add(menuItem);
-            } catch (e) {
-              print('Error parsing menu item: $e');
-            }
-          }
-
-          return menuItems;
-        }
+        final List<dynamic> data = jsonResponse['data'] ?? [];
+        return data.map((item) => MenuListItem.fromJson(item)).toList();
+      } else {
+        throw ApiException(jsonResponse['message'] ?? 'Failed to fetch menu items', statusCode: response.statusCode);
       }
-
-      throw Exception('Failed to fetch menu items: ${response.statusCode}');
     } catch (e) {
-      rethrow;
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error or server is unavailable: ${e.toString()}');
     }
   }
 
-  Future<String> uploadImage(Uint8List imageBytes) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/api/upload-image'),
-      headers: {'Content-Type': 'multipart/form-data'},
-      body: imageBytes,
-    );
-    if (response.statusCode == 200) {
-      return json.decode(response.body)['url'];
-    }
-    throw Exception('Failed to upload image');
-  }
-
-  Future<List<MenuListItem>> saveMenuItems(
-      Map<String, List<MenuListItem>> categorizedMenu, String storeId) async {
+  Future<String> _uploadImage(Uint8List imageBytes, String filename) async {
+    final uri = Uri.parse('$_baseUrl/api/upload-image');
     try {
-      List<Map<String, dynamic>> itemsToSave = [];
-      for (var entry in categorizedMenu.entries) {
-        final category = entry.key;
-        final items = entry.value;
-        for (var item in items) {
-          String imageUrl = item.imageUrl;
-          if (item.tempImageBytes != null) {
-            try {
-              print('イメージアップロード: ${item.title} (カテゴリ: $category)');
-              imageUrl = await uploadImage(item.tempImageBytes!);
-              print('イメージアップロード成功: $imageUrl');
-            } catch (e) {
-              print('イメージアップロード失敗: ${item.title}: $e');
-              imageUrl = item.imageUrl; // 既存 URL 使用
-            }
-          }
-          final updatedItem = MenuListItem(
-            id: item.id,
-            storeId: item.storeId.isNotEmpty ? item.storeId : storeId,
-            menuId: item.menuId.isNotEmpty
-                ? item.menuId
-                : DateTime.now().millisecondsSinceEpoch.toString(),
-            category: item.category,
-            title: item.title,
-            description: item.description,
-            price: item.price,
-            imageUrl: imageUrl,
-            createdAt: item.createdAt,
-            updatedAt: DateTime.now(),
-            menuStatus: item.menuStatus,
-            tempImageBytes: null,
-          );
-          itemsToSave.add(updatedItem.toJson());
-        }
+      var request = http.MultipartRequest('POST', uri);
+      request.files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: filename));
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        return json.decode(responseBody)['url'];
+      } else {
+        throw ApiException(json.decode(responseBody)['message'] ?? 'Failed to upload image', statusCode: response.statusCode);
       }
-
-      final saveResponse = await http.post(
-        Uri.parse('$_baseUrl/api/menu-list/bulk-save?store_id=$storeId'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(itemsToSave),
-      );
-
-      if (saveResponse.statusCode != 200) {
-        throw Exception('メニューの保存に失敗しました: ${saveResponse.statusCode}');
-      }
-
-      final Map<String, dynamic> jsonResponse = json.decode(saveResponse.body);
-      if (jsonResponse['status'] != 'success') {
-        throw Exception('メニューの保存に失敗しました: ${jsonResponse['message']}');
-      }
-
-      final List<dynamic> savedData = jsonResponse['data'];
-      final List<MenuListItem> updatedMenuItems = savedData
-          .cast<Map<String, dynamic>>()
-          .map((item) => MenuListItem.fromJson({
-                ...item,
-                'storeId': item['storeId']?.toString() ?? storeId,
-                'menuId': item['menuId']?.toString() ??
-                    (item['id']?.toString() ??
-                        DateTime.now().millisecondsSinceEpoch.toString()),
-              }))
-          .toList();
-
-      return updatedMenuItems;
     } catch (e) {
-      print('saveMenuItems エラー発生: $e');
-      throw Exception('メニューの保存に失敗しました: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Image upload failed: ${e.toString()}');
+    }
+  }
+
+  Future<void> saveMenuItems(Map<String, List<MenuListItem>> categorizedMenu, String storeId) async {
+    List<Map<String, dynamic>> itemsToSave = [];
+
+    for (var entry in categorizedMenu.entries) {
+      for (var item in entry.value) {
+        String finalImageUrl = item.imageUrl;
+        if (item.tempImageBytes != null) {
+          try {
+            final filename = '${item.menuId}.jpg';
+            finalImageUrl = await _uploadImage(item.tempImageBytes!, filename);
+          } catch (e) {
+            print('Image upload failed for ${item.title}: $e');
+          }
+        }
+        final itemToSave = item.copyWith(
+          imageUrl: finalImageUrl,
+          storeId: item.storeId.isNotEmpty ? item.storeId : storeId,
+          updatedAt: DateTime.now(),
+          clearTempImage: true,
+        );
+        itemsToSave.add(itemToSave.toJson());
+      }
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/menu-list/bulk-save?store_id=$storeId');
+    try {
+      final response = await _client.post(uri, headers: {'Content-Type': 'application/json'}, body: json.encode(itemsToSave));
+      final decodedBody = utf8.decode(response.bodyBytes);
+      final jsonResponse = json.decode(decodedBody);
+
+      if (response.statusCode != 200) {
+        throw ApiException(jsonResponse['message'] ?? 'Failed to save menus', statusCode: response.statusCode);
+      }
+      if (jsonResponse['status'] != 'success') {
+        throw ApiException(jsonResponse['message'] ?? 'Failed to save menus');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to save menus: ${e.toString()}');
     }
   }
 }
