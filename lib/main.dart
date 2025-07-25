@@ -5,7 +5,7 @@ import 'package:yoyaku_mate_provider/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/login_page.dart';
 
-import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_page.dart';
+import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_page.dart';
 import 'package:yoyaku_mate_provider/pages/sales_entry_page.dart';
 import 'package:yoyaku_mate_provider/pages/sales_overview_page.dart';
@@ -86,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _pagesWithCallback(VoidCallback? onProfileChanged, ProviderProfileService profileService, String userId, String userRole, String storeId) => [
     const WaitingPage(),
-    MenuManagementPage(storeId: storeId),
+    MenuManagementScreen(storeId: storeId),
     ProfilePage(
       userId: userId,
       userRole: userRole,
