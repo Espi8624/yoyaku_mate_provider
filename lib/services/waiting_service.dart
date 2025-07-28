@@ -30,7 +30,7 @@ class WaitingService {
   bool get isConnected => _isConnected;
 
   // 待機目録データを一度だけ取得する関数
-  Future<List<WaitingList>> fetchWaitingCustomers({String storeId = 'store-001'}) async {
+  Future<List<WaitingList>> fetchWaitingCustomers(String storeId) async {
     try {
       // print('Fetching waiting customers from: $_baseUrl/api/waiting-list?store_id=$storeId');
       final response = await http.get(
@@ -181,7 +181,7 @@ class WaitingService {
     _startPolling(storeId);
   }
 
-  void startPolling({String storeId = 'store-001'}) {
+  void startPolling(String storeId) {
     if (_isConnected && _lastStoreId == storeId) {
       // print('Already connected and polling for store: $storeId');
       return;
@@ -263,7 +263,7 @@ class WaitingService {
     required String contact,
     required String nationality,
     String notes = '',
-    String storeId = 'store-001',
+    required String storeId,
   }) async {
     try {
       // print('Creating waiting list item with data:');  // Add debug log
@@ -353,31 +353,31 @@ class WaitingService {
   }
 
   // 待機目録初期化関数
-  Future<void> clearWaitingList({String storeId = 'store-001'}) async {
+  Future<void> clearWaitingList(String storeId) async {
     try {
-      // print('Clearing waiting list for store: $storeId');
-      // print('Request URL: $_baseUrl/api/waiting-list?action=clear&store_id=$storeId');
-      
       final response = await http.post(
         Uri.parse('$_baseUrl/api/waiting-list?action=clear&store_id=$storeId'),
         headers: {'Content-Type': 'application/json'},
-        body: '{}',  // 空 JSON Object 追加
+        body: '{}',
       );
-
-      // print('Clear waiting list response status: ${response.statusCode}');
-      // print('Clear waiting list response body: ${response.body}');
 
       if (response.statusCode != 200) {
         throw Exception('Failed to clear waiting list: ${response.statusCode}');
       }
 
-      // 초기화 후 즉시 데이터를 다시 가져와서 스트림에 전달
-      // 初期化後、即データを再取得し、ストリームに送信
-      final updatedList = await fetchWaitingCustomers(storeId: storeId);
+      // 강제로 폴링 간격을 최소로 설정하고 즉시 데이터 갱신
+      _currentPollingInterval = _minPollingInterval;
+      _lastData = null; // 캐시된 데이터를 비워서 강제로 변경 감지하도록 함
+      
+      // 데이터를 즉시 새로 가져와서 스트림에 전송
+      final updatedList = await fetchWaitingCustomers(storeId);
       _waitingListController.add(updatedList);
-      _lastData = updatedList;
+      
+      // 폴링을 재시작하여 즉시 새로운 데이터를 받아오도록 함
+      if (_lastStoreId != null) {
+        _restartPolling(_lastStoreId!);
+      }
     } catch (e) {
-      // print('Error clearing waiting list: $e');
       rethrow;
     }
   }

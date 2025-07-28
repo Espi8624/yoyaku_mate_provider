@@ -3,7 +3,7 @@ import 'dart:async';
 
 import 'package:yoyaku_mate_provider/models/waiting_list.dart';
 import 'package:yoyaku_mate_provider/services/waiting_service.dart';
-import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
 
 class WaitingListCard extends StatefulWidget {
   final List<WaitingList> waitingList;
