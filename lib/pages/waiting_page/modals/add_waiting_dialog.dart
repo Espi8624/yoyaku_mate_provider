@@ -3,12 +3,13 @@ import 'package:dropdown_search/dropdown_search.dart';
 import 'dart:convert';
 
 import 'package:yoyaku_mate_provider/services/waiting_service.dart';
-import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
 
 class AddWaitingDialog extends StatefulWidget {
   final VoidCallback onAddSuccess;
+  final String storeId;
 
-  const AddWaitingDialog({super.key, required this.onAddSuccess});
+  const AddWaitingDialog({super.key, required this.onAddSuccess, required this.storeId});
 
   @override
   State<AddWaitingDialog> createState() => _AddWaitingDialogState();
@@ -28,7 +29,7 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedNationality = "日本";
+    _selectedNationality = "JAPAN";
     _nationalityController.text = _selectedNationality ?? '';
   }
 
@@ -58,7 +59,7 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
         nationality: _nationalityController.text,
         contact: _contactController.text,
         notes: _notesController.text,
-        storeId: 'store-001',
+        storeId: widget.storeId,
       );
 
       if (!mounted) return;

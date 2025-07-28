@@ -10,7 +10,8 @@ import '../../services/waiting_service.dart';
 import '../../models/waiting_list.dart';
 
 class WaitingPage extends StatefulWidget {
-  const WaitingPage({super.key});
+  final String storeId;
+  const WaitingPage({super.key, required this.storeId});
 
   @override
   State<WaitingPage> createState() => _WaitingPageState();
@@ -38,7 +39,7 @@ class _WaitingPageState extends State<WaitingPage> {
 
     try {
       // 初期データ取得
-      final initialData = await _waitingService.fetchWaitingCustomers();
+      final initialData = await _waitingService.fetchWaitingCustomers(widget.storeId);
 
       if (!mounted) return;
 
@@ -48,7 +49,7 @@ class _WaitingPageState extends State<WaitingPage> {
       });
 
       // polling 開始及び実時間更新購読
-      _waitingService.startPolling();
+      _waitingService.startPolling(widget.storeId);
       _waitingService.waitingListStream.listen(
         (updatedList) {
           if (!mounted) return;
@@ -108,7 +109,7 @@ class _WaitingPageState extends State<WaitingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  WaitingListButtons(onRefresh: _initializeData),
+                  WaitingListButtons(onRefresh: _initializeData, storeId: widget.storeId),
                   const SizedBox(height: 10),
                   Expanded(
                     child: _isLoading
