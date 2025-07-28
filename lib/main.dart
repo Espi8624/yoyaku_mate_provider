@@ -85,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final ProviderProfileService profileService = ProviderProfileService(baseUrl: "http://localhost:8080");
 
   List<Widget> _pagesWithCallback(VoidCallback? onProfileChanged, ProviderProfileService profileService, String userId, String userRole, String storeId) => [
-    const WaitingPage(),
+    WaitingPage(storeId: storeId),
     MenuManagementScreen(storeId: storeId),
     ProfilePage(
       userId: userId,

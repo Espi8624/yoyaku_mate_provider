@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/modals/add_waiting_dialog.dart';
 import 'package:yoyaku_mate_provider/services/waiting_service.dart';
-import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
 
 class WaitingListButtons extends StatelessWidget {
   final VoidCallback onRefresh; // 待機リストの更新をトリガーするコールバック
+  final String storeId; // ストアIDを渡すためのフィールド
 
-  const WaitingListButtons({super.key, required this.onRefresh});
+  const WaitingListButtons({super.key, required this.onRefresh, required this.storeId});
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +20,7 @@ class WaitingListButtons extends StatelessWidget {
               context: context,
               builder: (context) => AddWaitingDialog(
                 onAddSuccess: onRefresh, // 新しい待機追加後にリフレッシュ
+                storeId: storeId, // ストアIDを渡す
               ),
             );
           },
@@ -75,7 +77,7 @@ class WaitingListButtons extends StatelessWidget {
                       Navigator.of(context).pop();
                       try {
                         final waitingService = WaitingService();
-                        await waitingService.clearWaitingList(); // 非同期作業完了待機
+                        await waitingService.clearWaitingList(storeId); // 非同期作業完了待機
 
                         // UI 更新前に context が有効か確認
                         if (context.mounted) {
