@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
 
 class QRCodeButton extends StatelessWidget {
   final String data;
