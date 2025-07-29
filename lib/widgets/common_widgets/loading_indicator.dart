@@ -15,18 +15,18 @@ class LoadingIndicator extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: AppColors.white.withOpacity(0.9),
+            color: AppColors.cardBackground.withOpacity(0.9),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SpinKitSpinningLines(color: AppColors.primaryAction),
+              const SpinKitSpinningLines(color: AppColors.mainAccent),
               const SizedBox(height: 16),
               Text(
                 message ?? 'データをロードしています...',
-                style: const TextStyle(color: AppColors.primaryText, fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
           ),
