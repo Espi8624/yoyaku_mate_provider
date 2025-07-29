@@ -47,7 +47,7 @@ class _ImagePickerBoxState extends State<ImagePickerBox> {
         borderType: BorderType.RRect,
         radius: const Radius.circular(8),
         dashPattern: const [6, 3],
-        color: AppColors.mediumGrey,
+        color: AppColors.disabled,
         strokeWidth: 1.5,
         child: SizedBox(
           height: 160,
@@ -76,7 +76,7 @@ class _ImagePickerBoxState extends State<ImagePickerBox> {
 
   Widget _buildPlaceholder() {
     return const Center(
-      child: Text('+ クリックして画像を選択', style: TextStyle(color: AppColors.mediumGrey)),
+      child: Text('+ クリックして画像を選択', style: TextStyle(color: AppColors.disabled)),
     );
   }
 }

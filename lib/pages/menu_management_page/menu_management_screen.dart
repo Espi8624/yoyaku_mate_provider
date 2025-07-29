@@ -11,6 +11,7 @@ import 'widgets/dialogs/category_form_dialog.dart';
 import 'widgets/dialogs/menu_form_dialog.dart';
 import 'widgets/panels/action_buttons_panel.dart';
 import 'widgets/panels/menu_list_panel.dart';
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 
 class MenuManagementScreen extends StatelessWidget {
   final String storeId;
@@ -206,7 +207,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                   onDeleteMenu: _showDeleteMenuDialog,
                 ),
               ),
-              const VerticalDivider(width: 1),
+              const VerticalDivider(width: 0.5, color: AppColors.divider),
               Expanded(
                 flex: 1,
                 child: ActionButtonsPanel(
