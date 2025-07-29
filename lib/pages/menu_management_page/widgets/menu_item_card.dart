@@ -18,7 +18,7 @@ class MenuItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-      color: AppColors.white,
+      color: AppColors.cardBackground,
       elevation: 2,
       shadowColor: Colors.black.withOpacity(0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -33,7 +33,7 @@ class MenuItemCard extends StatelessWidget {
             const SizedBox(width: 16),
             IconButton(
                 icon: const Icon(Icons.edit,
-                    size: 20, color: AppColors.mediumGrey),
+                    size: 20, color: AppColors.textPrimary),
                 onPressed: onEdit,
                 tooltip: '編集'),
             IconButton(
@@ -60,9 +60,9 @@ class MenuItemCard extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                         Icons.image_not_supported,
-                        color: AppColors.lightGrey))
+                        color: AppColors.textSecondary))
                 : const Icon(Icons.image_not_supported,
-                    color: AppColors.lightGrey),
+                    color: AppColors.textSecondary),
       ),
     );
   }

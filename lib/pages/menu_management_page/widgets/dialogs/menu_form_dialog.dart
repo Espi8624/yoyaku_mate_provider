@@ -111,7 +111,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryAction, foregroundColor: AppColors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.mainAccent, foregroundColor: AppColors.cardBackground, padding: const EdgeInsets.symmetric(vertical: 16)),
                 onPressed: _submit,
                 child: const Text("確認"),
               ),

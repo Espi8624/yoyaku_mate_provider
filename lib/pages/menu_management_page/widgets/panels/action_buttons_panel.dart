@@ -21,7 +21,7 @@ class ActionButtonsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      color: AppColors.primaryBackground.withOpacity(0.5),
+      color: AppColors.cardBackground,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -29,39 +29,46 @@ class ActionButtonsPanel extends StatelessWidget {
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText)),
+                  color: AppColors.textPrimary)),
           const SizedBox(height: 24),
-          _buildButton(text: "カテゴリー追加", onPressed: onAddCategory),
+          _buildButton(text: "カテゴリー追加", textColor: AppColors.textPrimaryLight, onPressed: onAddCategory),
           const SizedBox(height: 16),
           _buildButton(
-              text: "メニュー追加", onPressed: isCategoryEmpty ? null : onAddMenu),
+              text: "メニュー追加", textColor: AppColors.textPrimaryLight, onPressed: isCategoryEmpty ? null : onAddMenu),
           const Spacer(),
           _buildButton(
               text: "保存",
+              textColor: AppColors.textPrimaryLight,
               onPressed: onSaveChanges,
-              color: AppColors.secondaryAction),
+              color: AppColors.mainAccent),
           const SizedBox(height: 16),
           _buildButton(
-              text: "初期化", onPressed: onResetAll, color: AppColors.error),
+              text: "初期化", textColor: AppColors.error, onPressed: onResetAll, color: AppColors.cardBackground),
         ],
       ),
     );
   }
 
   Widget _buildButton(
-      {required String text, required VoidCallback? onPressed, Color? color}) {
+      {required String text,
+      required textColor,
+      required VoidCallback? onPressed,
+      Color? color}) {
     return SizedBox(
       width: 270,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: color ?? AppColors.secondaryAction,
-          foregroundColor: AppColors.white,
+          backgroundColor: color ?? AppColors.mainAccent,
+          foregroundColor: AppColors.mainAccent,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          disabledBackgroundColor: AppColors.lightGrey,
+          disabledBackgroundColor: AppColors.mainAccent.withOpacity(0.5),
         ),
         onPressed: onPressed,
-        child: Text(text),
+        child: Text(
+          text,
+          style: TextStyle(color: textColor),
+        ),
       ),
     );
   }
