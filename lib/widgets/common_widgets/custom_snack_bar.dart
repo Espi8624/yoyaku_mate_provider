@@ -8,14 +8,14 @@ class CustomSnackBar {
     Color backgroundColor;
     switch (status) {
       case SnackBarStatus.success:
-        backgroundColor = Colors.green;
+        backgroundColor = AppColors.success;
         break;
       case SnackBarStatus.error:
         backgroundColor = AppColors.error;
         break;
       case SnackBarStatus.info:
       default:
-        backgroundColor = AppColors.secondaryAction;
+        backgroundColor = AppColors.cardBackground;
         break;
     }
 

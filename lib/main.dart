@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/firebase_options.dart';
 import 'package:yoyaku_mate_provider/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
@@ -51,6 +52,9 @@ class _MyAppState extends State<MyApp> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
           return MaterialApp(
+            theme: ThemeData(
+              scaffoldBackgroundColor: AppColors.background,
+            ),
             home: _isLoggedIn ? const HomeScreen() : LoginPage(onLoginSuccess: _onLoginSuccess),
           );
         }
@@ -119,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final storeId = userProvider.storeInfo?['data']['store_id'] ?? '';
     final storeName = userProvider.storeInfo?['data']['store_name'] ?? '';
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      // backgroundColor: const Color(0xFFF5F5F5),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Stack(
@@ -175,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     final result = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        backgroundColor: Colors.white,
+                        backgroundColor: AppColors.cardBackground,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         title: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -196,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: double.infinity,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF6F61),
+                                backgroundColor: AppColors.mainAccent,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 padding: const EdgeInsets.symmetric(vertical: 16),

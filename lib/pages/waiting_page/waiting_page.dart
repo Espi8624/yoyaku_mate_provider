@@ -96,7 +96,7 @@ class _WaitingPageState extends State<WaitingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      // backgroundColor: const Color(0xFFF5F5F5),
       body: Padding(
         padding: const EdgeInsets.only(
             top: 16.0, left: 16.0, bottom: 0.0, right: 16.0),

@@ -78,7 +78,7 @@ class _SettingPageState extends State<SettingPage>
       return const Center(child: CircularProgressIndicator());
     }
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      // backgroundColor: const Color(0xFFF5F5F5),
       body: Container(
         padding:
             const EdgeInsets.only(left: 24, top: 24, right: 24, bottom: 24),
