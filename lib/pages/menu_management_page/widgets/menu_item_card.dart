@@ -17,28 +17,50 @@ class MenuItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       color: AppColors.cardBackground,
-      elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      elevation: 4,
+      shadowColor: AppColors.textSecondary.withOpacity(0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: AppColors.divider.withOpacity(0.4),
+          width: 1,
+        ),
+      ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
         leading: _buildImage(),
-        title: Text(menuItem.title),
-        subtitle: Text(menuItem.description),
+        title: Text(
+          menuItem.title,
+          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Text(
+            menuItem.description,
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
+        ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('${menuItem.price.toStringAsFixed(0)}円'),
-            const SizedBox(width: 16),
+            Text(
+              '${menuItem.price.toStringAsFixed(0)}円',
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 12),
             IconButton(
                 icon: const Icon(Icons.edit,
-                    size: 20, color: AppColors.textPrimary),
+                    size: 20, color: AppColors.textSecondary),
                 onPressed: onEdit,
                 tooltip: '編集'),
             IconButton(
                 icon: const Icon(Icons.delete_outline,
-                    size: 20, color: AppColors.error),
+                    size: 22, color: AppColors.error),
                 onPressed: onDelete,
                 tooltip: '削除'),
           ],

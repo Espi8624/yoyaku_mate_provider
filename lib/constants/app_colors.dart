@@ -1,53 +1,57 @@
 import 'package:flutter/material.dart';
 
+/// A modern and sophisticated color palette inspired by natural moss and earth tones.
+/// This palette is designed to be calming, trustworthy, and visually appealing.
 class AppColors {
-  // --- Main Palette ---
+  // --- Main Palette (Earthy & Natural) ---
 
-  /// background color
-  static const Color background = Color(0xFFF5F5F2);
+  /// Primary background color.
+  static const Color background = Color(0xFFFAF9F6);
 
-  /// point/action color
-  /// ボタン、アイコンなど主要なインタラクション要素に使用
-  static const Color mainAccent = Color(0xFFBC4749);
+  /// Main accent color, the star of the show.
+  static const Color mainAccent = Color(0xFF9AA16A);
 
-  /// secondary accent color
-  /// セカンダリアクションやホバー効果に使用
-  static const Color secondaryAccent = Color(0xFF3A4B5E);
+  /// Secondary accent.
+  /// Use for special call-to-actions or highlighted information.
+  static const Color secondaryAccent = Color(0xFFE27D60);
 
-  // --- Text Palette ---
+  // --- Text Palette (Clear & Readable) ---
 
-  /// main text
-  static const Color textPrimary = Color(0xFF2A2A2A);
+  /// Primary text color.
+  static const Color textPrimary = Color(0xFF3B3B3B);
 
-  /// bright main text
-  static const Color textPrimaryLight = Color(0xFFF9F9F6);
+  /// Light text color.
+  static const Color textPrimaryLight = Color(0xFFF5F5F5);
 
-  /// secondary text
-  /// placeholder など secondary text 用
-  static const Color textSecondary = Color(0xFF857F72);
+  /// Secondary text color for placeholders, metadata, and less important information.
+  static const Color textSecondary = Color(0xFF7D7C7A);
 
-  // --- Neutral & Utility Palette ---
+  // --- Neutral & Utility Palette (Functional & Cohesive) ---
 
-  /// card background
-  static const Color cardBackground = Color(0xFFFCFCFA);
+  /// Card background.
+  static const Color cardBackground = Color(0xFFFFFFFF);
 
-  /// divider color
-  static const Color divider = Color(0xFFE5E7E2);
+  /// Divider color for separating UI elements.
+  static const Color divider = Color(0xFFE5E7EB);
 
-  /// disabled color
-  static const Color disabled = Color(0xFFD1D3D0);
+  /// Disabled color for inactive elements.
+  static const Color disabled = Color(0xFFD1D5DB);
 
-  /// error/alert
+  /// Error or alert color for warnings and critical errors.
   static const Color error = Color(0xFFD93838);
 
-  // --- Additional Palette for 2025 Trends ---
+  /// Warning color for non-critical alerts that require user attention.
+  static const Color warning = Color(0xFFF59E0B);
 
-  /// gradient start color
-  static const Color gradientStart = Color(0xFFF9E4E1);
+  /// Success/acceptance color.
+  static const Color success = Color(0xFF4E543A);
 
-  /// gradient end color
-  static const Color gradientEnd = Color(0xFFD9D2E9);
 
-  /// success/acceptance color
-  static const Color success = Color(0xFF718C5A);
+  // --- Additional Palette (Organic & Calm) ---
+
+  /// Gradient start color for a very subtle, warm, sandy feel.
+  static const Color gradientStart = Color(0xFFF3EDE7);
+
+  /// Gradient end color for a misty, calm green feel.
+  static const Color gradientEnd = Color(0xFFE9EAE3);
 }

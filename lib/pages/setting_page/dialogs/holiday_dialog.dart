@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-import '../../../widgets/custom_snack_bar.dart';
+import '../../../widgets/common_widgets/custom_snack_bar.dart';
 
 Future<void> showHolidayDialog({
   required BuildContext context,

@@ -1,15 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'sign_up_page.dart';
-import 'package:provider/provider.dart';
-import 'services/sign_in_service.dart';
-import 'user_provider.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
+import 'package:yoyaku_mate_provider/sign_up_page.dart';
 
 class LoginPage extends StatefulWidget {
-  final VoidCallback onLoginSuccess;
-  const LoginPage({super.key, required this.onLoginSuccess});
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -21,52 +16,50 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   String? _errorMsg;
 
-  void _tryLogin() async {
-    setState(() { _isLoading = true; _errorMsg = null; });
+  Future<void> _tryLogin() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _errorMsg = null;
+    });
+
     try {
-      await loginAndFetchUserInfo(
-        _idController.text.trim(),
-        _pwController.text,
-        (userInfo) async {
-          final userProvider = Provider.of<UserProvider>(context, listen: false);
-          userProvider.setUserInfo(userInfo);
-          final userId = userInfo['data']['_id'] ?? userInfo['data']['id'];
-          // store_info 照会
-          final storeResponse = await http.get(
-            Uri.parse('http://localhost:8080/api/provider_store?user_id=$userId'),
-          );
-          if (storeResponse.statusCode == 200) {
-            final storeInfo = jsonDecode(storeResponse.body);
-            userProvider.setStoreInfo(storeInfo);
-          }
-          widget.onLoginSuccess();
-        },
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _idController.text.trim(),
+        password: _pwController.text,
       );
     } on FirebaseAuthException catch (e) {
-      setState(() {
-        _errorMsg = e.message ?? 'IDまたはパスワードが正しくありません';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMsg = e.message ?? 'IDまたはパスワードが正しくありません';
+        });
+      }
     } catch (e) {
-      print('ログイン例外発生: $e');
-      setState(() {
-        _errorMsg = 'ログイン途中、エラーが発生しました';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMsg = 'ログイン中に予期せぬエラーが発生しました。';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      // backgroundColor: const Color(0xFFF5F5F5),
       body: Center(
         child: SingleChildScrollView(
           child: Container(
             width: 360,
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -83,10 +76,9 @@ class _LoginPageState extends State<LoginPage> {
                 const Text(
                   'ログイン',
                   style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF263238),
-                  ),
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -94,7 +86,8 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _idController,
                   decoration: InputDecoration(
                     labelText: 'メールアドレス',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8)),
                     prefixIcon: const Icon(Icons.email_outlined),
                   ),
                   keyboardType: TextInputType.emailAddress,
@@ -105,7 +98,8 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _pwController,
                   decoration: InputDecoration(
                     labelText: 'パスワード',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8)),
                     prefixIcon: const Icon(Icons.lock_outline),
                   ),
                   obscureText: true,
@@ -113,41 +107,40 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 if (_errorMsg != null) ...[
                   const SizedBox(height: 16),
-                  Text(_errorMsg!, style: const TextStyle(color: Colors.red, fontSize: 14), textAlign: TextAlign.center),
+                  Text(_errorMsg!,
+                      style: const TextStyle(color: AppColors.error, fontSize: 14),
+                      textAlign: TextAlign.center),
                 ],
                 const SizedBox(height: 28),
                 SizedBox(
                   height: 48,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6F61),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      backgroundColor: AppColors.mainAccent,
+                      foregroundColor: AppColors.textPrimaryLight,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      textStyle: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     onPressed: _isLoading ? null : _tryLogin,
                     child: _isLoading
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppColors.background))
                         : const Text('ログイン'),
                   ),
                 ),
                 const SizedBox(height: 8),
-                SizedBox(
-                  height: 48,
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF6B7280),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SignUpPage()),
-                      );
-                    },
-                    child: const Text('まだアカウントを持っていませんか？'),
-                  ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SignUpPage()),
+                    );
+                  },
+                  child: const Text('まだアカウントを持っていませんか？'),
                 ),
               ],
             ),

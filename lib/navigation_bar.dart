@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 
 class SideNavigationBar extends StatelessWidget {
   final bool isExpanded;
@@ -29,11 +30,11 @@ class SideNavigationBar extends StatelessWidget {
       child: Container(
         width: isExpanded ? 280 : 80,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
+          color: AppColors.cardBackground.withOpacity(0.9),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFF6F61).withOpacity(0.1),
+              color: AppColors.mainAccent.withOpacity(0.1),
               blurRadius: 10,
               spreadRadius: 2,
             ),
@@ -43,15 +44,13 @@ class SideNavigationBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-            // Toggle ボタン
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Align(
-                alignment: Alignment.topRight,
+              child: Center(
                 child: IconButton(
                   icon: Icon(
                     isExpanded ? Icons.close : Icons.menu_rounded,
-                    color: Colors.grey[700],
+                    color: AppColors.mainAccent,
                     size: 28,
                   ),
                   onPressed: onToggle,
@@ -77,7 +76,7 @@ class SideNavigationBar extends StatelessWidget {
                     boxShadow: selectedIndex == 2
                         ? [
                             BoxShadow(
-                              color: const Color(0xFFFF6F61).withOpacity(0.1),
+                              color: AppColors.mainAccent.withOpacity(0.2),
                               blurRadius: 8,
                               spreadRadius: 1,
                             ),
@@ -92,9 +91,9 @@ class SideNavigationBar extends StatelessWidget {
                         child: Container(
                           width: 50,
                           height: 50,
-                          color: Colors.grey[300],
+                          color: AppColors.mainAccent.withOpacity(0.2),
                           child: const Icon(Icons.person,
-                              size: 30, color: Colors.white),
+                              size: 30, color: AppColors.background),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -110,7 +109,7 @@ class SideNavigationBar extends StatelessWidget {
                                     style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
+                                      color: AppColors.textPrimary,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -120,8 +119,8 @@ class SideNavigationBar extends StatelessWidget {
                                       horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: userRole == "manager"
-                                        ? const Color(0xFFEF5350)
-                                        : const Color(0xFF42A5F5),
+                                        ? AppColors.secondaryAccent
+                                        : AppColors.mainAccent,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
@@ -129,7 +128,7 @@ class SideNavigationBar extends StatelessWidget {
                                     style: const TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.white,
+                                      color: AppColors.textPrimaryLight,
                                     ),
                                   ),
                                 ),
@@ -138,10 +137,10 @@ class SideNavigationBar extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               storeName,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w400,
-                                color: Colors.grey[600],
+                                color: AppColors.textSecondary,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -152,7 +151,8 @@ class SideNavigationBar extends StatelessWidget {
                   ),
                 ),
               ),
-            ] else ...[
+            ]
+            else ...[
               InkWell(
                 onTap: () => onItemTapped(2),
                 borderRadius: BorderRadius.circular(16),
@@ -164,57 +164,51 @@ class SideNavigationBar extends StatelessWidget {
                     boxShadow: selectedIndex == 2
                         ? [
                             BoxShadow(
-                              color: const Color(0xFFFF6F61).withOpacity(0.1),
-                              blurRadius: 8,
+                              color: AppColors.mainAccent.withOpacity(0.2),
+                              blurRadius: 30,
                               spreadRadius: 1,
                             ),
                           ]
                         : null,
                   ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      ClipOval(
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.person,
-                              size: 24, color: Colors.white),
+                  child: Center(
+                    child: Container(
+                      width: 50, // アイコンの直径
+                      height: 50, // アイコンの直径
+                      decoration: BoxDecoration(
+                        // プロフィールアイコン背景色
+                        color: AppColors.mainAccent.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                        // リング色
+                        border: Border.all(
+                          color: userRole == "manager"
+                              ? AppColors.secondaryAccent // 管理者
+                              : AppColors.mainAccent, // 職員
+                          width: 5.0, // リング幅
                         ),
                       ),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: userRole == "manager"
-                                ? const Color(0xFFEF5350)
-                                : const Color(0xFF42A5F5),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
+                      // アイコン設定
+                      child: const Icon(
+                        Icons.person,
+                        size: 24,
+                        color: AppColors.background,
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ],
             const SizedBox(height: 15),
 
-            // 区分線
-            Divider(
+            const Divider(
               height: 1,
               thickness: 0.5,
-              color: Colors.grey[300],
+              color: AppColors.divider,
               indent: 16,
               endIndent: 16,
             ),
             const SizedBox(height: 15),
 
-            // 待機リスト
             isExpanded
                 ? _NavItem(
                     icon: Icons.list_alt_rounded,
@@ -234,7 +228,6 @@ class SideNavigationBar extends StatelessWidget {
                   ),
             const SizedBox(height: 12),
 
-            // メニュー管理
             isExpanded
                 ? _NavItem(
                     icon: Icons.table_view_rounded,
@@ -256,7 +249,6 @@ class SideNavigationBar extends StatelessWidget {
 
             const Spacer(),
 
-            // 設定
             isExpanded
                 ? _NavItem(
                     icon: Icons.settings_rounded,
@@ -276,17 +268,15 @@ class SideNavigationBar extends StatelessWidget {
                   ),
             const SizedBox(height: 12),
 
-            // ログアウト区分線
-            Divider(
+            const Divider(
               height: 1,
               thickness: 0.5,
-              color: Colors.grey[300],
+              color: AppColors.divider,
               indent: 16,
               endIndent: 16,
             ),
             const SizedBox(height: 12),
 
-            // ログアウト
             isExpanded
                 ? _NavItem(
                     icon: Icons.logout_rounded,
@@ -352,12 +342,11 @@ class _NavItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: selected ? Colors.grey[100] : Colors.transparent,
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: const Color(0xFFFF6F61).withOpacity(0.1),
-                    blurRadius: 8,
+                    color: AppColors.mainAccent.withOpacity(0.2),
+                    blurRadius: 16,
                     spreadRadius: 1,
                   ),
                 ]
@@ -369,7 +358,7 @@ class _NavItem extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: selected ? const Color(0xFFEF5350) : Colors.grey[600],
+              color: selected ? AppColors.mainAccent : AppColors.textSecondary,
               size: 26,
             ),
             const SizedBox(width: 12),
@@ -378,7 +367,8 @@ class _NavItem extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? const Color(0xFFEF5350) : Colors.grey[700],
+                color:
+                    selected ? AppColors.mainAccent : AppColors.textSecondary,
               ),
             ),
           ],
@@ -413,12 +403,11 @@ class _NavIcon extends StatelessWidget {
         padding: const EdgeInsets.all(12.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: selected ? Colors.grey[100] : Colors.transparent,
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: const Color(0xFFFF6F61).withOpacity(0.1),
-                    blurRadius: 8,
+                    color: AppColors.mainAccent.withOpacity(0.2),
+                    blurRadius: 16,
                     spreadRadius: 1,
                   ),
                 ]
@@ -427,7 +416,7 @@ class _NavIcon extends StatelessWidget {
         child: Center(
           child: Icon(
             icon,
-            color: selected ? const Color(0xFFEF5350) : Colors.grey[600],
+            color: selected ? AppColors.mainAccent : AppColors.textSecondary,
             size: 26,
           ),
         ),

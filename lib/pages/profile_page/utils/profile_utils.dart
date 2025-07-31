@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:yoyaku_mate_provider/widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
 
 class ProfileUtils {
   // セクションタイトルウィジェット
