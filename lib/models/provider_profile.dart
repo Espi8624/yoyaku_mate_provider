@@ -4,6 +4,7 @@ class ProviderProfile {
   final String phoneNumber;
   final String name;
   final String role; // 'manager' or 'staff'
+  final String? storeId; // Optional for staff, required for manager  
   final String? storeName;
   final String? storeAddress;
   final String? storeTelNumber;
@@ -17,6 +18,7 @@ class ProviderProfile {
     required this.phoneNumber,
     required this.name,
     required this.role,
+    this.storeId,
     this.storeName,
     this.storeAddress,
     this.storeTelNumber,
@@ -31,6 +33,7 @@ class ProviderProfile {
     'phone_number': phoneNumber,
     'name': name,
     'role': role,
+    if (storeId != null) 'store_id': storeId,
     if (storeName != null) 'store_name': storeName,
     if (storeAddress != null) 'store_address': storeAddress,
     if (storeTelNumber != null) 'store_tel_number': storeTelNumber,
@@ -45,6 +48,7 @@ class ProviderProfile {
     phoneNumber: json['phone_number'],
     name: json['name'],
     role: json['role'],
+    // storeId: json['store_id'],
     storeName: json['store_name'],
     storeAddress: json['store_address'],
     storeTelNumber: json['store_tel_number'],

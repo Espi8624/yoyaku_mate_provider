@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../widgets/custom_snack_bar.dart';
+import '../../../widgets/common_widgets/custom_snack_bar.dart';
 
 Future<void> showMaxWaitingDialog(BuildContext context, int initialValue,
     {required void Function(int) onConfirm}) async {

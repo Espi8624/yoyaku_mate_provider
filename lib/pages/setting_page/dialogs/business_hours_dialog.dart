@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../widgets/custom_snack_bar.dart';
+import '../../../widgets/common_widgets/custom_snack_bar.dart';
 
 Future<void> showBusinessHoursDialog(BuildContext context, Map<String, Map<String, int>> businessHours, List<String> days, {VoidCallback? onConfirm}) async {
   await showDialog(

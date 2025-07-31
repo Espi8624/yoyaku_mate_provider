@@ -8,7 +8,8 @@ class ProviderProfileService {
 
   // 使用者プロファイル取得
   Future<Map<String, dynamic>> fetchUserProfile(String userId) async {
-    final response = await http.get(Uri.parse('$baseUrl/api/provider_user?user_id=$userId'));
+    final response =
+        await http.get(Uri.parse('$baseUrl/api/provider_user?user_id=$userId'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return data;
@@ -18,7 +19,8 @@ class ProviderProfileService {
   }
 
   // 使用者プロファイル更新
-  Future<void> updateUserProfile(String userId, Map<String, dynamic> update) async {
+  Future<void> updateUserProfile(
+      String userId, Map<String, dynamic> update) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/provider_user?user_id=$userId'),
       headers: {'Content-Type': 'application/json'},
@@ -31,7 +33,8 @@ class ProviderProfileService {
 
   // 店舗プロファイル取得
   Future<Map<String, dynamic>> fetchStoreProfile(String storeId) async {
-    final response = await http.get(Uri.parse('$baseUrl/api/provider_store?store_id=$storeId'));
+    final response = await http
+        .get(Uri.parse('$baseUrl/api/provider_store?store_id=$storeId'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return data;
@@ -41,7 +44,8 @@ class ProviderProfileService {
   }
 
   // 店舗プロファイル更新
-  Future<void> updateStoreProfile(String storeId, Map<String, dynamic> update) async {
+  Future<void> updateStoreProfile(
+      String storeId, Map<String, dynamic> update) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/provider_store?store_id=$storeId'),
       headers: {'Content-Type': 'application/json'},
@@ -53,20 +57,26 @@ class ProviderProfileService {
   }
 
   // 会員加入
-  Future<Map<String, dynamic>> signUp(ProviderProfile profile) async {
+  Future<Map<String, dynamic>> signUp(
+      ProviderProfile profile, String idToken) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/signup'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Baer $idToken',
+        },
         body: jsonEncode(profile.toJson()),
       );
 
       if (response.statusCode == 201) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to sign up: ${response.body}');
+        throw Exception(
+            'Failed to sign up. Status: ${response.statusCode}, Body: ${response.body}');
       }
     } catch (e) {
+      // ネットワーク等他のエラーを処理
       throw Exception('Failed to sign up: $e');
     }
   }
@@ -75,13 +85,13 @@ class ProviderProfileService {
   Future<bool> checkStoreExists(String storeId) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/store/$storeId/exists'),
+        Uri.parse('$baseUrl/api/auth/check-store?store_id=$storeId'),
         headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['exists'] as bool;
+        return data['data']['exists'] as bool;
       } else {
         throw Exception('Failed to check store existence: ${response.body}');
       }

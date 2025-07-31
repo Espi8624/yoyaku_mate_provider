@@ -5,7 +5,7 @@ import 'system_settings.dart';
 import 'dialogs/business_hours_dialog.dart';
 import '../../models/store_settings.dart';
 import '../../services/store_settings_service.dart';
-import '../../widgets/custom_snack_bar.dart';
+import '../../widgets/common_widgets/custom_snack_bar.dart';
 
 class SettingPage extends StatefulWidget {
   final String storeId;
