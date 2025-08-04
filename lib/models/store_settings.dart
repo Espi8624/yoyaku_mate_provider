@@ -17,23 +17,25 @@ class StoreSettings {
     return StoreSettings(
       storeId: json['store_id'] ?? '',
       managerId: json['manager_id'] ?? '',
-      operatingHours: (json['settings']['operating_hours'] as Map<String, dynamic>).map(
+      operatingHours:
+          (json['settings']['operating_hours'] as Map<String, dynamic>).map(
         (k, v) => MapEntry(k, Map<String, String>.from(v)),
       ),
       closedDays: ClosedDays.fromJson(json['settings']['closed_days'] ?? {}),
-      waitingPolicy: WaitingPolicy.fromJson(json['settings']['waiting_policy'] ?? {}),
+      waitingPolicy:
+          WaitingPolicy.fromJson(json['settings']['waiting_policy'] ?? {}),
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'store_id': storeId,
-    'manager_id': managerId,
-    'settings': {
-      'operating_hours': operatingHours,
-      'closed_days': closedDays.toJson(),
-      'waiting_policy': waitingPolicy.toJson(),
-    },
-  };
+        'store_id': storeId,
+        'manager_id': managerId,
+        'settings': {
+          'operating_hours': operatingHours,
+          'closed_days': closedDays.toJson(),
+          'waiting_policy': waitingPolicy.toJson(),
+        },
+      };
 
   StoreSettings copyWith({
     String? storeId,
@@ -75,28 +77,35 @@ class ClosedDays {
   }
 
   Map<String, dynamic> toJson() => {
-    'specific_dates': specificDates,
-    'regular_weekly': regularWeekly,
-    'regular_monthly': regularMonthly,
-    'holiday_closure': holidayClosure,
-  };
+        'specific_dates': specificDates,
+        'regular_weekly': regularWeekly,
+        'regular_monthly': regularMonthly,
+        'holiday_closure': holidayClosure,
+      };
 }
 
 class WaitingPolicy {
   final int maxWaitingCount;
-  WaitingPolicy({required this.maxWaitingCount});
+  final int? estimatedWaitingCount;
+
+  WaitingPolicy({required this.maxWaitingCount, this.estimatedWaitingCount});
 
   factory WaitingPolicy.fromJson(Map<String, dynamic> json) {
-    return WaitingPolicy(maxWaitingCount: json['max_waiting_count'] ?? 0);
+    return WaitingPolicy(
+      maxWaitingCount: json['max_waiting_count'] ?? 0,
+      estimatedWaitingCount: json['estimated_waiting_count'] ?? 0,
+    );
   }
 
   Map<String, dynamic> toJson() => {
-    'max_waiting_count': maxWaitingCount,
-  };
+        'max_waiting_count': maxWaitingCount,
+        'estimated_waiting_count': estimatedWaitingCount,
+      };
 
-  WaitingPolicy copyWith({int? maxWaitingCount}) {
+  WaitingPolicy copyWith({int? maxWaitingCount, int? estimatedWaitingCount}) {
     return WaitingPolicy(
       maxWaitingCount: maxWaitingCount ?? this.maxWaitingCount,
+      estimatedWaitingCount: estimatedWaitingCount ?? this.estimatedWaitingCount,
     );
   }
 }
