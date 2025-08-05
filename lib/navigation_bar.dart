@@ -34,7 +34,7 @@ class SideNavigationBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.mainAccent.withOpacity(0.1),
+              color: AppColors.accentPrimary.withOpacity(0.1),
               blurRadius: 10,
               spreadRadius: 2,
             ),
@@ -50,7 +50,7 @@ class SideNavigationBar extends StatelessWidget {
                 child: IconButton(
                   icon: Icon(
                     isExpanded ? Icons.close : Icons.menu_rounded,
-                    color: AppColors.mainAccent,
+                    color: AppColors.accentPrimary,
                     size: 28,
                   ),
                   onPressed: onToggle,
@@ -76,7 +76,7 @@ class SideNavigationBar extends StatelessWidget {
                     boxShadow: selectedIndex == 2
                         ? [
                             BoxShadow(
-                              color: AppColors.mainAccent.withOpacity(0.2),
+                              color: AppColors.accentPrimary.withOpacity(0.2),
                               blurRadius: 8,
                               spreadRadius: 1,
                             ),
@@ -91,7 +91,7 @@ class SideNavigationBar extends StatelessWidget {
                         child: Container(
                           width: 50,
                           height: 50,
-                          color: AppColors.mainAccent.withOpacity(0.2),
+                          color: AppColors.accentPrimary.withOpacity(0.2),
                           child: const Icon(Icons.person,
                               size: 30, color: AppColors.background),
                         ),
@@ -119,8 +119,8 @@ class SideNavigationBar extends StatelessWidget {
                                       horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: userRole == "manager"
-                                        ? AppColors.secondaryAccent
-                                        : AppColors.mainAccent,
+                                        ? AppColors.roleManager
+                                        : AppColors.roleStaff,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
@@ -151,20 +151,19 @@ class SideNavigationBar extends StatelessWidget {
                   ),
                 ),
               ),
-            ]
-            else ...[
+            ] else ...[
               InkWell(
                 onTap: () => onItemTapped(2),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(4.0),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: selectedIndex == 2
                         ? [
                             BoxShadow(
-                              color: AppColors.mainAccent.withOpacity(0.2),
+                              color: AppColors.accentPrimary.withOpacity(0.2),
                               blurRadius: 30,
                               spreadRadius: 1,
                             ),
@@ -173,21 +172,21 @@ class SideNavigationBar extends StatelessWidget {
                   ),
                   child: Center(
                     child: Container(
-                      width: 50, // アイコンの直径
-                      height: 50, // アイコンの直径
+                      width: 50,
+                      height: 50,
                       decoration: BoxDecoration(
-                        // プロフィールアイコン背景色
-                        color: AppColors.mainAccent.withOpacity(0.2),
+                        color: AppColors.accentPrimary.withOpacity(0.2),
                         shape: BoxShape.circle,
-                        // リング色
-                        border: Border.all(
-                          color: userRole == "manager"
-                              ? AppColors.secondaryAccent // 管理者
-                              : AppColors.mainAccent, // 職員
-                          width: 5.0, // リング幅
+                        border: Border.fromBorderSide(
+                          BorderSide(
+                            color: userRole == "manager"
+                                ? AppColors.roleManager
+                                : AppColors.roleStaff,
+                            width: 5.0,
+                            strokeAlign: BorderSide.strokeAlignInside,
+                          ),
                         ),
                       ),
-                      // アイコン設定
                       child: const Icon(
                         Icons.person,
                         size: 24,
@@ -203,7 +202,7 @@ class SideNavigationBar extends StatelessWidget {
             const Divider(
               height: 1,
               thickness: 0.5,
-              color: AppColors.divider,
+              color: AppColors.border,
               indent: 16,
               endIndent: 16,
             ),
@@ -271,7 +270,7 @@ class SideNavigationBar extends StatelessWidget {
             const Divider(
               height: 1,
               thickness: 0.5,
-              color: AppColors.divider,
+              color: AppColors.border,
               indent: 16,
               endIndent: 16,
             ),
@@ -345,7 +344,7 @@ class _NavItem extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: AppColors.mainAccent.withOpacity(0.2),
+                    color: AppColors.accentPrimary.withOpacity(0.1),
                     blurRadius: 16,
                     spreadRadius: 1,
                   ),
@@ -358,7 +357,8 @@ class _NavItem extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: selected ? AppColors.mainAccent : AppColors.textSecondary,
+              color:
+                  selected ? AppColors.accentPrimary : AppColors.textSecondary,
               size: 26,
             ),
             const SizedBox(width: 12),
@@ -367,8 +367,9 @@ class _NavItem extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color:
-                    selected ? AppColors.mainAccent : AppColors.textSecondary,
+                color: selected
+                    ? AppColors.accentPrimary
+                    : AppColors.textSecondary,
               ),
             ),
           ],
@@ -406,7 +407,7 @@ class _NavIcon extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: AppColors.mainAccent.withOpacity(0.2),
+                    color: AppColors.accentPrimary.withOpacity(0.1),
                     blurRadius: 16,
                     spreadRadius: 1,
                   ),
@@ -416,7 +417,7 @@ class _NavIcon extends StatelessWidget {
         child: Center(
           child: Icon(
             icon,
-            color: selected ? AppColors.mainAccent : AppColors.textSecondary,
+            color: selected ? AppColors.accentPrimary : AppColors.textSecondary,
             size: 26,
           ),
         ),

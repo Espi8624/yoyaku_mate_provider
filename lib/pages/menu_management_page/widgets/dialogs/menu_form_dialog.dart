@@ -35,7 +35,8 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
     final item = widget.menuItem;
     _titleController = TextEditingController(text: item?.title);
     _descriptionController = TextEditingController(text: item?.description);
-    _priceController = TextEditingController(text: item?.price.toStringAsFixed(0));
+    _priceController =
+        TextEditingController(text: item?.price.toStringAsFixed(0));
     _tempImageBytes = item?.tempImageBytes;
   }
 
@@ -53,7 +54,9 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
       final result = MenuListItem(
         id: _isEditing ? widget.menuItem!.id : '',
         storeId: _isEditing ? widget.menuItem!.storeId : widget.storeId,
-        menuId: _isEditing ? widget.menuItem!.menuId : now.millisecondsSinceEpoch.toString(),
+        menuId: _isEditing
+            ? widget.menuItem!.menuId
+            : now.millisecondsSinceEpoch.toString(),
         category: _isEditing ? widget.menuItem!.category : widget.category,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
@@ -87,19 +90,24 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: "メニュー名", border: OutlineInputBorder()),
-              validator: (value) => (value == null || value.trim().isEmpty) ? 'メニュー名を入力してください。' : null,
+              decoration: const InputDecoration(
+                  labelText: "メニュー名", border: OutlineInputBorder()),
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? 'メニュー名を入力してください。'
+                  : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _descriptionController,
-              decoration: const InputDecoration(labelText: "説明", border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                  labelText: "説明", border: OutlineInputBorder()),
               maxLines: 3,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _priceController,
-              decoration: const InputDecoration(labelText: "価格 (¥)", border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                  labelText: "価格 (¥)", border: OutlineInputBorder()),
               keyboardType: TextInputType.number,
               validator: (value) {
                 if (value == null || value.isEmpty) return '価格を入力してください。';
@@ -111,7 +119,10 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.mainAccent, foregroundColor: AppColors.cardBackground, padding: const EdgeInsets.symmetric(vertical: 16)),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentPrimary,
+                    foregroundColor: AppColors.cardBackground,
+                    padding: const EdgeInsets.symmetric(vertical: 16)),
                 onPressed: _submit,
                 child: const Text("確認"),
               ),

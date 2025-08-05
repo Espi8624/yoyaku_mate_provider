@@ -71,7 +71,7 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.mainAccent,
+                    backgroundColor: AppColors.accentPrimary,
                     foregroundColor: AppColors.cardBackground,
                     padding: const EdgeInsets.symmetric(vertical: 16)),
                 onPressed: _submit,
