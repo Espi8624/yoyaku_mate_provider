@@ -31,19 +31,27 @@ class ActionButtonsPanel extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary)),
           const SizedBox(height: 24),
-          _buildButton(text: "カテゴリー追加", textColor: AppColors.textPrimaryLight, onPressed: onAddCategory),
+          _buildButton(
+              text: "カテゴリー追加",
+              textColor: AppColors.textPrimaryLight,
+              onPressed: onAddCategory),
           const SizedBox(height: 16),
           _buildButton(
-              text: "メニュー追加", textColor: AppColors.textPrimaryLight, onPressed: isCategoryEmpty ? null : onAddMenu),
+              text: "メニュー追加",
+              textColor: AppColors.textPrimaryLight,
+              onPressed: isCategoryEmpty ? null : onAddMenu),
           const Spacer(),
           _buildButton(
               text: "保存",
               textColor: AppColors.textPrimaryLight,
               onPressed: onSaveChanges,
-              color: AppColors.mainAccent),
+              color: AppColors.accentPrimary),
           const SizedBox(height: 16),
           _buildButton(
-              text: "初期化", textColor: AppColors.error, onPressed: onResetAll, color: AppColors.cardBackground),
+              text: "初期化",
+              textColor: AppColors.error,
+              onPressed: onResetAll,
+              color: AppColors.cardBackground),
         ],
       ),
     );
@@ -58,11 +66,11 @@ class ActionButtonsPanel extends StatelessWidget {
       width: 270,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: color ?? AppColors.mainAccent,
-          foregroundColor: AppColors.mainAccent,
+          backgroundColor: color ?? AppColors.accentPrimary,
+          foregroundColor: AppColors.accentPrimary,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          disabledBackgroundColor: AppColors.mainAccent.withOpacity(0.5),
+          disabledBackgroundColor: AppColors.accentPrimary.withOpacity(0.5),
         ),
         onPressed: onPressed,
         child: Text(

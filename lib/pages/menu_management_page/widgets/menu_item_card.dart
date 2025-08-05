@@ -24,7 +24,7 @@ class MenuItemCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: AppColors.divider.withOpacity(0.4),
+          color: AppColors.border.withOpacity(0.4),
           width: 1,
         ),
       ),

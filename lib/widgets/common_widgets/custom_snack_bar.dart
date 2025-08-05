@@ -15,7 +15,7 @@ class CustomSnackBar {
         break;
       case SnackBarStatus.info:
       default:
-        backgroundColor = AppColors.cardBackground;
+        backgroundColor = AppColors.accentPrimary;
         break;
     }
 
