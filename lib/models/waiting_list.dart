@@ -1,3 +1,4 @@
+
 class WaitingList {
   final String? id;
   final String storeId;
@@ -6,11 +7,13 @@ class WaitingList {
   final String customerName;
   final int partySize;
   final String nationality;
-  final DateTime registrationTime;  final String? contact;
+  final DateTime registrationTime;
+  final String? contact;
   final String status;
   final String? notes;
   final DateTime? calledTime;
   final DateTime? entryTime;
+  final DateTime? updatedAt;
 
   WaitingList({
     this.id,
@@ -26,7 +29,9 @@ class WaitingList {
     this.notes,
     this.calledTime,
     this.entryTime,
+    this.updatedAt,
   });
+
   factory WaitingList.fromJson(Map<String, dynamic> json) {
     try {
       return WaitingList(
@@ -37,14 +42,15 @@ class WaitingList {
         customerName: json['customer_name'] ?? '',
         partySize: json['party_size'] ?? 1,
         nationality: json['nationality'] ?? '',
-        registrationTime: json['registration_time'] != null 
-            ? DateTime.parse(json['registration_time']) 
+        registrationTime: json['registration_time'] != null
+            ? DateTime.parse(json['registration_time'])
             : DateTime.now(),
         contact: json['contact'],
         status: json['status'] ?? 'waiting',
         notes: json['notes'],
         calledTime: json['called_time'] != null ? DateTime.parse(json['called_time']) : null,
         entryTime: json['entry_time'] != null ? DateTime.parse(json['entry_time']) : null,
+        updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
       );
     } catch (e) {
       print('Error parsing JSON: $e');
@@ -53,22 +59,40 @@ class WaitingList {
     }
   }
 
-  // 本日最後入場時間を取得する static メソッド
-  static DateTime? getLastEntryTime(List<WaitingList> waitingList) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    
-    DateTime? lastEntryTime;
-    for (var item in waitingList) {
-      if (item.entryTime != null) {
-        final entryDate = DateTime(item.entryTime!.year, item.entryTime!.month, item.entryTime!.day);
-        if (entryDate.isAtSameMomentAs(today)) {
-          if (lastEntryTime == null || item.entryTime!.isAfter(lastEntryTime)) {
-            lastEntryTime = item.entryTime;
-          }
-        }
-      }
-    }
-    return lastEntryTime;
+  WaitingList copyWith({
+    String? id,
+    String? storeId,
+    String? waitingId,
+    int? queueNumber,
+    String? customerName,
+    int? partySize,
+    String? nationality,
+    DateTime? registrationTime,
+    String? contact,
+    String? status,
+    String? notes,
+    DateTime? calledTime,
+    DateTime? entryTime,
+    DateTime? updatedAt,
+  }) {
+    return WaitingList(
+      id: id ?? this.id,
+      storeId: storeId ?? this.storeId,
+      waitingId: waitingId ?? this.waitingId,
+      queueNumber: queueNumber ?? this.queueNumber,
+      customerName: customerName ?? this.customerName,
+      partySize: partySize ?? this.partySize,
+      nationality: nationality ?? this.nationality,
+      registrationTime: registrationTime ?? this.registrationTime,
+      contact: contact ?? this.contact,
+      status: status ?? this.status,
+      notes: notes ?? this.notes,
+      calledTime: calledTime ?? this.calledTime,
+      entryTime: entryTime ?? this.entryTime,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
   }
+
+  // 下記のロジックは ViewModel へ移動
+  // static DateTime? getLastEntryTime(List<WaitingList> waitingList) { ... }
 }

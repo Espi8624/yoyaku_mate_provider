@@ -45,35 +45,70 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     super.initState();
     // context が安全な initState で ViewModel の参照を先に取得
     _viewModel = context.read<MenuManagementViewModel>();
-    _tabController = TabController(length: 0, vsync: this);
+
+    _tabController =
+        TabController(length: _viewModel.categories.length, vsync: this);
+
+    _addTabListener();
 
     // 保存された参照を使用し、リスナー追加
     _viewModel.addListener(_onViewModelUpdated);
 
-    final vm = context.read<MenuManagementViewModel>();
-    vm.addListener(_onViewModelUpdated);
-    if (vm.errorMessage != null) {
+    // 초기 에러 메시지 처리를 위해 Post-frame 콜백을 사용합니다.
+    if (_viewModel.errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        CustomSnackBar.show(context,
-            message: vm.errorMessage!, status: SnackBarStatus.error);
+        if (mounted) {
+          CustomSnackBar.show(context,
+              message: _viewModel.errorMessage!, status: SnackBarStatus.error);
+        }
       });
     }
   }
 
+  // Listener 追加ロジック
+  void _addTabListener() {
+    _tabController.addListener(() {
+      // 사용자가 탭을 스와이프하거나 탭을 탭하여 인덱스가 변경될 때마다
+      // setState를 호출하여 화면을 다시 그리도록 합니다.
+      // 이것이 아이콘 색상을 업데이트하는 열쇠입니다.
+      if (_tabController.indexIsChanging ||
+          _tabController.animation?.value == _tabController.index.toDouble()) {
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    });
+  }
+
   void _onViewModelUpdated() {
-    // 保存された参照を使用
+    // ViewModel のカテゴリーリストの長さが TabController の長さと異なる場合 (カテゴリー 追加/削除 時)
+    // TabController を再生成する
     if (_viewModel.categories.length != _tabController.length) {
-      setState(() {
-        final currentIndex =
-            _tabController.index.clamp(0, _viewModel.categories.length - 1);
-        _tabController.dispose();
-        _tabController = TabController(
-            length: _viewModel.categories.length,
-            vsync: this,
-            initialIndex: currentIndex);
-      });
+      if (mounted) {
+        setState(() {
+          // 現在 index を維持する
+          final currentIndex = _tabController.index.clamp(
+              0,
+              _viewModel.categories.isNotEmpty
+                  ? _viewModel.categories.length - 1
+                  : 0);
+
+          // 以前コントローラーを廃棄
+          _tabController.dispose();
+
+          // 新しい長さでコントローラー再生成
+          _tabController = TabController(
+              length: _viewModel.categories.length,
+              vsync: this,
+              initialIndex: currentIndex);
+
+          // 再生成したコントローラーにリスナーを付け直す
+          _addTabListener();
+        });
+      }
     }
-    if (_viewModel.errorMessage != null) {
+
+    if (_viewModel.errorMessage != null && mounted) {
       CustomSnackBar.show(context,
           message: _viewModel.errorMessage!, status: SnackBarStatus.error);
     }
@@ -90,7 +125,8 @@ class _MenuManagementViewState extends State<_MenuManagementView>
   Future<void> _showAddCategoryDialog() async {
     final newCategory = await showDialog<String>(
       context: context,
-      builder: (_) => CategoryFormDialog(existingCategories: _viewModel.categories),
+      builder: (_) =>
+          CategoryFormDialog(existingCategories: _viewModel.categories),
     );
     if (newCategory != null) {
       // context.read の代わりに保存しておいた _viewModel 変数を安全に使用
@@ -127,7 +163,8 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     final newMenu = await showDialog<MenuListItem>(
       context: context,
       builder: (_) => MenuFormDialog(
-          storeId: _viewModel.storeId, category: _viewModel.categories[_tabController.index]),
+          storeId: _viewModel.storeId,
+          category: _viewModel.categories[_tabController.index]),
     );
     if (newMenu != null) {
       _viewModel.addMenu(newMenu);
@@ -207,7 +244,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                   onDeleteMenu: _showDeleteMenuDialog,
                 ),
               ),
-              const VerticalDivider(width: 0.5, color: AppColors.divider),
+              const VerticalDivider(width: 0.5, color: AppColors.border),
               Expanded(
                 flex: 1,
                 child: ActionButtonsPanel(

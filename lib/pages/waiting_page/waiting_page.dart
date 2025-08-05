@@ -1,174 +1,303 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-
-import 'buttons/waiting_list_button.dart';
-import 'waiting_status_area.dart';
-import 'buttons/QR_code_button.dart';
-import 'waiting_list_card.dart';
-
-import '../../services/waiting_service.dart';
+import 'package:provider/provider.dart';
+import '../../constants/app_colors.dart';
 import '../../models/waiting_list.dart';
+import '../../services/waiting_service.dart';
+import '../../widgets/common_dialogs/base_dialog.dart';
+import '../../widgets/common_dialogs/confirmation_dialog.dart';
+import '../../widgets/common_widgets/loading_indicator.dart';
+import 'widgets/dialogs/add_waiting_dialog.dart';
+import 'widgets/qr_code_button.dart';
+import 'widgets/waiting_action_buttons.dart';
+import 'widgets/waiting_list_panel.dart';
+import 'widgets/waiting_status_area.dart';
+import 'waiting_viewmodel.dart';
 
-class WaitingPage extends StatefulWidget {
+class WaitingPage extends StatelessWidget {
   final String storeId;
   const WaitingPage({super.key, required this.storeId});
 
   @override
-  State<WaitingPage> createState() => _WaitingPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => WaitingViewModel(
+        storeId: storeId,
+        waitingService: WaitingService(),
+      ),
+      child: const _WaitingView(),
+    );
+  }
 }
 
-class _WaitingPageState extends State<WaitingPage> {
-  final WaitingService _waitingService = WaitingService();
-  List<WaitingList> _waitingList = [];
-  bool _isLoading = true;
-  String? _error;
+class _WaitingView extends StatelessWidget {
+  const _WaitingView();
 
-  @override
-  void initState() {
-    super.initState();
-    _initializeData();
-  }
-
-  Future<void> _initializeData() async {
-    if (!mounted) return;
-
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      // 初期データ取得
-      final initialData = await _waitingService.fetchWaitingCustomers(widget.storeId);
-
-      if (!mounted) return;
-
-      setState(() {
-        _waitingList = initialData;
-        _isLoading = false;
-      });
-
-      // polling 開始及び実時間更新購読
-      _waitingService.startPolling(widget.storeId);
-      _waitingService.waitingListStream.listen(
-        (updatedList) {
-          if (!mounted) return;
-          setState(() {
-            _waitingList = updatedList;
-            _error = null;
-          });
-        },
-        onError: (error) {
-          if (!mounted) return;
-          setState(() {
-            if (error.toString().contains("data\":null")) {
-              // データがない場合はエラーではなく正常として処理
-              _waitingList = [];
-              _error = null;
-            } else {
-              _error = 'データの更新中にエラーが発生しました。しばらくしてからもう一度お試しください。';
-            }
-          });
-        },
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        if (e.toString().contains("data\":null")) {
-          // データがない場合はエラーではなく正常として処理
-          _waitingList = [];
-          _error = null;
-        } else {
-          _error = 'データの読み込み中にエラーが発生しました。しばらくしてからもう一度お試しください。';
-        }
-      });
+  Future<void> _showAddWaitingDialog(BuildContext context) async {
+    final vm = context.read<WaitingViewModel>();
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => const AddWaitingDialog(),
+    );
+    if (result != null && context.mounted) {
+      await vm.addWaitingItem(context, result);
     }
   }
 
-  @override
-  void dispose() {
-    // print('Disposing WaitingPage');
-    _waitingService.dispose();
-    super.dispose();
+  Future<void> _showClearConfirmationDialog(BuildContext context) async {
+    final confirmed = await showConfirmationDialog(
+      context: context,
+      title: '待機目録初期化',
+      content: '現在の待機目録を全て初期化しますか？\nこの操作は取り消しできません。',
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<WaitingViewModel>().clearWaitingList(context);
+    }
+  }
+
+  void _showStatusBasedDialog(BuildContext context, WaitingList item) {
+    switch (item.status) {
+      case 'waiting':
+        _showNotificationDialog(context, item);
+        break;
+      case 'notified':
+        _showEntryConfirmationDialog(context, item);
+        break;
+      default:
+        _showInfoDialog(context, item);
+        break;
+    }
+  }
+
+  String _formatTime(DateTime time) {
+    final jstTime = time.toUtc().add(const Duration(hours: 9));
+    return "${jstTime.hour.toString().padLeft(2, '0')}:${jstTime.minute.toString().padLeft(2, '0')}";
+  }
+
+  Future<void> _showNotificationDialog(
+      BuildContext context, WaitingList item) async {
+    final vm = context.read<WaitingViewModel>();
+    final notesText =
+        (item.notes != null && item.notes!.isNotEmpty) ? item.notes! : null;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => BaseDialog(
+        title: '呼出',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('予約番号: ${item.waitingId}'),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(item.customerName,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 5),
+                const Text('様を呼出します。', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text('最後に詳細をご確認ください。', style: TextStyle(fontSize: 16)),
+            Text('${item.partySize}名',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            if (notesText != null)
+              Text(notesText,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  vm.updateWaitingStatus(ctx, item.waitingId, 'notified');
+                  Navigator.of(ctx).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16)),
+                child: const Text('呼出'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEntryConfirmationDialog(
+      BuildContext context, WaitingList item) async {
+    final vm = context.read<WaitingViewModel>();
+    final contactText = (item.contact != null && item.contact!.isNotEmpty)
+        ? item.contact!
+        : null;
+    final notesText =
+        (item.notes != null && item.notes!.isNotEmpty) ? item.notes! : null;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => BaseDialog(
+        title: '入店確認',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('予約番号: ${item.waitingId}'),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(item.customerName,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text(' 様', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text('${item.partySize}名',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            if (contactText != null)
+              Text('連絡先: $contactText', style: const TextStyle(fontSize: 16)),
+            if (notesText != null)
+              Text('メモ: $notesText', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 16),
+            const Text('入店処理を行いますか？',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  vm.updateWaitingStatus(ctx, item.waitingId, 'completed');
+                  Navigator.of(ctx).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16)),
+                child: const Text('入店完了'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showInfoDialog(BuildContext context, WaitingList item) async {
+    String formattedRegistrationTime = _formatTime(item.registrationTime);
+    String? formattedCalledTime =
+        item.calledTime != null ? _formatTime(item.calledTime!) : null;
+    String? formattedEntryTime =
+        item.entryTime != null ? _formatTime(item.entryTime!) : null;
+    final contactText = (item.contact != null && item.contact!.isNotEmpty)
+        ? item.contact!
+        : null;
+    final notesText =
+        (item.notes != null && item.notes!.isNotEmpty) ? item.notes! : null;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => BaseDialog(
+        title: '情報',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('予約番号: ${item.waitingId}'),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(item.customerName,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text(' 様', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text('${item.partySize}名',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            if (contactText != null)
+              Text('連絡先: $contactText', style: const TextStyle(fontSize: 16)),
+            if (notesText != null)
+              Text('メモ: $notesText', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 8),
+            Text('登録時間: $formattedRegistrationTime',
+                style: const TextStyle(fontSize: 16)),
+            if (formattedCalledTime != null)
+              Text('呼出時間: $formattedCalledTime',
+                  style: const TextStyle(fontSize: 16)),
+            if (formattedEntryTime != null)
+              Text('入店時間: $formattedEntryTime',
+                  style: const TextStyle(fontSize: 16)),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<WaitingViewModel>();
+
     return Scaffold(
-      // backgroundColor: const Color(0xFFF5F5F5),
       body: Padding(
-        padding: const EdgeInsets.only(
-            top: 16.0, left: 16.0, bottom: 0.0, right: 16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 左側: 待機リスト (2/3 幅)
             Expanded(
               flex: 2,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  WaitingListButtons(onRefresh: _initializeData, storeId: widget.storeId),
+                  WaitingActionButtons(
+                    onAddWaiting: () => _showAddWaitingDialog(context),
+                    onClearAll: () => _showClearConfirmationDialog(context),
+                  ),
                   const SizedBox(height: 10),
                   Expanded(
-                    child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _error != null
+                    child: vm.isLoading
+                        ? const Center(child: LoadingIndicator())
+                        : vm.error != null
                             ? Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(
-                                      _error!,
-                                      style: const TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 16,
-                                      ),
-                                    ),
+                                    Text(vm.error!,
+                                        style: const TextStyle(
+                                            color: AppColors.error)),
                                     const SizedBox(height: 16),
                                     ElevatedButton(
-                                      onPressed: _initializeData,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFF263238),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 10),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                              16),
-                                        ),
-                                        elevation: 5,
-                                      ),
+                                      onPressed: vm.loadWaitingList,
                                       child: const Text('再試行'),
                                     ),
                                   ],
                                 ),
                               )
-                            : WaitingListCard(
-                                waitingList: _waitingList,
-                                onRefresh: _initializeData),
+                            : WaitingListPanel(
+                                waitingList: vm.waitingList,
+                                onRefresh: vm.loadWaitingList,
+                                onItemAction: (item) =>
+                                    _showStatusBasedDialog(context, item),
+                              ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 11),
-            // 右側: 待機状態 (1/3 幅)
-            Expanded(
+            const SizedBox(width: 16),
+            const Expanded(
+              flex: 1,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const QRCodeButton(
-                      data:
-                          'https://1411-240b-10-bf67-3000-b4fa-8469-f2e4-80df.ngrok-free.app/wating-screen'),
-                  const SizedBox(height: 10),
+                  QRCodeButton(
+                      data: 'https://example.com/waiting-screen'),
+                  SizedBox(height: 10),
                   Expanded(
-                    child: WaitingStatusArea(
-                      waitingCount: _waitingList.where((item) => item.status == 'waiting' || item.status == 'notified').length,
-                      waitingList: _waitingList,
-                    ),
+                    child: WaitingStatusArea(),
                   ),
                 ],
               ),

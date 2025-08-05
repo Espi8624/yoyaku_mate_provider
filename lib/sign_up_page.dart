@@ -185,7 +185,7 @@ class _SignUpPageState extends State<SignUpPage> {
           const SizedBox(height: 32),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.mainAccent,
+                backgroundColor: AppColors.accentPrimary,
                 foregroundColor: AppColors.background,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8))),
@@ -243,7 +243,7 @@ class _SignUpPageState extends State<SignUpPage> {
             const SizedBox(height: 32),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.mainAccent,
+                  backgroundColor: AppColors.accentPrimary,
                   foregroundColor: AppColors.background,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8))),
@@ -286,7 +286,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       textAlign: TextAlign.center)),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.mainAccent,
+                  backgroundColor: AppColors.accentPrimary,
                   foregroundColor: AppColors.background,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8))),
@@ -320,7 +320,7 @@ class _SignUpPageState extends State<SignUpPage> {
             const SizedBox(height: 32),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.mainAccent,
+                  backgroundColor: AppColors.accentPrimary,
                   foregroundColor: AppColors.background,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8))),
@@ -365,7 +365,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       textAlign: TextAlign.center)),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.mainAccent,
+                  backgroundColor: AppColors.accentPrimary,
                   foregroundColor: AppColors.background,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8))),
@@ -375,7 +375,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          color: AppColors.background, strokeWidth: 2))
+                          color: AppColors.accentPrimary, strokeWidth: 2))
                   : const Text('登録',
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
