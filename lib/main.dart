@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.background,
         canvasColor: AppColors.cardBackground,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.mainAccent,
+          seedColor: AppColors.accentPrimary,
           background: AppColors.background,
         ),
         useMaterial3: true, 
@@ -220,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () {
                   if (_isExpanded) _toggleSidebar();
                 },
-                child: Container(
+                child: Container( 
                   margin: const EdgeInsets.only(left: 12.0),
                   decoration: BoxDecoration(
                     color: Theme.of(context).canvasColor,

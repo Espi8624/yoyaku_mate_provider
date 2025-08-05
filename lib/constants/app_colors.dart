@@ -1,57 +1,66 @@
 import 'package:flutter/material.dart';
 
-/// A modern and sophisticated color palette inspired by natural moss and earth tones.
-/// This palette is designed to be calming, trustworthy, and visually appealing.
 class AppColors {
-  // --- Main Palette (Earthy & Natural) ---
+  // --- 基本パレット ---
 
-  /// Primary background color.
-  static const Color background = Color(0xFFFAF9F6);
+  /// 背景色
+  static const Color background = Color(0xFFF8F9FA);
 
-  /// Main accent color, the star of the show.
-  static const Color mainAccent = Color(0xFF9AA16A);
+  /// 基本ブラック
+  static const Color primaryBlack = Color(0xFF161616);
 
-  /// Secondary accent.
-  /// Use for special call-to-actions or highlighted information.
-  static const Color secondaryAccent = Color(0xFFE27D60);
+  // --- アクセント & インタラクティブパレット ---
 
-  // --- Text Palette (Clear & Readable) ---
+  /// メインアクセント
+  static const Color accentPrimary = Color(0xFF2C2C2C);
 
-  /// Primary text color.
-  static const Color textPrimary = Color(0xFF3B3B3B);
+  /// セカンダリアクセント
+  static const Color accentSecondary = Color(0xFF424242);
 
-  /// Light text color.
-  static const Color textPrimaryLight = Color(0xFFF5F5F5);
+  // --- テキスト & コンテンツパレット ---
 
-  /// Secondary text color for placeholders, metadata, and less important information.
-  static const Color textSecondary = Color(0xFF7D7C7A);
+  /// メインテキスト
+  static const Color textPrimary = Color(0xFF161616);
 
-  // --- Neutral & Utility Palette (Functional & Cohesive) ---
+  /// 暗い背景上のテキスト
+  static const Color textPrimaryLight = Color(0xFFF8F9FA);
 
-  /// Card background.
+  /// セカンダリテキスト: 重要度の低い情報に使う中間グレー。
+  static const Color textSecondary = Color(0xFF6E6E6E);
+
+  /// ターシャリテキスト: プレースホルダーなどに使う薄いグレー。
+  static const Color textTertiary = Color(0xFFA6A6A6);
+
+  // --- UI & ユーティリティパレット ---
+
+  /// カード背景
   static const Color cardBackground = Color(0xFFFFFFFF);
 
-  /// Divider color for separating UI elements.
-  static const Color divider = Color(0xFFE5E7EB);
+  /// ボーダーと区切り線
+  static const Color border = Color(0xFFEAEAEA);
 
-  /// Disabled color for inactive elements.
-  static const Color disabled = Color(0xFFD1D5DB);
+  /// 無効化要素
+  static const Color disabled = Color(0xFFDCDCDC);
 
-  /// Error or alert color for warnings and critical errors.
-  static const Color error = Color(0xFFD93838);
+  /// 無効化背景
+  static const Color disabledBackground = Color(0xFFF0F0F0);
 
-  /// Warning color for non-critical alerts that require user attention.
-  static const Color warning = Color(0xFFF59E0B);
+  // --- セマンティックパレット ---
 
-  /// Success/acceptance color.
-  static const Color success = Color(0xFF4E543A);
+  /// エラー
+  static const Color error = Color(0xFFC53030);
 
+  /// 警告
+  static const Color warning = Color(0xFFDD6B20);
 
-  // --- Additional Palette (Organic & Calm) ---
+  /// 成功
+  static const Color success = Color(0xFF2F855A);
 
-  /// Gradient start color for a very subtle, warm, sandy feel.
-  static const Color gradientStart = Color(0xFFF3EDE7);
+  // --- ロールカラー ---
 
-  /// Gradient end color for a misty, calm green feel.
-  static const Color gradientEnd = Color(0xFFE9EAE3);
+  /// マネージャー
+  static const Color roleManager = Color(0xFF8B572A);
+
+  /// スタッフ
+  static const Color roleStaff = Color(0xFF5A677D);
 }

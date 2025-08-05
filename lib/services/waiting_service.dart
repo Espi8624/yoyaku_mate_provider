@@ -5,16 +5,16 @@ import '../models/waiting_list.dart';
 
 class WaitingService {
   static final WaitingService _instance = WaitingService._internal();
-  final _waitingListController = StreamController<List<WaitingList>>.broadcast();
+  late StreamController<List<WaitingList>> _waitingListController;
   bool _isConnected = false;
   Timer? _pollingTimer;
   static const String _baseUrl = 'http://localhost:8080';
-  
+
   // 基本 polling 間隔と最大間隔設定
   static const Duration _minPollingInterval = Duration(seconds: 1);
   static const Duration _maxPollingInterval = Duration(seconds: 5);
   Duration _currentPollingInterval = _minPollingInterval;
-  
+
   // 以前データキャッシュと変更検出用変数
   List<WaitingList>? _lastData;
   int _unchangedDataCount = 0;
@@ -24,9 +24,13 @@ class WaitingService {
     return _instance;
   }
 
-  WaitingService._internal();
+  WaitingService._internal() {
+    // controller 初期化
+    _waitingListController = StreamController<List<WaitingList>>.broadcast();
+  }
 
-  Stream<List<WaitingList>> get waitingListStream => _waitingListController.stream;
+  Stream<List<WaitingList>> get waitingListStream =>
+      _waitingListController.stream;
   bool get isConnected => _isConnected;
 
   // 待機目録データを一度だけ取得する関数
@@ -44,7 +48,7 @@ class WaitingService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         // print('Decoded JSON: $jsonResponse');
-        
+
         if (jsonResponse['data'] != null) {
           final List<dynamic> data = jsonResponse['data'];
           // print('Data list length: ${data.length}');
@@ -62,7 +66,8 @@ class WaitingService {
           return [];
         }
       }
-      throw Exception('Server returned ${response.statusCode}: ${response.body}');
+      throw Exception(
+          'Server returned ${response.statusCode}: ${response.body}');
     } catch (e, _) {
       // print('Error fetching waiting customers: $e');
       // print('Stack trace: $stackTrace');
@@ -84,7 +89,7 @@ class WaitingService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         // print('Polling decoded JSON: $jsonResponse');
-        
+
         if (jsonResponse['data'] != null) {
           final List<dynamic> data = jsonResponse['data'];
           // print('Polling data list length: ${data.length}');
@@ -124,7 +129,7 @@ class WaitingService {
     for (int i = 0; i < sortedNewData.length; i++) {
       final lastItem = sortedLastData[i];
       final newItem = sortedNewData[i];
-      
+
       // 全てのフィールドを比較し、変更を検出
       if (lastItem.waitingId != newItem.waitingId ||
           lastItem.status != newItem.status ||
@@ -156,11 +161,12 @@ class WaitingService {
       _unchangedDataCount = 0;
     } else {
       _unchangedDataCount++;
-      
+
       // 連続で5回以上変更がない場合、polling 間隔を徐々に増加
-      if (_unchangedDataCount >= _maxUnchangedCount && 
+      if (_unchangedDataCount >= _maxUnchangedCount &&
           _currentPollingInterval < _maxPollingInterval) {
-        final newInterval = _currentPollingInterval + const Duration(seconds: 1);
+        final newInterval =
+            _currentPollingInterval + const Duration(seconds: 1);
         if (newInterval <= _maxPollingInterval) {
           // print('No changes detected, increasing polling interval to ${newInterval.inSeconds}s');
           _currentPollingInterval = newInterval;
@@ -187,6 +193,11 @@ class WaitingService {
       return;
     }
 
+    // コントローラーが閉じられていたら新たに生成
+    if (_waitingListController.isClosed) {
+      _waitingListController = StreamController<List<WaitingList>>.broadcast();
+    }
+
     try {
       // print('Starting polling connection for store: $storeId');
       _isConnected = true;
@@ -209,7 +220,7 @@ class WaitingService {
 
         // データ変更検出
         final bool dataChanged = _hasDataChanged(waitingList);
-        
+
         // polling 間隔調整
         _adjustPollingInterval(dataChanged);
 
@@ -240,10 +251,10 @@ class WaitingService {
   void dispose() {
     // print('Disposing waiting service');
     stopPolling();
-    _waitingListController.close();
+    // _waitingListController.close();
   }
 
-   // 待機 ID 生成関数
+  // 待機 ID 生成関数
   String _generateWaitingId() {
     final now = DateTime.now();
     final year = now.year.toString();
@@ -252,7 +263,7 @@ class WaitingService {
     final hour = now.hour.toString().padLeft(2, '0');
     final minute = now.minute.toString().padLeft(2, '0');
     final second = now.second.toString().padLeft(2, '0');
-    
+
     return '$year$month$day-$hour$minute$second';
   }
 
@@ -299,16 +310,18 @@ class WaitingService {
       if (response.statusCode == 201) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         final waitingList = WaitingList.fromJson(jsonResponse);
-        
+
+        // ** 更新権限 ViewModel へ移動
         // データが変更されたため、 polling 間隔を最小に再設定
-        _currentPollingInterval = _minPollingInterval;
-        if (_lastStoreId != null) {
-          _restartPolling(_lastStoreId!);
-        }
-        
+        // _currentPollingInterval = _minPollingInterval;
+        // if (_lastStoreId != null) {
+        //   _restartPolling(_lastStoreId!);
+        // }
+
         return waitingList;
       }
-      throw Exception('Failed to create waiting list item: ${response.statusCode}\nResponse: ${response.body}');
+      throw Exception(
+          'Failed to create waiting list item: ${response.statusCode}\nResponse: ${response.body}');
     } catch (e) {
       // print('Error creating waiting list item: $e');  // Add debug log
       rethrow;
@@ -322,8 +335,9 @@ class WaitingService {
     required String storeId,
   }) async {
     try {
-      print('Updating waiting status - waitingId: $waitingId, status: $status, storeId: $storeId');
-      
+      print(
+          'Updating waiting status - waitingId: $waitingId, status: $status, storeId: $storeId');
+
       final response = await http.patch(
         Uri.parse('$_baseUrl/api/waiting-list?action=status'),
         headers: {'Content-Type': 'application/json'},
@@ -365,15 +379,16 @@ class WaitingService {
         throw Exception('Failed to clear waiting list: ${response.statusCode}');
       }
 
-      // 강제로 폴링 간격을 최소로 설정하고 즉시 데이터 갱신
+      // 強制にポーリングの間隔を最小に設定し、即データ更新
       _currentPollingInterval = _minPollingInterval;
-      _lastData = null; // 캐시된 데이터를 비워서 강제로 변경 감지하도록 함
-      
-      // 데이터를 즉시 새로 가져와서 스트림에 전송
+      // 強制に変更を感知
+      _lastData = null; 
+
+      // データを即新たに呼び出し、ストリームへ転送
       final updatedList = await fetchWaitingCustomers(storeId);
       _waitingListController.add(updatedList);
-      
-      // 폴링을 재시작하여 즉시 새로운 데이터를 받아오도록 함
+
+      // ポーリングを再スタートし、即新たなデータを受け取る
       if (_lastStoreId != null) {
         _restartPolling(_lastStoreId!);
       }
