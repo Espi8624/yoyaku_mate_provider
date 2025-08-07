@@ -1,0 +1,76 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../models/user_profile.dart';
+import '../../../../widgets/common_widgets/custom_snack_bar.dart';
+import '../../profile_viewmodel.dart';
+import '../dialogs/edit_profile_dialog.dart';
+import '../profile_header.dart';
+import '../profile_section.dart';
+import '../profile_setting_item.dart';
+
+class PersonalProfileView extends StatelessWidget {
+  final UserProfile userProfile;
+  const PersonalProfileView({super.key, required this.userProfile});
+
+  Future<void> _showEditDialog(
+    BuildContext context, {
+    required String title,
+    required String fieldKey,
+    required String initialValue,
+    bool isPassword = false,
+  }) async {
+    final newValue = await showDialog<String>(
+      context: context,
+      builder: (_) => EditProfileDialog(
+        title: title,
+        initialValue: initialValue,
+        isPassword: isPassword,
+      ),
+    );
+
+    if (newValue != null && newValue.isNotEmpty) {
+      final vm = context.read<ProfileViewModel>();
+      final success = await vm.updateProfileField(userFieldKey: fieldKey, value: newValue);
+      if (success && context.mounted) {
+        CustomSnackBar.show(context, message: '変更が保存されました', status: SnackBarStatus.success);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      children: [
+        ProfileHeader(
+          name: userProfile.name,
+          imageUrl: userProfile.avatarUrl,
+          onTapImage: () => CustomSnackBar.show(context, message: '準備中です', status: SnackBarStatus.info),
+          onTapName: () => _showEditDialog(context, title: 'お名前', fieldKey: 'user_name', initialValue: userProfile.name),
+          subtitle: userProfile.role == 'manager' ? '管理者' : '職員',
+        ),
+        const SizedBox(height: 32),
+        ProfileSection(
+          title: '基本情報',
+          children: [
+            ProfileSettingItem(
+              title: 'E-mail',
+              subtitle: userProfile.email,
+              onTap: () => _showEditDialog(context, title: 'E-mail', fieldKey: 'email', initialValue: userProfile.email),
+            ),
+            ProfileSettingItem(
+              title: 'パスワード',
+              subtitle: '********',
+              onTap: () => _showEditDialog(context, title: 'パスワード変更', fieldKey: 'password', initialValue: '', isPassword: true),
+            ),
+            ProfileSettingItem(
+              title: '電話番号',
+              subtitle: userProfile.phone,
+              onTap: () => _showEditDialog(context, title: '電話番号', fieldKey: 'phone', initialValue: userProfile.phone),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
