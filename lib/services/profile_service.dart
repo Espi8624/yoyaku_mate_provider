@@ -1,106 +1,135 @@
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'api_exception.dart';
 import '../models/provider_profile.dart';
 
 class ProviderProfileService {
   final String baseUrl;
   ProviderProfileService({required this.baseUrl});
 
-  // 使用者プロファイル取得
-  Future<Map<String, dynamic>> fetchUserProfile(String userId) async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/api/provider_user?user_id=$userId'));
+  // 認証 Token 取得
+  Future<String> _getIdToken() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw ApiException('ユーザーがログインしていません。');
+    }
+    final String? token = await user.getIdToken();
+    if (token == null) {
+      throw ApiException('認証トークンの取得に失敗しました。再ログインしてください。');
+    }
+    return token;
+  }
+
+  // ユーザープロフィール取得
+  Future<Map<String, dynamic>> fetchUserProfile(String firebaseUid) async {
+    final token = await _getIdToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/provider_user/firebase_uid?uid=$firebaseUid'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return data;
+      return json.decode(utf8.decode(response.bodyBytes));
     } else {
-      throw Exception('Failed to load user profile');
+      throw ApiException(
+          'Failed to load user profile. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
 
-  // 使用者プロファイル更新
+  // ユーザープロフィール更新
   Future<void> updateUserProfile(
-      String userId, Map<String, dynamic> update) async {
+      String mongoUserId, Map<String, dynamic> update) async {
+    final token = await _getIdToken();
     final response = await http.put(
-      Uri.parse('$baseUrl/api/provider_user?user_id=$userId'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('$baseUrl/api/provider_user?user_id=$mongoUserId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
       body: json.encode(update),
     );
     if (response.statusCode != 200) {
-      throw Exception('Failed to update user profile');
+      throw ApiException(
+          'Failed to update user profile. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
 
-  // 店舗プロファイル取得
+  // 店舗プロフィール取得
   Future<Map<String, dynamic>> fetchStoreProfile(String storeId) async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/api/provider_store?store_id=$storeId'));
+    final token = await _getIdToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/provider_store?store_id=$storeId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return data;
+      return json.decode(utf8.decode(response.bodyBytes));
     } else {
-      throw Exception('Failed to load store profile');
+      throw ApiException(
+          'Failed to load store profile. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
 
-  // 店舗プロファイル更新
+  // 店舗プロフィール更新
   Future<void> updateStoreProfile(
       String storeId, Map<String, dynamic> update) async {
+    final token = await _getIdToken();
     final response = await http.put(
       Uri.parse('$baseUrl/api/provider_store?store_id=$storeId'),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
       body: json.encode(update),
     );
     if (response.statusCode != 200) {
-      throw Exception('Failed to update store profile');
+      throw ApiException(
+          'Failed to update store profile. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
 
   // 会員加入
   Future<Map<String, dynamic>> signUp(
       ProviderProfile profile, String idToken) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/signup'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Baer $idToken',
-        },
-        body: jsonEncode(profile.toJson()),
-      );
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/signup'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $idToken',
+      },
+      body: jsonEncode(profile.toJson()),
+    );
 
-      if (response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception(
-            'Failed to sign up. Status: ${response.statusCode}, Body: ${response.body}');
-      }
-    } catch (e) {
-      // ネットワーク等他のエラーを処理
-      throw Exception('Failed to sign up: $e');
+    if (response.statusCode == 201) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } else {
+      throw ApiException(
+          'Failed to sign up. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
 
   // 店舗存在確認
   Future<bool> checkStoreExists(String storeId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/auth/check-store?store_id=$storeId'),
-        headers: {'Content-Type': 'application/json'},
-      );
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/auth/check-store?store_id=$storeId'),
+      headers: {'Content-Type': 'application/json'},
+    );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['data']['exists'] as bool;
-      } else {
-        throw Exception('Failed to check store existence: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Failed to check store existence: $e');
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['data']['exists'] as bool;
+    } else {
+      throw ApiException('Failed to check store existence: ${response.body}');
     }
   }
 
-  // メール中腹チェック
+  // E-mail 中腹確認
   Future<bool> checkEmailAvailability(String email) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth/check-email'),
@@ -112,11 +141,11 @@ class ProviderProfileService {
       final data = jsonDecode(response.body);
       return data['available'];
     } else {
-      throw Exception('Failed to check email availability');
+      throw ApiException('Failed to check email availability');
     }
   }
 
-  // 電話番号重複チェック
+  // 電話番号中腹確認
   Future<bool> checkPhoneAvailability(String phoneNumber) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth/check-phone'),
@@ -128,7 +157,7 @@ class ProviderProfileService {
       final data = jsonDecode(response.body);
       return data['available'];
     } else {
-      throw Exception('Failed to check phone number availability');
+      throw ApiException('Failed to check phone number availability');
     }
   }
 }

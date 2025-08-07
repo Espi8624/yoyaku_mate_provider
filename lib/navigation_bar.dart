@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yoyaku_mate_provider/pages/profile_page/profile_viewmodel.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 
@@ -7,9 +9,6 @@ class SideNavigationBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
   final VoidCallback onToggle;
-  final String userName;
-  final String storeName;
-  final String userRole; // 管理者 or 職員
   final VoidCallback? onLogout;
 
   const SideNavigationBar({
@@ -18,14 +17,22 @@ class SideNavigationBar extends StatelessWidget {
     required this.selectedIndex,
     required this.onItemTapped,
     required this.onToggle,
-    required this.userName,
-    required this.storeName,
-    required this.userRole,
     this.onLogout,
   });
 
   @override
   Widget build(BuildContext context) {
+    // context.watch を使用し、ProfileViewModel の変化を感知
+    final profileVM = context.watch<ProfileViewModel>();
+
+    final userProfile = profileVM.userProfile;
+    final storeProfile = profileVM.storeProfile;
+
+    // 基本値
+    final String userName = userProfile?.name ?? '...';
+    final String storeName = storeProfile?.name ?? '...';
+    final String userRole = userProfile?.role ?? 'staff';
+
     return Center(
       child: Container(
         width: isExpanded ? 280 : 80,
