@@ -7,29 +7,24 @@ import 'package:yoyaku_mate_provider/firebase_options.dart';
 import 'package:yoyaku_mate_provider/login_page.dart';
 import 'package:yoyaku_mate_provider/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_screen.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_page.dart';
-import 'package:yoyaku_mate_provider/pages/sales_entry_page.dart';
-import 'package:yoyaku_mate_provider/pages/sales_overview_page.dart';
+import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen.dart';
+import 'package:yoyaku_mate_provider/pages/profile_page/profile_viewmodel.dart';
+// import 'package:yoyaku_mate_provider/pages/sales_entry_page.dart';
+// import 'package:yoyaku_mate_provider/pages/sales_overview_page.dart';
 import 'package:yoyaku_mate_provider/pages/setting_page/setting_page.dart';
-import 'package:yoyaku_mate_provider/pages/shop_status_page.dart';
-import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_page.dart';
-import 'package:yoyaku_mate_provider/user_provider.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+// import 'package:yoyaku_mate_provider/pages/shop_status_page.dart';
+import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen.dart';
+import 'package:yoyaku_mate_provider/services/profile_service.dart';
+// import 'package:yoyaku_mate_provider/user_provider.dart';
+// import 'dart:convert';
+// import 'package:http/http.dart' as http;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => UserProvider()),
-      ],
-      child: const MyApp(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -46,7 +41,7 @@ class MyApp extends StatelessWidget {
           seedColor: AppColors.accentPrimary,
           background: AppColors.background,
         ),
-        useMaterial3: true, 
+        useMaterial3: true,
       ),
       home: const AuthWrapper(),
     );
@@ -66,7 +61,7 @@ class AuthWrapper extends StatelessWidget {
               body: Center(child: CircularProgressIndicator()));
         }
         if (snapshot.hasData) {
-          return const HomeScreenDataLoader();
+          return ProfileViewModelProvider(user: snapshot.data!);
         }
         return const LoginPage();
       },
@@ -74,73 +69,21 @@ class AuthWrapper extends StatelessWidget {
   }
 }
 
-class HomeScreenDataLoader extends StatelessWidget {
-  const HomeScreenDataLoader({super.key});
-
-  Future<void> _loadUserData(BuildContext context) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw Exception("User is not logged in.");
-
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    if (userProvider.userId != null) return;
-
-    final idToken = await user.getIdToken();
-    final userResponse = await http.get(
-      Uri.parse(
-          'http://localhost:8080/api/provider_user/firebase_uid?uid=${user.uid}'),
-      headers: {'Authorization': 'Bearer $idToken'},
-    );
-
-    if (userResponse.statusCode != 200) {
-      throw Exception('Failed to fetch user info: ${userResponse.body}');
-    }
-    final userInfo = jsonDecode(userResponse.body);
-    userProvider.setUserInfo(userInfo);
-
-    final userIdFromProvider = userProvider.userId;
-    if (userIdFromProvider != null) {
-      final storeResponse = await http.get(
-        Uri.parse(
-            'http://localhost:8080/api/provider_store?user_id=$userIdFromProvider'),
-      );
-      if (storeResponse.statusCode == 200 && storeResponse.body.isNotEmpty) {
-        final storeInfo = jsonDecode(storeResponse.body);
-        userProvider.setStoreInfo(storeInfo);
-      }
-    }
-  }
+// ProfileViewModel を生成し、下位 Widget ツリーに提供
+// 既存　HomeScreenDataLoader & UserProvider を対応
+class ProfileViewModelProvider extends StatelessWidget {
+  final User user;
+  const ProfileViewModelProvider({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _loadUserData(context),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('データローディング失敗: ${snapshot.error}'),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () async {
-                      await FirebaseAuth.instance.signOut();
-                    },
-                    child: const Text('ログアウト'),
-                  )
-                ],
-              ),
-            ),
-          );
-        }
-
-        if (snapshot.connectionState == ConnectionState.done) {
-          return const HomeScreen();
-        }
-
-        return const Scaffold(body: Center(child: CircularProgressIndicator()));
-      },
+    return ChangeNotifierProvider(
+      create: (_) => ProfileViewModel(
+        profileService:
+            ProviderProfileService(baseUrl: "http://localhost:8080"),
+        userId: user.uid, // Firebase UID を使用者 ID で使用
+      ),
+      child: const HomeScreen(),
     );
   }
 }
@@ -156,6 +99,15 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   bool _isExpanded = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Widget がビルドされた直後に ViewModel のデータローディングメソッドを呼出
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProfileViewModel>().loadProfiles();
+    });
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -170,31 +122,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    // final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final profileVM = context.watch<ProfileViewModel>();
 
-    if (userProvider.userId == null) {
-      return const Scaffold(body: Center(child: Text("ユーザー情報が見つかりません")));
+    if (profileVM.isLoading && profileVM.userProfile == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final userId = userProvider.userId!;
-    final userRole = userProvider.userRole ?? '';
-    final storeData = userProvider.storeInfo?['data'];
-    String storeId = '';
-    String storeName = '';
-
-    if (storeData is Map) {
-      storeId = storeData['store_id']?.toString() ?? '';
-      storeName = storeData['store_name']?.toString() ?? '';
+    if (!profileVM.isLoading && profileVM.userProfile == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('データローディング失敗: ${profileVM.errorMessage ?? "不明なエラー"}'),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                },
+                child: const Text('ログアウト'),
+              )
+            ],
+          ),
+        ),
+      );
     }
+
+    // データローディング成功
+    final storeId = profileVM.storeId;
 
     final List<Widget> pages = [
       WaitingPage(storeId: storeId),
       MenuManagementScreen(storeId: storeId),
-      ProfilePage(userId: userId, userRole: userRole, storeId: storeId),
+      const ProfileScreen(),
       SettingPage(storeId: storeId),
-      const ShopStatusPage(),
-      const SalesEntryPage(),
-      const SalesOverviewPage(),
     ];
 
     return Scaffold(
@@ -207,11 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedIndex: _selectedIndex,
               onItemTapped: _onItemTapped,
               onToggle: _toggleSidebar,
-              userName: userProvider.userName ?? '',
-              storeName: storeName,
-              userRole: userRole,
               onLogout: () async {
-                userProvider.clear();
                 await FirebaseAuth.instance.signOut();
               },
             ),
@@ -220,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () {
                   if (_isExpanded) _toggleSidebar();
                 },
-                child: Container( 
+                child: Container(
                   margin: const EdgeInsets.only(left: 12.0),
                   decoration: BoxDecoration(
                     color: Theme.of(context).canvasColor,
