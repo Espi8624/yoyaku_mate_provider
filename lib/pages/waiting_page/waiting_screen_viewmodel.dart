@@ -12,11 +12,11 @@ import '../../services/api_exception.dart';
 import '../../services/waiting_service.dart';
 import '../../widgets/common_widgets/custom_snack_bar.dart';
 
-class WaitingViewModel extends ChangeNotifier {
+class WaitingScreenViewModel extends ChangeNotifier {
   final WaitingService _waitingService;
   final String storeId;
 
-  WaitingViewModel(
+  WaitingScreenViewModel(
       {required this.storeId, required WaitingService waitingService})
       : _waitingService = waitingService {
     loadWaitingList();
@@ -177,7 +177,8 @@ class WaitingViewModel extends ChangeNotifier {
     } on ApiException catch (e) {
       if (context.mounted) {
         CustomSnackBar.show(context,
-            message: 'ステータスアップデート失敗: ${e.message}', status: SnackBarStatus.error);
+            message: 'ステータスアップデート失敗: ${e.message}',
+            status: SnackBarStatus.error);
       }
       // 失敗時、UI を以前の状態にロールバック
       _waitingList[itemIndex] = originalItem;

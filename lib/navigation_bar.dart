@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_viewmodel.dart';
+import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 
@@ -23,7 +23,7 @@ class SideNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // context.watch を使用し、ProfileViewModel の変化を感知
-    final profileVM = context.watch<ProfileViewModel>();
+    final profileVM = context.watch<ProfileScreenViewModel>();
 
     final userProfile = profileVM.userProfile;
     final storeProfile = profileVM.storeProfile;

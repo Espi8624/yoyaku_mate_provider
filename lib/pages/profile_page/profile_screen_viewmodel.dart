@@ -4,14 +4,14 @@ import '../../models/user_profile.dart';
 import '../../services/api_exception.dart';
 import '../../services/profile_service.dart';
 
-class ProfileViewModel extends ChangeNotifier {
+class ProfileScreenViewModel extends ChangeNotifier {
   final ProviderProfileService _profileService;
 
   final String firebaseUid;
 
   String _mongoUserId = '';
 
-  ProfileViewModel({
+  ProfileScreenViewModel({
     required ProviderProfileService profileService,
     required String userId, // 生成者では Firebase UID を取得
   })  : _profileService = profileService,

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import 'package:provider/provider.dart';
-import '../waiting_viewmodel.dart';
+import '../waiting_screen_viewmodel.dart';
 
 class WaitingStatusArea extends StatelessWidget {
   const WaitingStatusArea({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<WaitingViewModel>();
+    final vm = context.watch<WaitingScreenViewModel>();
 
     return Container(
       padding: const EdgeInsets.all(24),

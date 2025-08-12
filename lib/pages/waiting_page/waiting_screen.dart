@@ -11,16 +11,16 @@ import 'widgets/qr_code_button.dart';
 import 'widgets/waiting_action_buttons.dart';
 import 'widgets/waiting_list_panel.dart';
 import 'widgets/waiting_status_area.dart';
-import 'waiting_viewmodel.dart';
+import 'waiting_screen_viewmodel.dart';
 
-class WaitingPage extends StatelessWidget {
+class WaitingScreen extends StatelessWidget {
   final String storeId;
-  const WaitingPage({super.key, required this.storeId});
+  const WaitingScreen({super.key, required this.storeId});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => WaitingViewModel(
+      create: (_) => WaitingScreenViewModel(
         storeId: storeId,
         waitingService: WaitingService(),
       ),
@@ -33,7 +33,7 @@ class _WaitingView extends StatelessWidget {
   const _WaitingView();
 
   Future<void> _showAddWaitingDialog(BuildContext context) async {
-    final vm = context.read<WaitingViewModel>();
+    final vm = context.read<WaitingScreenViewModel>();
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => const AddWaitingDialog(),
@@ -50,7 +50,7 @@ class _WaitingView extends StatelessWidget {
       content: '現在の待機目録を全て初期化しますか？\nこの操作は取り消しできません。',
     );
     if (confirmed == true && context.mounted) {
-      await context.read<WaitingViewModel>().clearWaitingList(context);
+      await context.read<WaitingScreenViewModel>().clearWaitingList(context);
     }
   }
 
@@ -75,7 +75,7 @@ class _WaitingView extends StatelessWidget {
 
   Future<void> _showNotificationDialog(
       BuildContext context, WaitingList item) async {
-    final vm = context.read<WaitingViewModel>();
+    final vm = context.read<WaitingScreenViewModel>();
     final notesText =
         (item.notes != null && item.notes!.isNotEmpty) ? item.notes! : null;
 
@@ -130,7 +130,7 @@ class _WaitingView extends StatelessWidget {
 
   Future<void> _showEntryConfirmationDialog(
       BuildContext context, WaitingList item) async {
-    final vm = context.read<WaitingViewModel>();
+    final vm = context.read<WaitingScreenViewModel>();
     final contactText = (item.contact != null && item.contact!.isNotEmpty)
         ? item.contact!
         : null;
@@ -242,7 +242,7 @@ class _WaitingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<WaitingViewModel>();
+    final vm = context.watch<WaitingScreenViewModel>();
 
     return Scaffold(
       body: Padding(
@@ -293,8 +293,7 @@ class _WaitingView extends StatelessWidget {
               flex: 1,
               child: Column(
                 children: [
-                  QRCodeButton(
-                      data: 'https://example.com/waiting-screen'),
+                  QRCodeButton(data: 'https://example.com/waiting-screen'),
                   SizedBox(height: 10),
                   Expanded(
                     child: WaitingStatusArea(),

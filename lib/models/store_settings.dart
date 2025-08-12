@@ -82,6 +82,35 @@ class ClosedDays {
         'regular_monthly': regularMonthly,
         'holiday_closure': holidayClosure,
       };
+
+  // UI に表示する休業日要約情報を生成する getter
+  String get summary {
+    final parts = <String>[];
+
+    // 毎週定期休業日情報追加
+    if (regularWeekly.isNotEmpty) {
+      // 、で縁結
+      parts.add('毎週${regularWeekly.join('、')}');
+    }
+
+    // 祝日休業日情報追加
+    if (holidayClosure) {
+      parts.add('祝日');
+    }
+
+    // 特定日休業日情報追加
+    if (specificDates.isNotEmpty) {
+      parts.add('特定日${specificDates.length}日');
+    }
+
+    // 設定されている休業日がない場合'なし'を返却
+    if (parts.isEmpty) {
+      return 'なし';
+    }
+
+    // 設定されている情報を' / 'で繋げて最終文字列を生成
+    return parts.join(' / ');
+  }
 }
 
 class WaitingPolicy {
@@ -105,7 +134,8 @@ class WaitingPolicy {
   WaitingPolicy copyWith({int? maxWaitingCount, int? estimatedWaitingCount}) {
     return WaitingPolicy(
       maxWaitingCount: maxWaitingCount ?? this.maxWaitingCount,
-      estimatedWaitingCount: estimatedWaitingCount ?? this.estimatedWaitingCount,
+      estimatedWaitingCount:
+          estimatedWaitingCount ?? this.estimatedWaitingCount,
     );
   }
 }
