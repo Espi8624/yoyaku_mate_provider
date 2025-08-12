@@ -4,7 +4,8 @@ import '../../constants/app_colors.dart';
 enum SnackBarStatus { success, error, info }
 
 class CustomSnackBar {
-  static void show(BuildContext context, {required String message, SnackBarStatus status = SnackBarStatus.info}) {
+  static void show(BuildContext context,
+      {required String message, SnackBarStatus status = SnackBarStatus.info}) {
     Color backgroundColor;
     switch (status) {
       case SnackBarStatus.success:
@@ -14,7 +15,6 @@ class CustomSnackBar {
         backgroundColor = AppColors.error;
         break;
       case SnackBarStatus.info:
-      default:
         backgroundColor = AppColors.accentPrimary;
         break;
     }

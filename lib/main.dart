@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/firebase_options.dart';
 import 'package:yoyaku_mate_provider/login_page.dart';
-import 'package:yoyaku_mate_provider/navigation_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
