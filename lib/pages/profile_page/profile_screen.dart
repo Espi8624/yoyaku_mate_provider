@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/common_widgets/custom_snack_bar.dart';
-import 'profile_viewmodel.dart';
+import 'profile_screen_viewmodel.dart';
 import './widgets/views/personal_profile_view.dart';
 import './widgets/views/store_profile_view.dart';
 
@@ -25,12 +25,12 @@ class _ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<_ProfileView>
     with TickerProviderStateMixin {
   TabController? _tabController;
-  late final ProfileViewModel _viewModel;
+  late final ProfileScreenViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
-    _viewModel = context.read<ProfileViewModel>();
+    _viewModel = context.read<ProfileScreenViewModel>();
 
     _viewModel.addListener(_onViewModelUpdated);
 
@@ -70,7 +70,7 @@ class _ProfileViewState extends State<_ProfileView>
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelUpdated);
-    // nullable コントローラーを dispose 
+    // nullable コントローラーを dispose
     _tabController?.dispose();
     super.dispose();
   }
@@ -78,7 +78,7 @@ class _ProfileViewState extends State<_ProfileView>
   @override
   Widget build(BuildContext context) {
     // context.watch を使用し、ViewModel の状態変化を感知し、UI をビルドし直し
-    final vm = context.watch<ProfileViewModel>();
+    final vm = context.watch<ProfileScreenViewModel>();
     final bool isManager = vm.userProfile?.role == 'manager';
 
     return Scaffold(
@@ -110,7 +110,7 @@ class _ProfileViewState extends State<_ProfileView>
   }
 
   // ViewModel の状態によって適切なコンテンツ Widgets を返却するヘルパーメソッド
-  Widget _buildContent(ProfileViewModel vm, bool isManager) {
+  Widget _buildContent(ProfileScreenViewModel vm, bool isManager) {
     if (vm.userProfile == null) {
       return const Center(child: Text("ユーザー情報が見つかりません。"));
     }

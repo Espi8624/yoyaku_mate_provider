@@ -1,333 +1,309 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../../../models/store_settings.dart';
+import '../../../constants/app_colors.dart';
+import '../../../widgets/common_dialogs/base_dialog.dart';
 
-import '../../../widgets/common_widgets/custom_snack_bar.dart';
+// 休業日設定のためのダイアログウィジェット
+class HolidayDialog extends StatefulWidget {
+  final ClosedDays initialClosedDays;
 
-Future<void> showHolidayDialog({
-  required BuildContext context,
-  required List<String> weekdays,
-  required List<String> selectedWeekdays,
-  required List<int> selectedMonthDays,
-  required List<int> specialDays,
-  required List<int> selectedSpecialDays,
-  required Set<DateTime> jpHolidays,
-  required bool publicHolidayEnabled,
-  required DateTime? selectedDate,
-  required Function(void Function()) setDialogState,
-  required int tempSpecialDay,
-  required String tempWeekday,
-  required int tempMonthDay,
-  required DateTime now,
-  required void Function({
-    required bool publicHolidayEnabled,
-    required List<String> selectedWeekdays,
-    required List<int> selectedMonthDays,
-    required List<int> selectedSpecialDays,
-  }) onConfirm,
-}) async {
-  bool publicHolidayEnabled0 = publicHolidayEnabled;
-  await showDialog(
-    context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setDialogState) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('休業日設定',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF263238))),
-            IconButton(
-              icon: const Icon(Icons.close, color: Color(0xFF263238)),
-              onPressed: () => Navigator.pop(context),
-              splashRadius: 20,
-              tooltip: '閉じる',
+  const HolidayDialog({super.key, required this.initialClosedDays});
+
+  @override
+  _HolidayDialogState createState() => _HolidayDialogState();
+}
+
+class _HolidayDialogState extends State<HolidayDialog> {
+  // 状態管理変数
+  late bool _publicHolidayEnabled;
+  late List<String> _selectedWeekdays;
+  late List<int> _selectedMonthDays;
+  late List<DateTime> _selectedSpecificDates;
+  DateTime _focusedDay = DateTime.now();
+
+  // ドロップダウン時、値を選択するための一時的な変数
+  late String _tempWeekday;
+  late int _tempMonthDay;
+
+  // Data lists
+  final List<String> _weekdays = ['月', '火', '水', '木', '金', '土', '日'];
+  final List<int> _monthDays = List.generate(31, (i) => i + 1);
+
+  // 曜日を日本語に変換するためのヘルパーマップ
+  static const Map<int, String> _weekdayStringMap = {
+    DateTime.monday: '月',
+    DateTime.tuesday: '火',
+    DateTime.wednesday: '水',
+    DateTime.thursday: '木',
+    DateTime.friday: '金',
+    DateTime.saturday: '土',
+    DateTime.sunday: '日',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    final closedDays = widget.initialClosedDays;
+    _publicHolidayEnabled = closedDays.holidayClosure;
+    _selectedWeekdays = List.from(closedDays.regularWeekly);
+    // int.tryParse を使用し、数字ではない値が入ってもアプリがクラッシュされないようにする
+    _selectedMonthDays = closedDays.regularMonthly
+        .map((dayStr) => int.tryParse(dayStr))
+        .whereType<int>() // Parsing に失敗した null 値を除外
+        .toList();
+    _selectedSpecificDates = closedDays.specificDates
+        .map((dateStr) {
+          try {
+            return DateTime.parse(dateStr);
+          } catch (e) {
+            return null;
+          }
+        })
+        .whereType<DateTime>()
+        .toList();
+
+    _tempWeekday = _weekdays.first;
+    _tempMonthDay = _monthDays.first;
+  }
+
+  // 週ごとの休業日や月ごとの休業日をチェックするヘルパーメソッド
+  bool _isRegularClosedDay(DateTime day) {
+    final isWeeklyHoliday =
+        _selectedWeekdays.contains(_weekdayStringMap[day.weekday]);
+    final isMonthlyHoliday = _selectedMonthDays.contains(day.day);
+    return isWeeklyHoliday || isMonthlyHoliday;
+  }
+
+  // ユーザーがカレンダーの日付をタップしたときの処理
+  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
+    setState(() {
+      if (_isRegularClosedDay(selectedDay)) {
+        return;
+      }
+
+      if (_selectedSpecificDates.any((d) => isSameDay(d, selectedDay))) {
+        _selectedSpecificDates.removeWhere((d) => isSameDay(d, selectedDay));
+      } else {
+        _selectedSpecificDates.add(selectedDay);
+      }
+      _focusedDay = focusedDay;
+    });
+  }
+
+  // 設定確認後の処理
+  void _submit() {
+    final result = ClosedDays(
+      holidayClosure: _publicHolidayEnabled,
+      regularWeekly: _selectedWeekdays,
+      regularMonthly: _selectedMonthDays.map((d) => d.toString()).toList(),
+      specificDates: _selectedSpecificDates
+          .map((d) => d.toIso8601String().split('T').first)
+          .toList(),
+    );
+    Navigator.of(context).pop(result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BaseDialog(
+      title: '休業日設定',
+      width: 800,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 400,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildCalendarView(),
+                const VerticalDivider(width: 32, color: AppColors.border),
+                _buildSettingsPanel(),
+              ],
             ),
-          ],
-        ),
-        content: SizedBox(
-          width: 800,
-          height: 400,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 左側: カレンダー
-              Expanded(
-                flex: 1,
-                child: TableCalendar(
-                  firstDay: DateTime(2020),
-                  lastDay: DateTime(2100),
-                  focusedDay: selectedDate ?? DateTime.now(),
-                  selectedDayPredicate: (day) =>
-                      selectedDate != null && isSameDay(day, selectedDate),
-                  onDaySelected: (selected, _) {
-                    setDialogState(() {
-                      selectedDate = selected;
-                    });
-                  },
-                  calendarFormat: CalendarFormat.month,
-                  headerStyle: const HeaderStyle(
-                      formatButtonVisible: false, titleCentered: true),
-                  calendarBuilders: CalendarBuilders(
-                    defaultBuilder: (context, day, focusedDay) {
-                      final isHoliday = publicHolidayEnabled &&
-                          jpHolidays.any((h) => isSameDay(h, day));
-                      final isRegularWeekday =
-                          selectedWeekdays.contains(weekdays[day.weekday - 1]);
-                      final isRegularMonthDay =
-                          selectedMonthDays.contains(day.day);
-                      final isSpecialDay = day.year == now.year &&
-                          day.month == now.month &&
-                          selectedSpecialDays.contains(day.day);
-                      final isRed = isHoliday ||
-                          isRegularWeekday ||
-                          isRegularMonthDay ||
-                          isSpecialDay;
-                      return Center(
-                        child: Text(
-                          '${day.day}',
-                          style: TextStyle(color: isRed ? Colors.red : null),
-                        ),
-                      );
-                    },
-                    todayBuilder: (context, day, focusedDay) {
-                      final isHoliday = publicHolidayEnabled &&
-                          jpHolidays.any((h) => isSameDay(h, day));
-                      final isRegularWeekday =
-                          selectedWeekdays.contains(weekdays[day.weekday - 1]);
-                      final isRegularMonthDay =
-                          selectedMonthDays.contains(day.day);
-                      final isSpecialDay = day.year == now.year &&
-                          day.month == now.month &&
-                          selectedSpecialDays.contains(day.day);
-                      final isRed = isHoliday ||
-                          isRegularWeekday ||
-                          isRegularMonthDay ||
-                          isSpecialDay;
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: isRed ? Colors.red[100] : Colors.blue[100],
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${day.day}',
-                            style: TextStyle(
-                                color: isRed ? Colors.red : Colors.blue),
-                          ),
-                        ),
-                      );
-                    },
-                    selectedBuilder: (context, day, focusedDay) {
-                      final isHoliday = publicHolidayEnabled &&
-                          jpHolidays.any((h) => isSameDay(h, day));
-                      final isRegularWeekday =
-                          selectedWeekdays.contains(weekdays[day.weekday - 1]);
-                      final isRegularMonthDay =
-                          selectedMonthDays.contains(day.day);
-                      final isSpecialDay = day.year == now.year &&
-                          day.month == now.month &&
-                          selectedSpecialDays.contains(day.day);
-                      final isRed = isHoliday ||
-                          isRegularWeekday ||
-                          isRegularMonthDay ||
-                          isSpecialDay;
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: isRed ? Colors.red : Colors.green,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${day.day}',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              // 区分線
-              Container(
-                width: 1,
-                height: 500,
-                color: Colors.grey[300],
-              ),
-              const SizedBox(width: 32),
-              // 右側: 設定 UI
-              Expanded(
-                flex: 1,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 特定日指定
-                      const Text('特定日指定',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      Wrap(
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: selectedSpecialDays
-                            .map((d) => Chip(
-                                  label: Text('$d日'),
-                                  onDeleted: () => setDialogState(
-                                      () => selectedSpecialDays.remove(d)),
-                                ))
-                            .toList(),
-                      ),
-                      Row(
-                        children: [
-                          DropdownButton<int>(
-                            value: tempSpecialDay,
-                            items: specialDays
-                                .map((d) => DropdownMenuItem(
-                                    value: d, child: Text('$d日')))
-                                .toList(),
-                            onChanged: (v) =>
-                                setDialogState(() => tempSpecialDay = v!),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: selectedSpecialDays
-                                    .contains(tempSpecialDay)
-                                ? null
-                                : () => setDialogState(() =>
-                                    selectedSpecialDays.add(tempSpecialDay)),
-                            child: const Text('追加'),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 32),
-                      // 定期休業日
-                      const Text('定期休業日',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      const Text('毎週(曜日)', style: TextStyle()),
-                      Wrap(
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: selectedWeekdays
-                            .map((w) => Chip(
-                                  label: Text(w),
-                                  onDeleted: () => setDialogState(
-                                      () => selectedWeekdays.remove(w)),
-                                ))
-                            .toList(),
-                      ),
-                      Row(
-                        children: [
-                          DropdownButton<String>(
-                            value: tempWeekday,
-                            items: weekdays
-                                .map((w) =>
-                                    DropdownMenuItem(value: w, child: Text(w)))
-                                .toList(),
-                            onChanged: (v) =>
-                                setDialogState(() => tempWeekday = v!),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: selectedWeekdays.contains(tempWeekday)
-                                ? null
-                                : () => setDialogState(
-                                    () => selectedWeekdays.add(tempWeekday)),
-                            child: const Text('追加'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Text('毎月(日付)', style: TextStyle()),
-                      Wrap(
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: selectedMonthDays
-                            .map((d) => Chip(
-                                  label: Text('$d日'),
-                                  onDeleted: () => setDialogState(
-                                      () => selectedMonthDays.remove(d)),
-                                ))
-                            .toList(),
-                      ),
-                      Row(
-                        children: [
-                          DropdownButton<int>(
-                            value: tempMonthDay,
-                            items: List.generate(
-                                31,
-                                (i) => DropdownMenuItem(
-                                    value: i + 1, child: Text('${i + 1}日'))),
-                            onChanged: (v) =>
-                                setDialogState(() => tempMonthDay = v!),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: selectedMonthDays.contains(tempMonthDay)
-                                ? null
-                                : () => setDialogState(
-                                    () => selectedMonthDays.add(tempMonthDay)),
-                            child: const Text('追加'),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 32),
-                      // 休業日指定
-                      Row(
-                        children: [
-                          const Text('祝日休業',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 8),
-                          Switch(
-                            value: publicHolidayEnabled0,
-                            onChanged: (v) =>
-                                setDialogState(() => publicHolidayEnabled0 = v),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
           ),
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        actions: [
-          FractionallySizedBox(
-            widthFactor: 0.75,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF6F61),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                onConfirm(
-                  publicHolidayEnabled: publicHolidayEnabled0,
-                  selectedWeekdays: selectedWeekdays,
-                  selectedMonthDays: selectedMonthDays,
-                  selectedSpecialDays: selectedSpecialDays,
-                );
-                CustomSnackBar.show(
-                  context,
-                  message: '休業日が設定されました',
-                  status: SnackBarStatus.info,
-                );
-              },
-              child: const Text('確認'),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentPrimary,
+              foregroundColor: AppColors.textPrimaryLight,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 80),
             ),
+            onPressed: _submit,
+            child: const Text('確認'),
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
+
+  // 左側に表示するウィジェット (Calendar 側)
+  Widget _buildCalendarView() {
+    return Expanded(
+      flex: 3,
+      child: TableCalendar(
+        firstDay: DateTime.utc(2020, 1, 1),
+        lastDay: DateTime.utc(2100, 12, 31),
+        focusedDay: _focusedDay,
+        onDaySelected: _onDaySelected,
+        selectedDayPredicate: (day) =>
+            _selectedSpecificDates.any((d) => isSameDay(d, day)),
+        headerStyle:
+            const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+        calendarBuilders: CalendarBuilders(
+          defaultBuilder: (context, day, focusedDay) {
+            if (_isRegularClosedDay(day)) {
+              return Center(
+                child: Text(
+                  '${day.day}',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              );
+            }
+            return null;
+          },
+          todayBuilder: (context, day, focusedDay) {
+            if (_isRegularClosedDay(day)) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '${day.day}',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+              );
+            }
+            return null;
+          },
+          disabledBuilder: (context, day, focusedDay) {
+            if (_isRegularClosedDay(day)) {
+              return Center(
+                child: Text(
+                  '${day.day}',
+                  style: TextStyle(color: Colors.red.withOpacity(0.5)),
+                ),
+              );
+            }
+            return null;
+          },
+        ),
+      ),
+    );
+  }
+
+  /// 右側の設定パネルを構築するメソッド (値選択側)
+  Widget _buildSettingsPanel() {
+    return Expanded(
+      flex: 2,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(left: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('定期休業日', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            _buildChipSelector<String>(
+              title: '毎週 (曜日)',
+              items: _weekdays,
+              selectedItems: _selectedWeekdays,
+              tempValue: _tempWeekday,
+              onTempChanged: (v) => setState(() => _tempWeekday = v!),
+              onAdd: () => setState(() {
+                if (!_selectedWeekdays.contains(_tempWeekday)) {
+                  _selectedWeekdays.add(_tempWeekday);
+                }
+              }),
+              onDelete: (item) =>
+                  setState(() => _selectedWeekdays.remove(item)),
+            ),
+            const SizedBox(height: 16),
+            _buildChipSelector<int>(
+              title: '毎月 (日)',
+              items: _monthDays,
+              selectedItems: _selectedMonthDays,
+              tempValue: _tempMonthDay,
+              itemToString: (item) => '$item日',
+              onTempChanged: (v) => setState(() => _tempMonthDay = v!),
+              onAdd: () => setState(() {
+                if (!_selectedMonthDays.contains(_tempMonthDay)) {
+                  _selectedMonthDays.add(_tempMonthDay);
+                  _selectedMonthDays.sort(); // ソートして順序を保つ
+                }
+              }),
+              onDelete: (item) =>
+                  setState(() => _selectedMonthDays.remove(item)),
+            ),
+            const Divider(height: 32),
+            Row(
+              children: [
+                const Text('祝日休業',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                Switch(
+                  value: _publicHolidayEnabled,
+                  onChanged: (v) => setState(() => _publicHolidayEnabled = v),
+                  activeColor: AppColors.accentPrimary,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // チップセレクターを構築するヘルパーメソッド
+  // タイトル、アイテムリスト、選択されたアイテム、追加・削除のコールバックを受け取る
+  // アイテムの表示方法をカスタマイズするためのオプションも提供
+  Widget _buildChipSelector<T>({
+    required String title,
+    required List<T> items,
+    required List<T> selectedItems,
+    required T tempValue,
+    required ValueChanged<T?> onTempChanged,
+    required VoidCallback onAdd,
+    required ValueChanged<T> onDelete,
+    String Function(T)? itemToString,
+  }) {
+    // itemToString が提供されていない場合は、デフォルトの toString() を使用
+    final displayValue = itemToString ?? (item) => item.toString();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title),
+        Wrap(
+          spacing: 4,
+          children: selectedItems
+              .map((item) => Chip(
+                    label: Text(displayValue(item)),
+                    onDeleted: () => onDelete(item),
+                  ))
+              .toList(),
+        ),
+        Row(
+          children: [
+            DropdownButton<T>(
+              value: tempValue,
+              items: items
+                  .map((i) =>
+                      DropdownMenuItem(value: i, child: Text(displayValue(i))))
+                  .toList(),
+              onChanged: onTempChanged,
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: selectedItems.contains(tempValue) ? null : onAdd,
+              child: const Text('追加'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }

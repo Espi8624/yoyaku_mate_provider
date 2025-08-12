@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../models/store_profile.dart';
 import '../../../../widgets/common_widgets/custom_snack_bar.dart';
-import '../../profile_viewmodel.dart';
+import '../../profile_screen_viewmodel.dart';
 import '../dialogs/edit_profile_dialog.dart';
 import '../profile_header.dart';
 import '../profile_section.dart';
@@ -25,7 +25,7 @@ class StoreProfileView extends StatelessWidget {
     );
 
     if (newValue != null && newValue.isNotEmpty) {
-      final vm = context.read<ProfileViewModel>();
+      final vm = context.read<ProfileScreenViewModel>();
       final success =
           await vm.updateProfileField(storeFieldKey: fieldKey, value: newValue);
       if (success && context.mounted) {

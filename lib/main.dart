@@ -8,10 +8,10 @@ import 'package:yoyaku_mate_provider/login_page.dart';
 import 'package:yoyaku_mate_provider/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_viewmodel.dart';
+import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
 // import 'package:yoyaku_mate_provider/pages/sales_entry_page.dart';
 // import 'package:yoyaku_mate_provider/pages/sales_overview_page.dart';
-import 'package:yoyaku_mate_provider/pages/setting_page/setting_page.dart';
+import 'package:yoyaku_mate_provider/pages/setting_page/setting_screen.dart';
 // import 'package:yoyaku_mate_provider/pages/shop_status_page.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
@@ -78,7 +78,7 @@ class ProfileViewModelProvider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ProfileViewModel(
+      create: (_) => ProfileScreenViewModel(
         profileService:
             ProviderProfileService(baseUrl: "http://localhost:8080"),
         userId: user.uid, // Firebase UID を使用者 ID で使用
@@ -104,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // Widget がビルドされた直後に ViewModel のデータローディングメソッドを呼出
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProfileViewModel>().loadProfiles();
+      context.read<ProfileScreenViewModel>().loadProfiles();
     });
   }
 
@@ -123,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     // final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final profileVM = context.watch<ProfileViewModel>();
+    final profileVM = context.watch<ProfileScreenViewModel>();
 
     if (profileVM.isLoading && profileVM.userProfile == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -153,10 +153,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final storeId = profileVM.storeId;
 
     final List<Widget> pages = [
-      WaitingPage(storeId: storeId),
+      WaitingScreen(storeId: storeId),
       MenuManagementScreen(storeId: storeId),
       const ProfileScreen(),
-      SettingPage(storeId: storeId),
+      SettingScreen(storeId: storeId),
     ];
 
     return Scaffold(

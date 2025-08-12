@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../constants/app_colors.dart';
 import '../../../widgets/common_dialogs/base_dialog.dart';
-import '../waiting_viewmodel.dart';
+import '../waiting_screen_viewmodel.dart';
 
 class QRCodeButton extends StatelessWidget {
   final String data;
@@ -47,7 +47,7 @@ class QRCodeButton extends StatelessWidget {
                           foregroundColor: Colors.white),
                       onPressed: () {
                         context
-                            .read<WaitingViewModel>()
+                            .read<WaitingScreenViewModel>()
                             .generateAndSaveQrPdf(context, data);
                         Navigator.of(ctx).pop();
                       },

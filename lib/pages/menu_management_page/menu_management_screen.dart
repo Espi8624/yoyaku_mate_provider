@@ -6,7 +6,7 @@ import '../../services/menu_service.dart';
 import '../../widgets/common_dialogs/confirmation_dialog.dart';
 import '../../widgets/common_widgets/custom_snack_bar.dart';
 import '../../widgets/common_widgets/loading_indicator.dart';
-import 'menu_management_viewmodel.dart';
+import 'menu_management_screen_viewmodel.dart';
 import 'widgets/dialogs/category_form_dialog.dart';
 import 'widgets/dialogs/menu_form_dialog.dart';
 import 'widgets/panels/action_buttons_panel.dart';
@@ -20,8 +20,8 @@ class MenuManagementScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) =>
-          MenuManagementViewModel(storeId: storeId, menuService: MenuService()),
+      create: (_) => MenuManagementScreenViewModel(
+          storeId: storeId, menuService: MenuService()),
       child: const _MenuManagementView(),
     );
   }
@@ -38,13 +38,13 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     with TickerProviderStateMixin {
   late TabController _tabController;
 
-  late final MenuManagementViewModel _viewModel;
+  late final MenuManagementScreenViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
     // context が安全な initState で ViewModel の参照を先に取得
-    _viewModel = context.read<MenuManagementViewModel>();
+    _viewModel = context.read<MenuManagementScreenViewModel>();
 
     _tabController =
         TabController(length: _viewModel.categories.length, vsync: this);
@@ -225,7 +225,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<MenuManagementViewModel>();
+    final vm = context.watch<MenuManagementScreenViewModel>();
 
     return Scaffold(
       body: Stack(

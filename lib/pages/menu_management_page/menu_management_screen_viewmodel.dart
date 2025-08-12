@@ -3,11 +3,11 @@ import '../../models/menu_list.dart';
 import '../../services/api_exception.dart';
 import '../../services/menu_service.dart';
 
-class MenuManagementViewModel extends ChangeNotifier {
+class MenuManagementScreenViewModel extends ChangeNotifier {
   final MenuService _menuService;
   final String storeId;
 
-  MenuManagementViewModel(
+  MenuManagementScreenViewModel(
       {required this.storeId, required MenuService menuService})
       : _menuService = menuService {
     loadMenuData();
