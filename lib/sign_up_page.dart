@@ -1,7 +1,11 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/provider_profile.dart';
+import 'package:yoyaku_mate_provider/services/api_exception.dart'; // ApiException を使用する為 import
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -17,6 +21,14 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // 戻るボタンのホバーステータス
+  bool _isBackButtonHovered = false;
+
+  // 画像ファイルを保持するステータス変数
+  File? _licenseImageFile;
+  final ImagePicker _picker = ImagePicker();
+
+  // コントローラー初期化
   final TextEditingController managerEmailController = TextEditingController();
   final TextEditingController managerPasswordController =
       TextEditingController();
@@ -25,7 +37,6 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController storeNameController = TextEditingController();
   final TextEditingController storeAddressController = TextEditingController();
   final TextEditingController storePhoneController = TextEditingController();
-  final TextEditingController storeBizNumController = TextEditingController();
 
   final TextEditingController staffStoreIdController = TextEditingController();
   final TextEditingController staffEmailController = TextEditingController();
@@ -42,13 +53,60 @@ class _SignUpPageState extends State<SignUpPage> {
     storeNameController.dispose();
     storeAddressController.dispose();
     storePhoneController.dispose();
-    storeBizNumController.dispose();
     staffStoreIdController.dispose();
     staffEmailController.dispose();
     staffPasswordController.dispose();
     staffPhoneController.dispose();
     staffNameController.dispose();
     super.dispose();
+  }
+
+  // イメージ選択する関数
+  Future<void> _pickImage() async {
+    try {
+      print("Attempting to pick image...");
+      File? selectedFile;
+
+      if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+        // desktop -> file_picker 使用
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: false,
+        );
+        if (result != null && result.files.single.path != null) {
+          selectedFile = File(result.files.single.path!);
+          print("Image picked via file_picker: ${result.files.single.path}");
+        } else {
+          print("No image selected via file_picker.");
+        }
+      } else {
+        // mobile -> image_picker 使用
+        final XFile? pickedFile =
+            await _picker.pickImage(source: ImageSource.gallery);
+        if (pickedFile != null) {
+          selectedFile = File(pickedFile.path);
+          print("Image picked via image_picker: ${pickedFile.path}");
+        } else {
+          print("No image selected via image_picker.");
+        }
+      }
+
+      if (selectedFile != null) {
+        setState(() {
+          _licenseImageFile = selectedFile;
+          _errorMessage = null; // エラーメッセージをクリア
+        });
+      } else {
+        setState(() {
+          _errorMessage = "イメージが選択されていません";
+        });
+      }
+    } catch (e) {
+      print("Error picking image: $e");
+      setState(() {
+        _errorMessage = "イメージ選択中にエラー発生: $e";
+      });
+    }
   }
 
   Future<void> _handleSignUp() async {
@@ -89,9 +147,7 @@ class _SignUpPageState extends State<SignUpPage> {
           storeName: storeNameController.text,
           storeAddress: storeAddressController.text,
           storeTelNumber: storePhoneController.text,
-          bizNumber: storeBizNumController.text.isEmpty
-              ? null
-              : storeBizNumController.text,
+          bizNumber: null, // bizNumber는 이제 사용하지 않음
           storeEmail: managerEmailController.text.trim(),
         );
       } else {
@@ -114,7 +170,33 @@ class _SignUpPageState extends State<SignUpPage> {
 
       final profileService =
           ProviderProfileService(baseUrl: 'http://localhost:8080');
-      await profileService.signUp(profile, idToken);
+
+      final createdProfileMap = await profileService.signUp(profile, idToken);
+
+      String? storeId;
+
+      // バックエンド応答から 'data' オブジェクトを検索し、その中から 'store_id' を抽出
+      if (createdProfileMap.containsKey('data') &&
+          createdProfileMap['data'] is Map) {
+        final userData = createdProfileMap['data'] as Map<String, dynamic>;
+        storeId = userData['store_id'] as String?;
+      } else {
+        // 'data' ラッパーがない非常時の為のフォールバックロジック
+        storeId = createdProfileMap['store_id'] as String?;
+      }
+
+      // 管理者で、ライセンス画像が選択され、storeIdが存在する場合のみアップロードを実行
+      if (_role == 'manager' && _licenseImageFile != null) {
+        // 上記で抽出した storeId 変数を使用
+        if (storeId != null && storeId.isNotEmpty) {
+          print(
+              'Successfully extracted storeId: $storeId. Proceeding to upload image.');
+          await profileService.uploadLicenseImage(storeId, _licenseImageFile!);
+        } else {
+          print(
+              "Warning: 'store_id' not found in signUp response. Image upload skipped.");
+        }
+      }
 
       await FirebaseAuth.instance.signOut();
 
@@ -129,8 +211,9 @@ class _SignUpPageState extends State<SignUpPage> {
         await newUser.delete();
       }
       if (mounted) {
+        // ApiException と一般 Exception を区別し、メッセージを表示
         setState(() {
-          _errorMessage = e.toString();
+          _errorMessage = e is ApiException ? e.message : e.toString();
         });
       }
     } finally {
@@ -146,16 +229,16 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('新規登録'),
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.textPrimary,
+        // title: const Text('新規登録'),
+        // backgroundColor: AppColors.background,
+        // foregroundColor: AppColors.textPrimary,
         elevation: 0,
       ),
       body: Center(
         child: SingleChildScrollView(
           child: Container(
             width: 360,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
             decoration: BoxDecoration(
               color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(20),
@@ -175,50 +258,48 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Widget _buildStep() {
+    // 現在ステップに応じたウィジェットを保持する変数
+    Widget contentWidget;
+
     if (_step == 0) {
-      return Column(
+      contentWidget = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text('どちらで会員加入を進みますか？',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center),
           const SizedBox(height: 32),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentPrimary,
-                foregroundColor: AppColors.background,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8))),
-            onPressed: () => setState(() {
-              _role = 'manager';
-              _step = 1;
-            }),
-            child: const Text('マネージャー',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight)),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.background,
-                foregroundColor: AppColors.textPrimary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8))),
-            onPressed: () => setState(() {
-              _role = 'staff';
-              _step = 1;
-            }),
-            child: const Text('職員',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildRoleButton(
+                icon: Icons.storefront,
+                label: '管理者',
+                onPressed: () => setState(() {
+                  _role = 'manager';
+                  _step = 1;
+                }),
+                isPrimary: true,
+              ),
+              const SizedBox(width: 24),
+              _buildRoleButton(
+                icon: Icons.person_outline,
+                label: '職員',
+                onPressed: () => setState(() {
+                  _role = 'staff';
+                  _step = 1;
+                }),
+              ),
+            ],
           ),
         ],
       );
-    }
-
-    if (_role == 'manager') {
+    } else if (_role == 'manager') {
       if (_step == 1) {
-        return Column(
+        contentWidget = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const SizedBox(height: 36),
             const Text('ユーザー情報入力',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
@@ -244,7 +325,7 @@ class _SignUpPageState extends State<SignUpPage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentPrimary,
-                  foregroundColor: AppColors.background,
+                  foregroundColor: AppColors.textPrimaryLight,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8))),
               onPressed: () => setState(() => _step = 2),
@@ -253,11 +334,11 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
           ],
         );
-      }
-      if (_step == 2) {
-        return Column(
+      } else if (_step == 2) {
+        contentWidget = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const SizedBox(height: 36),
             const Text('店情報入力',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
@@ -273,10 +354,34 @@ class _SignUpPageState extends State<SignUpPage> {
                 controller: storePhoneController,
                 decoration: const InputDecoration(labelText: '電話番号'),
                 keyboardType: TextInputType.phone),
-            const SizedBox(height: 16),
-            TextField(
-                controller: storeBizNumController,
-                decoration: const InputDecoration(labelText: '事業者番号')),
+            const SizedBox(height: 24),
+            const Text('営業許可証',
+                style: TextStyle(color: AppColors.textSecondary)),
+            const SizedBox(height: 8),
+            Container(
+              height: 150,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: _licenseImageFile == null
+                    ? const Text('アップロードするイメージ',
+                        style: TextStyle(color: AppColors.textSecondary))
+                    : Image.file(_licenseImageFile!, fit: BoxFit.contain),
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.upload_file),
+              label: const Text('ファイル選択'),
+              onPressed: _pickImage,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                side: const BorderSide(color: AppColors.border),
+              ),
+            ),
             const SizedBox(height: 32),
             if (_errorMessage != null)
               Padding(
@@ -287,7 +392,7 @@ class _SignUpPageState extends State<SignUpPage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentPrimary,
-                  foregroundColor: AppColors.background,
+                  foregroundColor: AppColors.textPrimaryLight,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8))),
               onPressed: _isLoading ? null : _handleSignUp,
@@ -303,14 +408,15 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
           ],
         );
+      } else {
+        contentWidget = const SizedBox.shrink();
       }
-    }
-
-    if (_role == 'staff') {
+    } else if (_role == 'staff') {
       if (_step == 1) {
-        return Column(
+        contentWidget = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const SizedBox(height: 36),
             const Text('店番号入力',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
@@ -321,7 +427,7 @@ class _SignUpPageState extends State<SignUpPage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentPrimary,
-                  foregroundColor: AppColors.background,
+                  foregroundColor: AppColors.textPrimaryLight,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8))),
               onPressed: () => setState(() => _step = 2),
@@ -330,11 +436,11 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
           ],
         );
-      }
-      if (_step == 2) {
-        return Column(
+      } else if (_step == 2) {
+        contentWidget = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const SizedBox(height: 36),
             const Text('情報入力',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
@@ -366,7 +472,7 @@ class _SignUpPageState extends State<SignUpPage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentPrimary,
-                  foregroundColor: AppColors.background,
+                  foregroundColor: AppColors.textPrimaryLight,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8))),
               onPressed: _isLoading ? null : _handleSignUp,
@@ -375,16 +481,99 @@ class _SignUpPageState extends State<SignUpPage> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          color: AppColors.accentPrimary, strokeWidth: 2))
+                          color: AppColors.background, strokeWidth: 2))
                   : const Text('登録',
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ],
         );
+      } else {
+        contentWidget = const SizedBox.shrink();
       }
+    } else {
+      contentWidget = const SizedBox.shrink();
     }
 
-    return const SizedBox.shrink();
+    // _step が0より大きい場合、Stackで囲んで戻るボタンを追加
+    if (_step > 0) {
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          contentWidget,
+
+          // 戻るボタン
+          Positioned(
+            top: -12,
+            left: -12,
+            child: MouseRegion(
+              // マウスが領域に入ったとき
+              onEnter: (event) => setState(() => _isBackButtonHovered = true),
+              // マウスが領域を離れたとき
+              onExit: (event) => setState(() => _isBackButtonHovered = false),
+              cursor: SystemMouseCursors.click,
+
+              child: AnimatedScale(
+                // _isBackButtonHovered ステータスに応じて拡大/縮小率を決定
+                scale: _isBackButtonHovered ? 1.2 : 1.0,
+                duration: const Duration(milliseconds: 200),
+
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back,
+                      color: AppColors.textSecondary),
+
+                  // 全てのクリック/ホバー効果を透明にする
+                  style: IconButton.styleFrom(
+                    hoverColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _step--;
+                      _errorMessage = null;
+                    });
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    } else {
+      return contentWidget;
+    }
+  }
+
+  Widget _buildRoleButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    bool isPrimary = false, // 기본값은 false
+  }) {
+    const double buttonSize = 130.0;
+
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        fixedSize: const Size(buttonSize, buttonSize),
+        backgroundColor:
+            isPrimary ? AppColors.accentPrimary : AppColors.background,
+        foregroundColor:
+            isPrimary ? AppColors.textPrimaryLight : AppColors.textPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 2,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 48),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
   }
 }
