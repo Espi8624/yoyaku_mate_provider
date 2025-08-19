@@ -1,6 +1,7 @@
 import 'dart:convert';
+import 'dart:io'; // 파일 처리를 위해 추가
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
+import 'package:http/http.dart' as http; // 파일 업로드를 위해 추가
 import 'api_exception.dart';
 import '../models/provider_profile.dart';
 
@@ -112,6 +113,36 @@ class ProviderProfileService {
       throw ApiException(
           'Failed to sign up. Status: ${response.statusCode}, Body: ${response.body}');
     }
+  }
+
+  // 営業許可証イメージアップロード
+  Future<void> uploadLicenseImage(String storeId, File imageFile) async {
+    // Firebase Authからトークンを取得
+    final token = await _getIdToken();
+    final uri = Uri.parse('$baseUrl/api/stores/upload-license');
+
+    final request = http.MultipartRequest('POST', uri);
+
+    // Firebase Authから取得한トークンを使用
+    request.headers['Authorization'] = 'Bearer $token';
+
+    // storeIdを formData に追加
+    request.fields['storeId'] = storeId;
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'licenseImage',
+        imageFile.path,
+      ),
+    );
+
+    final response = await request.send();
+
+    if (response.statusCode != 200) {
+      final responseBody = await response.stream.bytesToString();
+      throw ApiException(
+          'Failed to upload license image. Status: ${response.statusCode}, Body: $responseBody');
+    }
+    print('License image uploaded successfully!');
   }
 
   // 店舗存在確認

@@ -9,15 +9,9 @@ import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar.dart'
 import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
-// import 'package:yoyaku_mate_provider/pages/sales_entry_page.dart';
-// import 'package:yoyaku_mate_provider/pages/sales_overview_page.dart';
 import 'package:yoyaku_mate_provider/pages/setting_page/setting_screen.dart';
-// import 'package:yoyaku_mate_provider/pages/shop_status_page.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
-// import 'package:yoyaku_mate_provider/user_provider.dart';
-// import 'dart:convert';
-// import 'package:http/http.dart' as http;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
