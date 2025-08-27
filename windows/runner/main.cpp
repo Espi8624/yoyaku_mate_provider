@@ -3,6 +3,9 @@
 #include <windows.h>
 
 #include "flutter_window.h"
+
+#include "url_protocol.h"
+
 #include "utils.h"
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
@@ -18,6 +21,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
   flutter::DartProject project(L"data");
+
+  // ▼▼▼ 이 부분을 추가 ▼▼▼
+  // 커스텀 URL 스킴을 등록합니다.
+  RegisterUrlProtocol(L"yoyaku-mate", L"Yoyaku Mate Provider");
+  // ▲▲▲ 여기까지 ▲▲▲
 
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();

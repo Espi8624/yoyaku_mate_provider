@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/firebase_options.dart';
-import 'package:yoyaku_mate_provider/login_page.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen.dart';
@@ -12,6 +11,8 @@ import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel
 import 'package:yoyaku_mate_provider/pages/setting_page/setting_screen.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
+
+import 'package:yoyaku_mate_provider/routes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +27,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
+      routerConfig: router, // GoRouter設定を使用
       title: 'Yoyaku Mate Provider',
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.background,
@@ -37,31 +39,30 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const AuthWrapper(),
     );
   }
 }
 
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
+// class AuthWrapper extends StatelessWidget {
+//   const AuthWrapper({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
-        }
-        if (snapshot.hasData) {
-          return ProfileViewModelProvider(user: snapshot.data!);
-        }
-        return const LoginPage();
-      },
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return StreamBuilder<User?>(
+//       stream: FirebaseAuth.instance.authStateChanges(),
+//       builder: (context, snapshot) {
+//         if (snapshot.connectionState == ConnectionState.waiting) {
+//           return const Scaffold(
+//               body: Center(child: CircularProgressIndicator()));
+//         }
+//         if (snapshot.hasData) {
+//           return ProfileViewModelProvider(user: snapshot.data!);
+//         }
+//         return const LoginPage();
+//       },
+//     );
+//   }
+// }
 
 // ProfileViewModel を生成し、下位 Widget ツリーに提供
 // 既存　HomeScreenDataLoader & UserProvider を対応
