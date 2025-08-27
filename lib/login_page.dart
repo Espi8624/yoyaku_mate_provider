@@ -1,7 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
-import 'package:yoyaku_mate_provider/sign_up_page.dart';
+// import 'package:yoyaku_mate_provider/sign_up_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -108,7 +109,8 @@ class _LoginPageState extends State<LoginPage> {
                 if (_errorMsg != null) ...[
                   const SizedBox(height: 16),
                   Text(_errorMsg!,
-                      style: const TextStyle(color: AppColors.error, fontSize: 14),
+                      style:
+                          const TextStyle(color: AppColors.error, fontSize: 14),
                       textAlign: TextAlign.center),
                 ],
                 const SizedBox(height: 28),
@@ -136,9 +138,10 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SignUpPage()),
-                    );
+                    // Navigator.of(context).push(
+                    //   MaterialPageRoute(builder: (_) => const SignUpPage()),
+                    // );
+                    GoRouter.of(context).push('/signup');
                   },
                   child: const Text('まだアカウントを持っていませんか？'),
                 ),
