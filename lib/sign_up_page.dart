@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/provider_profile.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart'; // ApiException を使用する為 import
@@ -20,6 +22,7 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _role;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _lineLoginUrl;
 
   // 戻るボタンのホバーステータス
   bool _isBackButtonHovered = false;
@@ -174,37 +177,47 @@ class _SignUpPageState extends State<SignUpPage> {
       final createdProfileMap = await profileService.signUp(profile, idToken);
 
       String? storeId;
+      String? lineLoginUrl;
 
       // バックエンド応答から 'data' オブジェクトを検索し、その中から 'store_id' を抽出
       if (createdProfileMap.containsKey('data') &&
           createdProfileMap['data'] is Map) {
         final userData = createdProfileMap['data'] as Map<String, dynamic>;
         storeId = userData['store_id'] as String?;
-      } else {
-        // 'data' ラッパーがない非常時の為のフォールバックロジック
-        storeId = createdProfileMap['store_id'] as String?;
+        lineLoginUrl = userData['line_login_url'] as String?;
       }
 
       // 管理者で、ライセンス画像が選択され、storeIdが存在する場合のみアップロードを実行
-      if (_role == 'manager' && _licenseImageFile != null) {
-        // 上記で抽出した storeId 変数を使用
-        if (storeId != null && storeId.isNotEmpty) {
-          print(
-              'Successfully extracted storeId: $storeId. Proceeding to upload image.');
-          await profileService.uploadLicenseImage(storeId, _licenseImageFile!);
-        } else {
-          print(
-              "Warning: 'store_id' not found in signUp response. Image upload skipped.");
-        }
+      if (_role == 'manager' && _licenseImageFile != null && storeId != null) {
+        await profileService.uploadLicenseImage(storeId, _licenseImageFile!);
       }
 
-      await FirebaseAuth.instance.signOut();
+      // 会員加入完了処理
+      if (_role == 'manager' &&
+          lineLoginUrl != null &&
+          lineLoginUrl.isNotEmpty) {
+        // managerの場合、URLをstateに保存し、_step=3に変更し、LINE連動UIを表示
+        final uri = Uri.parse(lineLoginUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('会員登録が完了しました。ログインしてください')),
-        );
-        Navigator.of(context).pop();
+          await FirebaseAuth.instance.signOut();
+          if (mounted) {
+            context.go('/signup/complete');
+          }
+        } else {
+          throw Exception('Could not launch LINE login URL');
+        }
+      } else {
+        // staffか、managerにも関わらずURLをもらえなかった場合
+        // ログアウトされ、ログインページに遷移
+        await FirebaseAuth.instance.signOut();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('会員登録が完了しました。ログインしてください')),
+          );
+          context.go('/login');
+        }
       }
     } catch (e) {
       if (newUser != null) {
@@ -213,7 +226,8 @@ class _SignUpPageState extends State<SignUpPage> {
       if (mounted) {
         // ApiException と一般 Exception を区別し、メッセージを表示
         setState(() {
-          _errorMessage = e is ApiException ? e.message : e.toString();
+          _errorMessage =
+              "エラー : ${e is ApiException ? e.message : e.toString()}";
         });
       }
     } finally {
@@ -233,6 +247,37 @@ class _SignUpPageState extends State<SignUpPage> {
         // backgroundColor: AppColors.background,
         // foregroundColor: AppColors.textPrimary,
         elevation: 0,
+        // Stackの代わりにAppBarのleadingを使用し、戻るを具現
+        leading: _step > 0
+            ? MouseRegion(
+                onEnter: (event) => setState(() => _isBackButtonHovered = true),
+                onExit: (event) => setState(() => _isBackButtonHovered = false),
+                cursor: SystemMouseCursors.click,
+                child: AnimatedScale(
+                  scale: _isBackButtonHovered ? 1.2 : 1.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back,
+                        color: AppColors.textSecondary),
+                    style: IconButton.styleFrom(
+                      hoverColor: Colors.transparent,
+                      highlightColor: Colors.transparent,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        // LINE連動段階(_step=3)では以前情報入力段階(_step=2)に戻る
+                        if (_step == 3) {
+                          _step = 2;
+                        } else {
+                          _step--;
+                        }
+                        _errorMessage = null;
+                      });
+                    },
+                  ),
+                ),
+              )
+            : null,
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -408,6 +453,8 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
           ],
         );
+      } else if (_step == 3) {
+        contentWidget = _buildLineIntegrationStep();
       } else {
         contentWidget = const SizedBox.shrink();
       }
@@ -495,60 +542,14 @@ class _SignUpPageState extends State<SignUpPage> {
       contentWidget = const SizedBox.shrink();
     }
 
-    // _step が0より大きい場合、Stackで囲んで戻るボタンを追加
-    if (_step > 0) {
-      return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          contentWidget,
-
-          // 戻るボタン
-          Positioned(
-            top: -12,
-            left: -12,
-            child: MouseRegion(
-              // マウスが領域に入ったとき
-              onEnter: (event) => setState(() => _isBackButtonHovered = true),
-              // マウスが領域を離れたとき
-              onExit: (event) => setState(() => _isBackButtonHovered = false),
-              cursor: SystemMouseCursors.click,
-
-              child: AnimatedScale(
-                // _isBackButtonHovered ステータスに応じて拡大/縮小率を決定
-                scale: _isBackButtonHovered ? 1.2 : 1.0,
-                duration: const Duration(milliseconds: 200),
-
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back,
-                      color: AppColors.textSecondary),
-
-                  // 全てのクリック/ホバー効果を透明にする
-                  style: IconButton.styleFrom(
-                    hoverColor: Colors.transparent,
-                    highlightColor: Colors.transparent,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _step--;
-                      _errorMessage = null;
-                    });
-                  },
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    } else {
-      return contentWidget;
-    }
+    return contentWidget;
   }
 
   Widget _buildRoleButton({
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
-    bool isPrimary = false, // 기본값은 false
+    bool isPrimary = false,
   }) {
     const double buttonSize = 130.0;
 
@@ -575,5 +576,66 @@ class _SignUpPageState extends State<SignUpPage> {
         ],
       ),
     );
+  }
+
+  // LINE連動を案内するUIを生成
+  Widget _buildLineIntegrationStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 36),
+        const Icon(Icons.check_circle_outline, color: Colors.green, size: 60),
+        const SizedBox(height: 24),
+        const Text(
+          '申請が仮受付されました。',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          '最後に、ご本人確認と今後のお知らせのためにLINEアカウントを連携してください。下のボタンを押して、LINEで申請を完了してください。',
+          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 48),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF00B900), // LINE Green Color
+            foregroundColor: Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          onPressed: _isLoading ? null : _launchLineLogin,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2))
+              : const Text(
+                  'LINEで申請完了',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+        ),
+      ],
+    );
+  }
+
+  // LINEログインを実行
+  Future<void> _launchLineLogin() async {
+    if (_lineLoginUrl == null) return;
+
+    final Uri url = Uri.parse(_lineLoginUrl!);
+    if (await canLaunchUrl(url)) {
+      // 外部URLを開く
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'LINEを開けません。アプリが設置されているか確認をお願いします。';
+        });
+      }
+    }
   }
 }
