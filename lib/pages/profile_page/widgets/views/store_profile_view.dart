@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../models/store_profile.dart';
 import '../../../../widgets/common_widgets/custom_snack_bar.dart';
 import '../../profile_screen_viewmodel.dart';
 import '../dialogs/edit_profile_dialog.dart';
 import '../profile_header.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
+import 'verification_status_view.dart';
 
 class StoreProfileView extends StatelessWidget {
-  final StoreProfile storeProfile;
-  const StoreProfileView({super.key, required this.storeProfile});
+  const StoreProfileView({super.key});
 
   Future<void> _showEditDialog(
     BuildContext context, {
@@ -37,6 +36,17 @@ class StoreProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<ProfileScreenViewModel>();
+    final storeProfile = vm.storeProfile;
+    final storeLicense = vm.storeLicense;
+
+    // 데이터가 아직 로드되지 않았거나 없는 경우를 위한 UI 처리
+    if (storeProfile == null || storeLicense == null) {
+      // ProfileScreen의 메인 로딩 인디케이터가 이미 있으므로, 여기서는
+      // 데이터가 없는 경우의 메시지를 보여주거나 빈 컨테이너를 반환할 수 있습니다.
+      return const Center(child: Text("店舗情報がありません。"));
+    }
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       children: [
@@ -75,17 +85,11 @@ class StoreProfileView extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         ProfileSection(
-          title: '事業者情報',
+          title: '店舗認証状態',
           children: [
-            ProfileSettingItem(
-              title: '事業者登録情報',
-              subtitle: storeProfile.bizNumber.isEmpty
-                  ? '未登録'
-                  : storeProfile.bizNumber,
-              onTap: () => _showEditDialog(context,
-                  title: '事業者登録番号',
-                  fieldKey: 'biz_number',
-                  initialValue: storeProfile.bizNumber),
+            // 새로 만든 위젯에 ViewModel의 상태 값을 전달합니다.
+            VerificationStatusWidget(
+              status: storeLicense.verificationStatus,
             ),
           ],
         ),

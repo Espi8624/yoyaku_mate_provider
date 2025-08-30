@@ -134,7 +134,7 @@ class _ProfileViewState extends State<_ProfileView>
 
                     // store profile が null の場合を備えた防御コード
                     if (vm.storeProfile != null)
-                      StoreProfileView(storeProfile: vm.storeProfile!)
+                      StoreProfileView()
                     else
                       const Center(child: Text("店舗情報がありません。")),
                   ],
