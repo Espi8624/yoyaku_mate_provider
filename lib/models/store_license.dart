@@ -1,7 +1,6 @@
 class StoreLicense {
   final String storeId;
   final String verificationStatus;
-  // 필요하다면 다른 필드도 추가할 수 있습니다 (admin_comment 등)
 
   StoreLicense({
     required this.storeId,

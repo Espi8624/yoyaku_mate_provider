@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:io'; // 파일 처리를 위해 추가
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http; // 파일 업로드를 위해 추가
+import 'package:http/http.dart' as http;
 import 'api_exception.dart';
 import '../models/provider_profile.dart';
 
@@ -80,7 +80,6 @@ class ProviderProfileService {
   // 店舗ライセンス情報取得
   Future<Map<String, dynamic>> fetchStoreLicense(String storeId) async {
     final token = await _getIdToken();
-    // 백엔드에 만들어져 있을 (또는 만들어야 할) API 엔드포인트 주소를 사용합니다.
     final response = await http.get(
       Uri.parse('$baseUrl/api/provider_store/license?store_id=$storeId'),
       headers: {

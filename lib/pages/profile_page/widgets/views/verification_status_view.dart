@@ -37,7 +37,7 @@ class VerificationStatusWidget extends StatelessWidget {
         title = '承認が拒否されました';
         subtitle = '登録情報に問題がありました。詳細は管理者からのメッセージを確認してください。';
         break;
-      default: // NOT_SUBMITTED 또는 예상치 못한 값
+      default: // NOT_SUBMITTED又は予想出来なかった状態
         iconData = Icons.edit_document;
         backgroundColor = AppColors.notSubmittedBackground;
         iconColor = AppColors.notSubmitted;
@@ -66,7 +66,7 @@ class VerificationStatusWidget extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary, // 어두운 텍스트 색상
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -75,7 +75,7 @@ class VerificationStatusWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     color: AppColors.textPrimary.withOpacity(0.8),
-                    height: 1.5, // 줄 간격
+                    height: 1.5,
                   ),
                 ),
               ],
