@@ -77,6 +77,25 @@ class ProviderProfileService {
     }
   }
 
+  // 店舗ライセンス情報取得
+  Future<Map<String, dynamic>> fetchStoreLicense(String storeId) async {
+    final token = await _getIdToken();
+    // 백엔드에 만들어져 있을 (또는 만들어야 할) API 엔드포인트 주소를 사용합니다.
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/provider_store/license?store_id=$storeId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      return json.decode(utf8.decode(response.bodyBytes));
+    } else {
+      throw ApiException(
+          'Failed to load store license. Status: ${response.statusCode}, Body: ${response.body}');
+    }
+  }
+
   // 店舗プロフィール更新
   Future<void> updateStoreProfile(
       String storeId, Map<String, dynamic> update) async {
