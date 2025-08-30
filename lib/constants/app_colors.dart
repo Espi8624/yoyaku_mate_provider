@@ -63,4 +63,17 @@ class AppColors {
 
   /// スタッフ
   static const Color roleStaff = Color(0xFF5A677D);
+
+  // 状態管理色
+  static const Color pendingBackground = Color(0xFFFFF3E0);
+  static const Color pending = Color(0xFFF57C00);
+
+  static const Color approvedBackground = Color(0xFFE8F5E9);
+  static const Color approved = Color(0xFF388E3C);
+
+  static const Color rejectedBackground = Color(0xFFFFEBEE);
+  static const Color rejected = Color(0xFFD32F2F);
+
+  static const Color notSubmittedBackground = Color(0xFFEEEEEE);
+  static const Color notSubmitted = Color(0xFF616161);
 }

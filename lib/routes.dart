@@ -20,9 +20,7 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) {
-        // AuthWrapper役割分離
-        final user = FirebaseAuth.instance.currentUser!;
-        return ProfileViewModelProvider(user: user);
+        return const HomeScreen();
       },
     ),
     // ログインページ

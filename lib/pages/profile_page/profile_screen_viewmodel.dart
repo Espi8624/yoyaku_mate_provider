@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/models/store_license.dart';
 import '../../models/store_profile.dart';
 import '../../models/user_profile.dart';
 import '../../services/api_exception.dart';
@@ -27,6 +28,9 @@ class ProfileScreenViewModel extends ChangeNotifier {
   StoreProfile? _storeProfile;
   StoreProfile? get storeProfile => _storeProfile;
 
+  StoreLicense? _storeLicense;
+  StoreLicense? get storeLicense => _storeLicense;
+
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
@@ -42,6 +46,7 @@ class ProfileScreenViewModel extends ChangeNotifier {
   void clearProfile() {
     _userProfile = null;
     _storeProfile = null;
+    _storeLicense = null;
     _mongoUserId = '';
     _storeId = '';
     notifyListeners();
@@ -82,19 +87,33 @@ class ProfileScreenViewModel extends ChangeNotifier {
 
       // 管理者及び storeId がある場合、店舗プロフィールを取得
       if (_userProfile?.role == 'manager' && _storeId.isNotEmpty) {
-        final storeProfileResponse =
-            await _profileService.fetchStoreProfile(_storeId);
+        // ★★★ Future.wait를 사용하여 두 API를 동시에 호출하도록 수정 ★★★
+        final responses = await Future.wait([
+          _profileService.fetchStoreProfile(_storeId),
+          _profileService.fetchStoreLicense(_storeId), // 새로 추가된 서비스 메소드 호출
+        ]);
 
+        final storeProfileResponse = responses[0];
+        final storeLicenseResponse = responses[1];
+
+        // --- StoreProfile 처리 ---
         if (!storeProfileResponse.containsKey('data') ||
             storeProfileResponse['data'] == null) {
           throw ApiException('無効な店舗データ形式です。');
         }
-        final storeData = storeProfileResponse['data'];
-        if (storeData is! Map<String, dynamic>) {
-          throw ApiException('無効な店舗データ形式です。');
-        }
-
+        final storeData = storeProfileResponse['data'] as Map<String, dynamic>;
         _storeProfile = StoreProfile.fromJson(storeData);
+
+        // --- StoreLicense 처리 (수정된 부분) ---
+        if (!storeLicenseResponse.containsKey('data') ||
+            storeLicenseResponse['data'] == null) {
+          // ★★★ 1. 에러 메시지를 더 명확하게 수정 ★★★
+          throw ApiException('無効な店舗ライセンスデータ形式です。');
+        }
+        final licenseData =
+            storeLicenseResponse['data'] as Map<String, dynamic>;
+        // ★★★ 2. 올바른 데이터 소스(licenseData)를 사용하도록 수정 ★★★
+        _storeLicense = StoreLicense.fromJson(licenseData);
       }
     } on ApiException catch (e) {
       _errorMessage = 'データローディング失敗: ${e.message}';

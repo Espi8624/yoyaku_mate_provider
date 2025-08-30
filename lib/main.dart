@@ -27,17 +27,50 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerConfig: router, // GoRouter設定を使用
-      title: 'Yoyaku Mate Provider',
-      theme: ThemeData(
-        scaffoldBackgroundColor: AppColors.background,
-        canvasColor: AppColors.cardBackground,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.accentPrimary,
-          background: AppColors.background,
+    return MultiProvider(
+      providers: [
+        // ProviderProfileService를 제공합니다.
+        Provider<ProviderProfileService>(
+          create: (_) =>
+              ProviderProfileService(baseUrl: "http://localhost:8080"),
         ),
-        useMaterial3: true,
+        // StreamProvider를 사용하여 Firebase User 객체를 제공합니다.
+        StreamProvider<User?>(
+          create: (_) => FirebaseAuth.instance.authStateChanges(),
+          initialData: null,
+        ),
+        // ChangeNotifierProxyProvider를 사용하여 User에 의존하는 ViewModel을 만듭니다.
+        ChangeNotifierProxyProvider<User?, ProfileScreenViewModel>(
+          create: (context) => ProfileScreenViewModel(
+            profileService: context.read<ProviderProfileService>(),
+            userId: '', // 초기값
+          ),
+          update: (context, user, previousViewModel) {
+            final newUid = user?.uid ?? '';
+            // UID가 변경되었을 때만 새로운 ViewModel을 생성하여 데이터 유실을 방지합니다.
+            if (previousViewModel == null ||
+                previousViewModel.firebaseUid != newUid) {
+              return ProfileScreenViewModel(
+                profileService: context.read<ProviderProfileService>(),
+                userId: newUid,
+              );
+            }
+            return previousViewModel;
+          },
+        ),
+      ],
+      child: MaterialApp.router(
+        routerConfig: router, // GoRouter設定を使用
+        title: 'Yoyaku Mate Provider',
+        theme: ThemeData(
+          scaffoldBackgroundColor: AppColors.background,
+          canvasColor: AppColors.cardBackground,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppColors.accentPrimary,
+            background: AppColors.background,
+          ),
+          useMaterial3: true,
+        ),
       ),
     );
   }
@@ -66,22 +99,22 @@ class MyApp extends StatelessWidget {
 
 // ProfileViewModel を生成し、下位 Widget ツリーに提供
 // 既存　HomeScreenDataLoader & UserProvider を対応
-class ProfileViewModelProvider extends StatelessWidget {
-  final User user;
-  const ProfileViewModelProvider({super.key, required this.user});
+// class ProfileViewModelProvider extends StatelessWidget {
+//   final User user;
+//   const ProfileViewModelProvider({super.key, required this.user});
 
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ProfileScreenViewModel(
-        profileService:
-            ProviderProfileService(baseUrl: "http://localhost:8080"),
-        userId: user.uid, // Firebase UID を使用者 ID で使用
-      ),
-      child: const HomeScreen(),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return ChangeNotifierProvider(
+//       create: (_) => ProfileScreenViewModel(
+//         profileService:
+//             ProviderProfileService(baseUrl: "http://localhost:8080"),
+//         userId: user.uid, // Firebase UID を使用者 ID で使用
+//       ),
+//       child: const HomeScreen(),
+//     );
+//   }
+// }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -98,9 +131,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     // Widget がビルドされた直後に ViewModel のデータローディングメソッドを呼出
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProfileScreenViewModel>().loadProfiles();
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   context.read<ProfileScreenViewModel>().loadProfiles();
+    // });
   }
 
   void _onItemTapped(int index) {
@@ -119,6 +152,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     // final userProvider = Provider.of<UserProvider>(context, listen: false);
     final profileVM = context.watch<ProfileScreenViewModel>();
+
+    if (profileVM.userProfile == null &&
+        !profileVM.isLoading &&
+        profileVM.errorMessage == null &&
+        profileVM.firebaseUid.isNotEmpty) {
+      // build 메소드 중에 다른 위젯의 상태를 변경하면 안 되므로,
+      // 프레임이 끝난 직후에 실행되도록 합니다.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // ViewModel을 다시 찾아서 loadProfiles()를 호출합니다.
+        // 이 시점에는 context.read를 사용하는 것이 더 안전할 수 있습니다.
+        context.read<ProfileScreenViewModel>().loadProfiles();
+      });
+    }
 
     if (profileVM.isLoading && profileVM.userProfile == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
