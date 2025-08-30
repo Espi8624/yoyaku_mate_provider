@@ -29,25 +29,22 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // ProviderProfileService를 제공합니다.
         Provider<ProviderProfileService>(
           create: (_) =>
               ProviderProfileService(baseUrl: "http://localhost:8080"),
         ),
-        // StreamProvider를 사용하여 Firebase User 객체를 제공합니다.
         StreamProvider<User?>(
           create: (_) => FirebaseAuth.instance.authStateChanges(),
           initialData: null,
         ),
-        // ChangeNotifierProxyProvider를 사용하여 User에 의존하는 ViewModel을 만듭니다.
         ChangeNotifierProxyProvider<User?, ProfileScreenViewModel>(
           create: (context) => ProfileScreenViewModel(
             profileService: context.read<ProviderProfileService>(),
-            userId: '', // 초기값
+            userId: '',
           ),
           update: (context, user, previousViewModel) {
             final newUid = user?.uid ?? '';
-            // UID가 변경되었을 때만 새로운 ViewModel을 생성하여 데이터 유실을 방지합니다.
+            // UIDが変更された時のみ新しいViewModelを生成し、データ損失防止
             if (previousViewModel == null ||
                 previousViewModel.firebaseUid != newUid) {
               return ProfileScreenViewModel(
@@ -157,11 +154,9 @@ class _HomeScreenState extends State<HomeScreen> {
         !profileVM.isLoading &&
         profileVM.errorMessage == null &&
         profileVM.firebaseUid.isNotEmpty) {
-      // build 메소드 중에 다른 위젯의 상태를 변경하면 안 되므로,
-      // 프레임이 끝난 직후에 실행되도록 합니다.
+      // プレイム終了直後に実行
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // ViewModel을 다시 찾아서 loadProfiles()를 호출합니다.
-        // 이 시점에는 context.read를 사용하는 것이 더 안전할 수 있습니다.
+        // ViewModelを取り戻し、loadProfiles()を呼び出す
         context.read<ProfileScreenViewModel>().loadProfiles();
       });
     }

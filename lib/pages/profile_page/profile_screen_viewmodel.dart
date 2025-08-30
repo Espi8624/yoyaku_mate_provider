@@ -87,16 +87,16 @@ class ProfileScreenViewModel extends ChangeNotifier {
 
       // 管理者及び storeId がある場合、店舗プロフィールを取得
       if (_userProfile?.role == 'manager' && _storeId.isNotEmpty) {
-        // ★★★ Future.wait를 사용하여 두 API를 동시에 호출하도록 수정 ★★★
+        // Future.waitを使用し、API２つを同時に呼出
         final responses = await Future.wait([
           _profileService.fetchStoreProfile(_storeId),
-          _profileService.fetchStoreLicense(_storeId), // 새로 추가된 서비스 메소드 호출
+          _profileService.fetchStoreLicense(_storeId),
         ]);
 
         final storeProfileResponse = responses[0];
         final storeLicenseResponse = responses[1];
 
-        // --- StoreProfile 처리 ---
+        // StoreProfile処理
         if (!storeProfileResponse.containsKey('data') ||
             storeProfileResponse['data'] == null) {
           throw ApiException('無効な店舗データ形式です。');
@@ -104,15 +104,13 @@ class ProfileScreenViewModel extends ChangeNotifier {
         final storeData = storeProfileResponse['data'] as Map<String, dynamic>;
         _storeProfile = StoreProfile.fromJson(storeData);
 
-        // --- StoreLicense 처리 (수정된 부분) ---
+        // StoreLicense処理
         if (!storeLicenseResponse.containsKey('data') ||
             storeLicenseResponse['data'] == null) {
-          // ★★★ 1. 에러 메시지를 더 명확하게 수정 ★★★
           throw ApiException('無効な店舗ライセンスデータ形式です。');
         }
         final licenseData =
             storeLicenseResponse['data'] as Map<String, dynamic>;
-        // ★★★ 2. 올바른 데이터 소스(licenseData)를 사용하도록 수정 ★★★
         _storeLicense = StoreLicense.fromJson(licenseData);
       }
     } on ApiException catch (e) {
