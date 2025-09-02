@@ -11,29 +11,34 @@ class MenuService {
 
   MenuService({
     http.Client? client,
-    String baseUrl = 'http://localhost:8080',
+    String baseUrl = 'http://10.0.2.2:8080',
   })  : _client = client ?? http.Client(),
         _baseUrl = baseUrl;
 
   Future<List<MenuListItem>> fetchMenuItems(String storeId) async {
     final uri = Uri.parse('$_baseUrl/api/menu-list?store_id=$storeId');
     try {
-      final response = await _client.get(uri, headers: {'Content-Type': 'application/json'});
+      final response =
+          await _client.get(uri, headers: {'Content-Type': 'application/json'});
       final decodedBody = utf8.decode(response.bodyBytes);
       final jsonResponse = json.decode(decodedBody);
 
       if (response.statusCode == 200) {
         if (jsonResponse['status'] != 'success') {
-          throw ApiException(jsonResponse['message'] ?? 'Failed to fetch menu items');
+          throw ApiException(
+              jsonResponse['message'] ?? 'Failed to fetch menu items');
         }
         final List<dynamic> data = jsonResponse['data'] ?? [];
         return data.map((item) => MenuListItem.fromJson(item)).toList();
       } else {
-        throw ApiException(jsonResponse['message'] ?? 'Failed to fetch menu items', statusCode: response.statusCode);
+        throw ApiException(
+            jsonResponse['message'] ?? 'Failed to fetch menu items',
+            statusCode: response.statusCode);
       }
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Network error or server is unavailable: ${e.toString()}');
+      throw ApiException(
+          'Network error or server is unavailable: ${e.toString()}');
     }
   }
 
@@ -41,14 +46,17 @@ class MenuService {
     final uri = Uri.parse('$_baseUrl/api/upload-image');
     try {
       var request = http.MultipartRequest('POST', uri);
-      request.files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: filename));
+      request.files.add(http.MultipartFile.fromBytes('image', imageBytes,
+          filename: filename));
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
 
       if (response.statusCode == 200) {
         return json.decode(responseBody)['url'];
       } else {
-        throw ApiException(json.decode(responseBody)['message'] ?? 'Failed to upload image', statusCode: response.statusCode);
+        throw ApiException(
+            json.decode(responseBody)['message'] ?? 'Failed to upload image',
+            statusCode: response.statusCode);
       }
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -56,7 +64,8 @@ class MenuService {
     }
   }
 
-  Future<void> saveMenuItems(Map<String, List<MenuListItem>> categorizedMenu, String storeId) async {
+  Future<void> saveMenuItems(
+      Map<String, List<MenuListItem>> categorizedMenu, String storeId) async {
     List<Map<String, dynamic>> itemsToSave = [];
 
     for (var entry in categorizedMenu.entries) {
@@ -80,14 +89,18 @@ class MenuService {
       }
     }
 
-    final uri = Uri.parse('$_baseUrl/api/menu-list/bulk-save?store_id=$storeId');
+    final uri =
+        Uri.parse('$_baseUrl/api/menu-list/bulk-save?store_id=$storeId');
     try {
-      final response = await _client.post(uri, headers: {'Content-Type': 'application/json'}, body: json.encode(itemsToSave));
+      final response = await _client.post(uri,
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode(itemsToSave));
       final decodedBody = utf8.decode(response.bodyBytes);
       final jsonResponse = json.decode(decodedBody);
 
       if (response.statusCode != 200) {
-        throw ApiException(jsonResponse['message'] ?? 'Failed to save menus', statusCode: response.statusCode);
+        throw ApiException(jsonResponse['message'] ?? 'Failed to save menus',
+            statusCode: response.statusCode);
       }
       if (jsonResponse['status'] != 'success') {
         throw ApiException(jsonResponse['message'] ?? 'Failed to save menus');

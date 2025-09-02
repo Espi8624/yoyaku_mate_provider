@@ -13,6 +13,7 @@ import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar_mobile.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +32,7 @@ class MyApp extends StatelessWidget {
       providers: [
         Provider<ProviderProfileService>(
           create: (_) =>
-              ProviderProfileService(baseUrl: "http://localhost:8080"),
+              ProviderProfileService(baseUrl: "http://10.0.2.2:8080"),
         ),
         StreamProvider<User?>(
           create: (_) => FirebaseAuth.instance.authStateChanges(),
@@ -187,7 +188,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // データローディング成功
     final storeId = profileVM.storeId;
-
     final List<Widget> pages = [
       WaitingScreen(storeId: storeId),
       MenuManagementScreen(storeId: storeId),
@@ -195,38 +195,60 @@ class _HomeScreenState extends State<HomeScreen> {
       SettingScreen(storeId: storeId),
     ];
 
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            SideNavigationBar(
-              isExpanded: _isExpanded,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // mobile/ desktopを区分する基準点を設定
+        const double mobileBreakpoint = 700;
+
+        // 設定値より幅が狭い場合mobileレイアウトを表示
+        if (constraints.maxWidth < mobileBreakpoint) {
+          // mobile layout
+          return Scaffold(
+            body: pages[_selectedIndex],
+            bottomNavigationBar: NavigationBarMobile(
               selectedIndex: _selectedIndex,
               onItemTapped: _onItemTapped,
-              onToggle: _toggleSidebar,
-              onLogout: () async {
-                await FirebaseAuth.instance.signOut();
-              },
             ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  if (_isExpanded) _toggleSidebar();
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(left: 12.0),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).canvasColor,
-                    borderRadius: BorderRadius.circular(16),
+          );
+        } else {
+          // desktop layout
+          return Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  SideNavigationBar(
+                    isExpanded: _isExpanded,
+                    selectedIndex: _selectedIndex,
+                    onItemTapped: _onItemTapped,
+                    onToggle: _toggleSidebar,
+                    onLogout: () async {
+                      await FirebaseAuth.instance.signOut();
+                    },
                   ),
-                  child: pages[_selectedIndex],
-                ),
+                  const SizedBox(
+                    width: 12.0,
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        if (_isExpanded) _toggleSidebar();
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).canvasColor,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: pages[_selectedIndex],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          );
+        }
+      },
     );
   }
 }

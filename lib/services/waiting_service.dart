@@ -8,7 +8,7 @@ class WaitingService {
   late StreamController<List<WaitingList>> _waitingListController;
   bool _isConnected = false;
   Timer? _pollingTimer;
-  static const String _baseUrl = 'http://localhost:8080';
+  static const String _baseUrl = 'http://10.0.2.2:8080';
 
   // 基本 polling 間隔と最大間隔設定
   static const Duration _minPollingInterval = Duration(seconds: 1);
@@ -382,7 +382,7 @@ class WaitingService {
       // 強制にポーリングの間隔を最小に設定し、即データ更新
       _currentPollingInterval = _minPollingInterval;
       // 強制に変更を感知
-      _lastData = null; 
+      _lastData = null;
 
       // データを即新たに呼び出し、ストリームへ転送
       final updatedList = await fetchWaitingCustomers(storeId);

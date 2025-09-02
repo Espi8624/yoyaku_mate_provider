@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../constants/app_colors.dart';
-import '../../models/waiting_list.dart';
-import '../../services/waiting_service.dart';
-import '../../widgets/common_dialogs/base_dialog.dart';
-import '../../widgets/common_dialogs/confirmation_dialog.dart';
-import '../../widgets/common_widgets/loading_indicator.dart';
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
+import 'package:yoyaku_mate_provider/models/waiting_list.dart';
+import 'package:yoyaku_mate_provider/services/waiting_service.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/loading_indicator.dart';
 import 'widgets/dialogs/add_waiting_dialog.dart';
 import 'widgets/qr_code_button.dart';
 import 'widgets/waiting_action_buttons.dart';
@@ -31,6 +31,155 @@ class WaitingScreen extends StatelessWidget {
 
 class _WaitingView extends StatelessWidget {
   const _WaitingView();
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<WaitingScreenViewModel>();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const double mobileBreakpoint = 700;
+        final bool isMobile = constraints.maxWidth < mobileBreakpoint;
+
+        if (vm.isLoading) {
+          return const Center(child: LoadingIndicator());
+        }
+        if (vm.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(vm.error!, style: const TextStyle(color: AppColors.error)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: vm.loadWaitingList,
+                  child: const Text('再試行'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (isMobile) {
+          // mobile layout
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('待機リスト',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              elevation: 0,
+              actions: [
+                const QRCodeButton(data: 'https://example.com/waiting-screen'),
+                IconButton(
+                    icon: const Icon(Icons.delete_sweep_rounded),
+                    onPressed: () => _showClearConfirmationDialog(context)),
+              ],
+            ),
+            // floatingActionButton: FloatingActionButton(
+            //   onPressed: () => _showAddWaitingDialog(context),
+            //   backgroundColor: AppColors.accentPrimary,
+            //   child: const Icon(Icons.add, color: Colors.white),
+            // ),
+            body: SafeArea(
+              top: false,
+              child: Stack(
+                children: [
+                  // 待機目録リスト
+                  Positioned.fill(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: WaitingListPanel(
+                        waitingList: vm.waitingList,
+                        onRefresh: vm.loadWaitingList,
+                        onItemAction: (item) =>
+                            _showStatusBasedDialog(context, item),
+                        bottomPadding: 85,
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Padding(
+                          padding:
+                              const EdgeInsets.only(right: 16.0, bottom: 16.0),
+                          child: FloatingActionButton(
+                            onPressed: () => _showAddWaitingDialog(context),
+                            backgroundColor: AppColors.accentPrimary,
+                            child: const Icon(Icons.add, color: Colors.white),
+                          ),
+                        ),
+                        const ClipRRect(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
+                          ),
+                          child: WaitingStatusArea(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        } else {
+          // desktop layout
+          return Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      children: [
+                        WaitingActionButtons(
+                          onAddWaiting: () => _showAddWaitingDialog(context),
+                          onClearAll: () =>
+                              _showClearConfirmationDialog(context),
+                        ),
+                        const SizedBox(height: 10),
+                        Expanded(
+                          child: WaitingListPanel(
+                            waitingList: vm.waitingList,
+                            onRefresh: vm.loadWaitingList,
+                            onItemAction: (item) =>
+                                _showStatusBasedDialog(context, item),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    flex: 1,
+                    child: Column(
+                      children: [
+                        QRCodeButton(
+                            data: 'https://example.com/waiting-screen'),
+                        SizedBox(height: 10),
+                        Expanded(
+                          child: WaitingStatusArea(isInitiallyExpanded: true),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      },
+    );
+  }
 
   Future<void> _showAddWaitingDialog(BuildContext context) async {
     final vm = context.read<WaitingScreenViewModel>();
@@ -234,73 +383,6 @@ class _WaitingView extends StatelessWidget {
             if (formattedEntryTime != null)
               Text('入店時間: $formattedEntryTime',
                   style: const TextStyle(fontSize: 16)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<WaitingScreenViewModel>();
-
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: Column(
-                children: [
-                  WaitingActionButtons(
-                    onAddWaiting: () => _showAddWaitingDialog(context),
-                    onClearAll: () => _showClearConfirmationDialog(context),
-                  ),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: vm.isLoading
-                        ? const Center(child: LoadingIndicator())
-                        : vm.error != null
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(vm.error!,
-                                        style: const TextStyle(
-                                            color: AppColors.error)),
-                                    const SizedBox(height: 16),
-                                    ElevatedButton(
-                                      onPressed: vm.loadWaitingList,
-                                      child: const Text('再試行'),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : WaitingListPanel(
-                                waitingList: vm.waitingList,
-                                onRefresh: vm.loadWaitingList,
-                                onItemAction: (item) =>
-                                    _showStatusBasedDialog(context, item),
-                              ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            const Expanded(
-              flex: 1,
-              child: Column(
-                children: [
-                  QRCodeButton(data: 'https://example.com/waiting-screen'),
-                  SizedBox(height: 10),
-                  Expanded(
-                    child: WaitingStatusArea(),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),

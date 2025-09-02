@@ -1,64 +1,89 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../../../constants/app_colors.dart';
-import '../../../widgets/common_dialogs/base_dialog.dart';
-import '../waiting_screen_viewmodel.dart';
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
+import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen_viewmodel.dart';
 
 class QRCodeButton extends StatelessWidget {
   final String data;
   const QRCodeButton({super.key, required this.data});
 
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        ElevatedButton.icon(
-          icon: const Icon(Icons.qr_code, color: Colors.white),
-          label: const Text('QRコード', style: TextStyle(color: Colors.white)),
-          style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.textPrimary,
-              foregroundColor: Colors.white),
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (ctx) => BaseDialog(
-                title: 'QRコード',
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 200,
-                      height: 200,
-                      child: Center(
-                        child: QrImageView(
-                            data: data, version: QrVersions.auto, size: 180.0),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      icon:
-                          const Icon(Icons.print_outlined, color: Colors.white),
-                      label: const Text('出力',
-                          style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentPrimary,
-                          foregroundColor: Colors.white),
-                      onPressed: () {
-                        context
-                            .read<WaitingScreenViewModel>()
-                            .generateAndSaveQrPdf(context, data);
-                        Navigator.of(ctx).pop();
-                      },
-                    ),
-                  ],
+  void _showQrDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => BaseDialog(
+        title: 'QRコード',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 200,
+              height: 200,
+              child: Center(
+                child: QrImageView(
+                  data: data,
+                  version: QrVersions.auto,
+                  size: 180.0,
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.textPrimary,
                 ),
               ),
-            );
-          },
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.print_outlined, color: Colors.white),
+              label: const Text('出力', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPrimary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              onPressed: () {
+                context
+                    .read<WaitingScreenViewModel>()
+                    .generateAndSaveQrPdf(context, data);
+                Navigator.of(ctx).pop();
+              },
+            ),
+          ],
         ),
-      ],
+      ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // break point設定
+    const double mobileBreakpoint = 700;
+    final bool isMobile = MediaQuery.of(context).size.width < mobileBreakpoint;
+
+    // mobile UI
+    if (isMobile) {
+      return IconButton(
+        icon: const Icon(Icons.qr_code_2_rounded),
+        tooltip: 'QRコード表示',
+        onPressed: () => _showQrDialog(context),
+      );
+    }
+    // desktop UI
+    else {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          ElevatedButton.icon(
+            icon: const Icon(Icons.qr_code_rounded, color: Colors.white),
+            label: const Text('QRコード', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.textPrimary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            onPressed: () => _showQrDialog(context),
+          ),
+        ],
+      );
+    }
   }
 }
