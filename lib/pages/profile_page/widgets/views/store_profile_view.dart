@@ -40,10 +40,8 @@ class StoreProfileView extends StatelessWidget {
     final storeProfile = vm.storeProfile;
     final storeLicense = vm.storeLicense;
 
-    // 데이터가 아직 로드되지 않았거나 없는 경우를 위한 UI 처리
+    // データがまだロードされてない、又は、無い場合のUI処理
     if (storeProfile == null || storeLicense == null) {
-      // ProfileScreen의 메인 로딩 인디케이터가 이미 있으므로, 여기서는
-      // 데이터가 없는 경우의 메시지를 보여주거나 빈 컨테이너를 반환할 수 있습니다.
       return const Center(child: Text("店舗情報がありません。"));
     }
 
@@ -87,7 +85,7 @@ class StoreProfileView extends StatelessWidget {
         ProfileSection(
           title: '店舗認証状態',
           children: [
-            // 새로 만든 위젯에 ViewModel의 상태 값을 전달합니다.
+            // Widgetにステータス伝達
             VerificationStatusWidget(
               status: storeLicense.verificationStatus,
             ),

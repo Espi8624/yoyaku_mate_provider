@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
-// import 'package:yoyaku_mate_provider/sign_up_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -83,7 +82,7 @@ class _LoginPageState extends State<LoginPage> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
-                TextField(
+                TextFormField(
                   controller: _idController,
                   decoration: InputDecoration(
                     labelText: 'メールアドレス',
@@ -92,10 +91,10 @@ class _LoginPageState extends State<LoginPage> {
                     prefixIcon: const Icon(Icons.email_outlined),
                   ),
                   keyboardType: TextInputType.emailAddress,
-                  autofillHints: const [AutofillHints.email],
+                  autofillHints: null,
                 ),
                 const SizedBox(height: 20),
-                TextField(
+                TextFormField(
                   controller: _pwController,
                   decoration: InputDecoration(
                     labelText: 'パスワード',
@@ -104,7 +103,7 @@ class _LoginPageState extends State<LoginPage> {
                     prefixIcon: const Icon(Icons.lock_outline),
                   ),
                   obscureText: true,
-                  autofillHints: const [AutofillHints.password],
+                  autofillHints: null,
                 ),
                 if (_errorMsg != null) ...[
                   const SizedBox(height: 16),
