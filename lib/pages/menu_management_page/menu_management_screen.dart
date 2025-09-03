@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/panels/action_button_panel_mobile.dart';
 import '../../models/menu_list.dart';
 import '../../services/api_exception.dart';
 import '../../services/menu_service.dart';
@@ -54,7 +55,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     // 保存された参照を使用し、リスナー追加
     _viewModel.addListener(_onViewModelUpdated);
 
-    // 초기 에러 메시지 처리를 위해 Post-frame 콜백을 사용합니다.
+    // 初期エラーメッセージ処理のためPost-frameコールバックを使用
     if (_viewModel.errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -68,9 +69,6 @@ class _MenuManagementViewState extends State<_MenuManagementView>
   // Listener 追加ロジック
   void _addTabListener() {
     _tabController.addListener(() {
-      // 사용자가 탭을 스와이프하거나 탭을 탭하여 인덱스가 변경될 때마다
-      // setState를 호출하여 화면을 다시 그리도록 합니다.
-      // 이것이 아이콘 색상을 업데이트하는 열쇠입니다.
       if (_tabController.indexIsChanging ||
           _tabController.animation?.value == _tabController.index.toDouble()) {
         if (mounted) {
@@ -224,42 +222,97 @@ class _MenuManagementViewState extends State<_MenuManagementView>
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     final vm = context.watch<MenuManagementScreenViewModel>();
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: MenuListPanel(
-                  tabController: _tabController,
-                  categories: vm.categories,
-                  categorizedMenu: vm.categorizedMenu,
-                  onEditCategory: _showEditCategoryDialog,
-                  onDeleteCategory: _showDeleteCategoryDialog,
-                  onEditMenu: _showEditMenuDialog,
-                  onDeleteMenu: _showDeleteMenuDialog,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // mobile layout基準点
+        const double mobileBreakpoint = 700;
+        final bool isMobile = constraints.maxWidth < mobileBreakpoint;
+
+        // mobile layout
+        if (isMobile) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('メニュー管理',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              elevation: 0,
+            ),
+            body: Stack(
+              children: [
+                Positioned.fill(
+                  bottom: 150,
+                  child: MenuListPanel(
+                    tabController: _tabController,
+                    categories: vm.categories,
+                    categorizedMenu: vm.categorizedMenu,
+                    onEditCategory: _showEditCategoryDialog,
+                    onDeleteCategory: _showDeleteCategoryDialog,
+                    onEditMenu: _showEditMenuDialog,
+                    onDeleteMenu: _showDeleteMenuDialog,
+                  ),
                 ),
-              ),
-              const VerticalDivider(width: 0.5, color: AppColors.border),
-              Expanded(
-                flex: 1,
-                child: ActionButtonsPanel(
-                  isCategoryEmpty: vm.categories.isEmpty,
-                  onAddCategory: _showAddCategoryDialog,
-                  onAddMenu: _showAddMenuDialog,
-                  onSaveChanges: _saveChanges,
-                  onResetAll: _showDeleteAllMenusDialog,
+
+                // 下段ボタンパネル
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: ActionButtonsPanelMobile(
+                    isCategoryEmpty: vm.categories.isEmpty,
+                    onAddCategory: _showAddCategoryDialog,
+                    onAddMenu: _showAddMenuDialog,
+                    onSaveChanges: _saveChanges,
+                    onResetAll: _showDeleteAllMenusDialog,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          if (vm.isLoading) const LoadingIndicator(),
-        ],
-      ),
+
+                // ローディング表示
+                if (vm.isLoading) const LoadingIndicator(),
+              ],
+            ),
+          );
+        } else {
+          // desktop layout
+          return Scaffold(
+            body: Stack(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: MenuListPanel(
+                        tabController: _tabController,
+                        categories: vm.categories,
+                        categorizedMenu: vm.categorizedMenu,
+                        onEditCategory: _showEditCategoryDialog,
+                        onDeleteCategory: _showDeleteCategoryDialog,
+                        onEditMenu: _showEditMenuDialog,
+                        onDeleteMenu: _showDeleteMenuDialog,
+                      ),
+                    ),
+                    const VerticalDivider(width: 0.5, color: AppColors.border),
+                    Expanded(
+                      flex: 1,
+                      child: ActionButtonsPanel(
+                        isCategoryEmpty: vm.categories.isEmpty,
+                        onAddCategory: _showAddCategoryDialog,
+                        onAddMenu: _showAddMenuDialog,
+                        onSaveChanges: _saveChanges,
+                        onResetAll: _showDeleteAllMenusDialog,
+                      ),
+                    ),
+                  ],
+                ),
+                if (vm.isLoading) const LoadingIndicator(),
+              ],
+            ),
+          );
+        }
+      },
     );
   }
 }
