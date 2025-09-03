@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../constants/app_colors.dart'; // AppColors 경로를 프로젝트에 맞게 확인해주세요.
-import '../../../../models/menu_list.dart'; // MenuListItem 모델 경로를 프로젝트에 맞게 확인해주세요.
-import '../menu_item_card.dart'; // MenuItemCard 위젯 경로를 프로젝트에 맞게 확인해주세요.
+import '../../../../constants/app_colors.dart';
+import '../../../../models/menu_list.dart';
+import '../menu_item_card.dart';
 
 class MenuListPanel extends StatelessWidget {
   final TabController tabController;
@@ -28,7 +28,6 @@ class MenuListPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- 페이지 제목 ---
         const Padding(
           padding: EdgeInsets.fromLTRB(24, 32, 24, 16),
           child: Text(
@@ -41,18 +40,16 @@ class MenuListPanel extends StatelessWidget {
           ),
         ),
 
-        // --- 카테고리가 있을 경우에만 TabBar와 TabBarView를 표시 ---
+        // カテゴリが存在する場合、TabBar, TabBarViewを表示
         if (categories.isNotEmpty) ...[
-          // --- TabBar 섹션 ---
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0), // 좌우 여백 추가
+            padding: EdgeInsets.zero,
             child: TabBar(
               controller: tabController,
               isScrollable: true,
-              dividerColor: Colors.transparent, // 기본 구분선 제거
-              indicatorSize: TabBarIndicatorSize.tab, // 인디케이터 크기를 탭에 맞춤
-
-              // 탭을 눌렀을 때 효과 (Ripple)
+              dividerColor: Colors.transparent,
+              // indicatorサイズをTabに合わせる
+              indicatorSize: TabBarIndicatorSize.tab,
               splashBorderRadius: BorderRadius.circular(30),
               overlayColor: WidgetStateProperty.resolveWith<Color?>(
                 (Set<WidgetState> states) {
@@ -66,66 +63,57 @@ class MenuListPanel extends StatelessWidget {
                 },
               ),
 
-              // 선택된 탭의 인디케이터 디자인
+              // 選択されたTabのindicatorデザイン
               indicator: const ShapeDecoration(
                 color: AppColors.accentPrimary,
                 shape: StadiumBorder(),
               ),
-
-              // 텍스트 색상
               labelColor: AppColors.textPrimaryLight,
               unselectedLabelColor: AppColors.textPrimary,
 
-              // 텍스트 스타일 (두께 조절로 시각적 차이 부여)
               labelStyle:
                   const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               unselectedLabelStyle:
                   const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
 
-              // 각 탭 사이의 기본 패딩
-              labelPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+              // Tabの間の基本Padding
+              labelPadding: EdgeInsets.zero,
 
-              // [핵심 로직] 탭 목록 생성
+              // Tab List生成
               tabs: List.generate(categories.length, (index) {
-                // 현재 탭의 선택 여부 판단
                 final bool isSelected = tabController.index == index;
-                // 선택 상태에 따라 아이콘 색상 결정
-                final Color iconColor = isSelected
+                final Color editIconColor = isSelected
                     ? AppColors.textPrimaryLight
-                    : AppColors.textPrimary;
+                    : AppColors.textSecondary;
+                final Color deleteIconColor = isSelected
+                    ? AppColors.error
+                    : AppColors.error.withOpacity(0.6);
 
                 return Tab(
-                  child: Padding(
-                    // 탭 내부 요소들의 패딩
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12.0, vertical: 8.0),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 0.0, 8.0),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(categories[index]),
-                        const SizedBox(width: 12),
-                        // [수정 완료] 아이콘 색상을 동적으로 변경
-                        IconButton(
-                          onPressed: () => onEditCategory(index),
-                          // Icon 위젯에 직접 색상 지정
-                          icon: Icon(Icons.edit_outlined,
-                              size: 18, color: iconColor),
-                          splashRadius: 20,
-                          constraints: const BoxConstraints(),
-                          padding: EdgeInsets.zero,
-                          tooltip: 'カテゴリー編集', // 툴팁 추가 (웹/데스크탑 환경에서 유용)
+                        const SizedBox(width: 2),
+                        Transform.translate(
+                          offset: const Offset(8, 0),
+                          child: _buildTabIconButton(
+                            icon: Icons.edit,
+                            color: editIconColor,
+                            tooltip: 'カテゴリー編集',
+                            onPressed: () => onEditCategory(index),
+                          ),
                         ),
-                        const SizedBox(width: 4),
-                        // 삭제 아이콘은 항상 error 색상 유지
-                        IconButton(
-                          onPressed: () => onDeleteCategory(index),
-                          icon: const Icon(Icons.close,
-                              size: 18, color: AppColors.error),
-                          splashRadius: 20,
-                          constraints: const BoxConstraints(),
-                          padding: EdgeInsets.zero,
-                          tooltip: 'カテゴリー削除', // 툴팁 추가
+                        Transform.translate(
+                          offset: const Offset(-4, 0),
+                          child: _buildTabIconButton(
+                            icon: Icons.delete_outline,
+                            color: deleteIconColor,
+                            tooltip: 'カテゴリー削除',
+                            onPressed: () => onDeleteCategory(index),
+                          ),
                         ),
                       ],
                     ),
@@ -135,19 +123,18 @@ class MenuListPanel extends StatelessWidget {
             ),
           ),
 
-          // --- TabBarView (탭 컨텐츠) ---
+          // TabBarView
           Expanded(
             child: TabBarView(
               controller: tabController,
               children: categories.map((category) {
-                // 'available' 상태의 메뉴만 필터링
+                // ステータス'available'のメニューのみフィルタリング
                 final menuList = (categorizedMenu[category] ?? [])
                     .where((item) => item.menuStatus == 'available')
                     .toList();
 
                 return ListView.builder(
-                  padding:
-                      const EdgeInsets.fromLTRB(24, 24, 24, 80), // 하단 패딩 확보
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 80),
                   itemCount: menuList.length,
                   itemBuilder: (context, index) {
                     return MenuItemCard(
@@ -162,7 +149,7 @@ class MenuListPanel extends StatelessWidget {
           ),
         ],
 
-        // --- 카테고리가 없을 경우 표시되는 화면 ---
+        // カテゴリが存在しない場合の画面
         if (categories.isEmpty)
           Expanded(
             child: Center(
@@ -187,6 +174,27 @@ class MenuListPanel extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  // Icon Button
+  Widget _buildTabIconButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 1),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        color: color,
+        splashRadius: 14,
+        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+        padding: EdgeInsets.zero,
+        tooltip: tooltip,
+      ),
     );
   }
 }

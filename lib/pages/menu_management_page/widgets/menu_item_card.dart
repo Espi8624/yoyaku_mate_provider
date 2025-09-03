@@ -16,53 +16,64 @@ class MenuItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // mobile layout break point設定
+    final isMobile = MediaQuery.of(context).size.width < 700;
+
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      margin: EdgeInsets.symmetric(
+        vertical: 8,
+        horizontal: isMobile ? 0 : 16,
+      ),
       color: AppColors.cardBackground,
       elevation: 4,
       shadowColor: AppColors.textSecondary.withOpacity(0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: AppColors.border.withOpacity(0.4),
-          width: 1,
-        ),
+        side: BorderSide(color: AppColors.border.withOpacity(0.4), width: 1),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-        leading: _buildImage(),
-        title: Text(
-          menuItem.title,
-          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4.0),
-          child: Text(
-            menuItem.description,
-            style: const TextStyle(color: AppColors.textSecondary),
-          ),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              '${menuItem.price.toStringAsFixed(0)}円',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
+            _buildImage(),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    menuItem.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (menuItem.description.isNotEmpty) ...[
+                    Text(
+                      menuItem.description,
+                      style: const TextStyle(
+                          fontSize: 13, color: AppColors.textSecondary),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  // mobile時、価格を下に表示
+                  if (isMobile) _buildPriceTag(),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            IconButton(
-                icon: const Icon(Icons.edit,
-                    size: 20, color: AppColors.textSecondary),
-                onPressed: onEdit,
-                tooltip: '編集'),
-            IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    size: 22, color: AppColors.error),
-                onPressed: onDelete,
-                tooltip: '削除'),
+            const SizedBox(width: 8),
+
+            // desktop時価格を右に表示
+            if (!isMobile) _buildPriceTag(),
+
+            const SizedBox(width: 4),
+            // 編集/削除ボタン
+            _buildActionButtons(),
           ],
         ),
       ),
@@ -86,6 +97,41 @@ class MenuItemCard extends StatelessWidget {
                 : const Icon(Icons.image_not_supported,
                     color: AppColors.textSecondary),
       ),
+    );
+  }
+
+  // 価格Widget
+  Widget _buildPriceTag() {
+    return Text(
+      '${menuItem.price.toStringAsFixed(0)}円',
+      style: const TextStyle(
+        color: AppColors.textSecondary,
+        fontWeight: FontWeight.bold,
+        fontSize: 15,
+      ),
+    );
+  }
+
+  // 編集/削除ボタンWidget
+  Widget _buildActionButtons() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon:
+              const Icon(Icons.edit, size: 20, color: AppColors.textSecondary),
+          onPressed: onEdit,
+          splashRadius: 20,
+          tooltip: '編集',
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete_outline,
+              size: 22, color: AppColors.error),
+          onPressed: onDelete,
+          splashRadius: 20,
+          tooltip: '削除',
+        ),
+      ],
     );
   }
 }
