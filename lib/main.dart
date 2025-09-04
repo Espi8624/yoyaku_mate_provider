@@ -135,9 +135,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (index == 4) {
+      // ログアウト実行
+      FirebaseAuth.instance.signOut();
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
 
   void _toggleSidebar() {
@@ -193,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
       MenuManagementScreen(storeId: storeId),
       const ProfileScreen(),
       SettingScreen(storeId: storeId),
+      Container(),
     ];
 
     return LayoutBuilder(
