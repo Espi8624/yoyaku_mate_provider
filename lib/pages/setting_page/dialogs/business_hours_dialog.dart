@@ -81,9 +81,15 @@ class _BusinessHoursDialogState extends State<BusinessHoursDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    const desktopMaxWidth = 470.0;
+    final dialogWidth = (screenWidth * 0.9 < desktopMaxWidth)
+        ? screenWidth * 0.9
+        : desktopMaxWidth;
+
     return BaseDialog(
       title: '営業時間設定',
-      width: 450,
+      width: dialogWidth,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
