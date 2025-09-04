@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../constants/app_colors.dart';
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 
 class EditProfileDialog extends StatefulWidget {
   final String title;
@@ -33,45 +34,49 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   }
 
   void _submit() {
-    // Dialog では値だけ返却し、実際のロジック処理は ViewModel がするようにする
     Navigator.of(context).pop(_controller.text);
   }
 
   @override
   Widget build(BuildContext context) {
-    // BaseDialog を使用するか、ここで直接 AlertDialog を構成
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(widget.title,
-          style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary)),
-      content: TextField(
-        controller: _controller,
-        obscureText: widget.isPassword,
-        autofocus: true,
-        decoration: InputDecoration(
-          hintText: widget.title,
-          border: const OutlineInputBorder(),
-        ),
-        onSubmitted: (_) => _submit(),
-      ),
-      actions: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentPrimary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+    return BaseDialog(
+      title: widget.title,
+      width: 400,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _controller,
+            obscureText: widget.isPassword,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: '新しい${widget.title}',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
-            onPressed: _submit,
-            child: const Text('確認'),
+            onSubmitted: (_) => _submit(),
           ),
-        ),
-      ],
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPrimary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: _submit,
+              child: const Text('確認'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
