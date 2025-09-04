@@ -106,22 +106,60 @@ class _HolidayDialogState extends State<HolidayDialog> {
 
   @override
   Widget build(BuildContext context) {
+    const desktopMaxWidth = 800.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final dialogWidth = (screenWidth * 0.95 < desktopMaxWidth)
+        ? screenWidth * 0.95
+        : desktopMaxWidth;
+
     return BaseDialog(
       title: '休業日設定',
-      width: 800,
+      width: dialogWidth,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            height: 400,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildCalendarView(),
-                const VerticalDivider(width: 32, color: AppColors.border),
-                _buildSettingsPanel(),
-              ],
-            ),
+          // LayoutBuilderを使用し、反応型レイアウトを適用
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const double mobileBreakpoint = 700;
+              final bool isMobileLayout =
+                  constraints.maxWidth < mobileBreakpoint;
+
+              // mobile layout
+              if (isMobileLayout) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 400, // カレンダーの高さを固定
+                      child: _buildCalendarView(isMobile: true),
+                    ),
+                    const Divider(height: 32, color: AppColors.border),
+                    _buildSettingsPanel(isMobile: true),
+                  ],
+                );
+              }
+              // desktop layout
+              else {
+                return SizedBox(
+                  height: 400,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _buildCalendarView(isMobile: false),
+                      ),
+                      const VerticalDivider(width: 32, color: AppColors.border),
+                      Expanded(
+                        flex: 2,
+                        child: _buildSettingsPanel(isMobile: false),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
           ),
           const SizedBox(height: 24),
           ElevatedButton(
@@ -139,120 +177,111 @@ class _HolidayDialogState extends State<HolidayDialog> {
   }
 
   // 左側に表示するウィジェット (Calendar 側)
-  Widget _buildCalendarView() {
-    return Expanded(
-      flex: 3,
-      child: TableCalendar(
-        firstDay: DateTime.utc(2020, 1, 1),
-        lastDay: DateTime.utc(2100, 12, 31),
-        focusedDay: _focusedDay,
-        onDaySelected: _onDaySelected,
-        selectedDayPredicate: (day) =>
-            _selectedSpecificDates.any((d) => isSameDay(d, day)),
-        headerStyle:
-            const HeaderStyle(formatButtonVisible: false, titleCentered: true),
-        calendarBuilders: CalendarBuilders(
-          defaultBuilder: (context, day, focusedDay) {
-            if (_isRegularClosedDay(day)) {
-              return Center(
+  Widget _buildCalendarView({required bool isMobile}) {
+    return TableCalendar(
+      firstDay: DateTime.utc(2020, 1, 1),
+      lastDay: DateTime.utc(2100, 12, 31),
+      focusedDay: _focusedDay,
+      onDaySelected: _onDaySelected,
+      selectedDayPredicate: (day) =>
+          _selectedSpecificDates.any((d) => isSameDay(d, day)),
+      headerStyle:
+          const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+      calendarBuilders: CalendarBuilders(
+        defaultBuilder: (context, day, focusedDay) {
+          if (_isRegularClosedDay(day)) {
+            return Center(
+              child: Text(
+                '${day.day}',
+                style: const TextStyle(color: Colors.red),
+              ),
+            );
+          }
+          return null;
+        },
+        todayBuilder: (context, day, focusedDay) {
+          if (_isRegularClosedDay(day)) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
                 child: Text(
                   '${day.day}',
                   style: const TextStyle(color: Colors.red),
                 ),
-              );
-            }
-            return null;
-          },
-          todayBuilder: (context, day, focusedDay) {
-            if (_isRegularClosedDay(day)) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    '${day.day}',
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
-              );
-            }
-            return null;
-          },
-          disabledBuilder: (context, day, focusedDay) {
-            if (_isRegularClosedDay(day)) {
-              return Center(
-                child: Text(
-                  '${day.day}',
-                  style: TextStyle(color: Colors.red.withOpacity(0.5)),
-                ),
-              );
-            }
-            return null;
-          },
-        ),
+              ),
+            );
+          }
+          return null;
+        },
+        disabledBuilder: (context, day, focusedDay) {
+          if (_isRegularClosedDay(day)) {
+            return Center(
+              child: Text(
+                '${day.day}',
+                style: TextStyle(color: Colors.red.withOpacity(0.5)),
+              ),
+            );
+          }
+          return null;
+        },
       ),
     );
   }
 
   /// 右側の設定パネルを構築するメソッド (値選択側)
-  Widget _buildSettingsPanel() {
-    return Expanded(
-      flex: 2,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.only(left: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('定期休業日', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            _buildChipSelector<String>(
-              title: '毎週 (曜日)',
-              items: _weekdays,
-              selectedItems: _selectedWeekdays,
-              tempValue: _tempWeekday,
-              onTempChanged: (v) => setState(() => _tempWeekday = v!),
-              onAdd: () => setState(() {
-                if (!_selectedWeekdays.contains(_tempWeekday)) {
-                  _selectedWeekdays.add(_tempWeekday);
-                }
-              }),
-              onDelete: (item) =>
-                  setState(() => _selectedWeekdays.remove(item)),
-            ),
-            const SizedBox(height: 16),
-            _buildChipSelector<int>(
-              title: '毎月 (日)',
-              items: _monthDays,
-              selectedItems: _selectedMonthDays,
-              tempValue: _tempMonthDay,
-              itemToString: (item) => '$item日',
-              onTempChanged: (v) => setState(() => _tempMonthDay = v!),
-              onAdd: () => setState(() {
-                if (!_selectedMonthDays.contains(_tempMonthDay)) {
-                  _selectedMonthDays.add(_tempMonthDay);
-                  _selectedMonthDays.sort(); // ソートして順序を保つ
-                }
-              }),
-              onDelete: (item) =>
-                  setState(() => _selectedMonthDays.remove(item)),
-            ),
-            const Divider(height: 32),
-            Row(
-              children: [
-                const Text('祝日休業',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                Switch(
-                  value: _publicHolidayEnabled,
-                  onChanged: (v) => setState(() => _publicHolidayEnabled = v),
-                  activeColor: AppColors.accentPrimary,
-                ),
-              ],
-            ),
-          ],
-        ),
+  Widget _buildSettingsPanel({required bool isMobile}) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(left: isMobile ? 0 : 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('定期休業日', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          _buildChipSelector<String>(
+            title: '毎週 (曜日)',
+            items: _weekdays,
+            selectedItems: _selectedWeekdays,
+            tempValue: _tempWeekday,
+            onTempChanged: (v) => setState(() => _tempWeekday = v!),
+            onAdd: () => setState(() {
+              if (!_selectedWeekdays.contains(_tempWeekday)) {
+                _selectedWeekdays.add(_tempWeekday);
+              }
+            }),
+            onDelete: (item) => setState(() => _selectedWeekdays.remove(item)),
+          ),
+          const SizedBox(height: 16),
+          _buildChipSelector<int>(
+            title: '毎月 (日)',
+            items: _monthDays,
+            selectedItems: _selectedMonthDays,
+            tempValue: _tempMonthDay,
+            itemToString: (item) => '$item日',
+            onTempChanged: (v) => setState(() => _tempMonthDay = v!),
+            onAdd: () => setState(() {
+              if (!_selectedMonthDays.contains(_tempMonthDay)) {
+                _selectedMonthDays.add(_tempMonthDay);
+                _selectedMonthDays.sort(); // ソートして順序を保つ
+              }
+            }),
+            onDelete: (item) => setState(() => _selectedMonthDays.remove(item)),
+          ),
+          const Divider(height: 32),
+          Row(
+            children: [
+              const Text('祝日休業', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(width: 8),
+              Switch(
+                value: _publicHolidayEnabled,
+                onChanged: (v) => setState(() => _publicHolidayEnabled = v),
+                activeColor: AppColors.accentPrimary,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
