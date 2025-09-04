@@ -40,6 +40,10 @@ class NavigationBarMobile extends StatelessWidget {
           activeIcon: Icon(Icons.settings_rounded),
           label: '設定',
         ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.logout_rounded),
+          label: 'ログアウト',
+        ),
       ],
     );
   }
