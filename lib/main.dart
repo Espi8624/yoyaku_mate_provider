@@ -220,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // desktop layout
           return Scaffold(
             body: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(8.0),
               child: Row(
                 children: [
                   SideNavigationBar(

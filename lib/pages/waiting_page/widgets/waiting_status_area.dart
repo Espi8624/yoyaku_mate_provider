@@ -106,27 +106,29 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(2, 2),
-          ),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(2, 2))
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text("現状ウェイティング状況",
-              style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary)),
-          const SizedBox(height: 24),
-          _StatusInfo(label: "直前入場時間", value: vm.lastEntryTimeFormatted),
-          const SizedBox(height: 8),
-          const _StatusInfo(label: "予想待機時間", value: "10分"),
-          const Spacer(),
-          _buildBottomInfo(vm),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("現状ウェイティング状況",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary)),
+            const SizedBox(height: 16),
+            _StatusInfo(label: "直前入場時間", value: vm.lastEntryTimeFormatted),
+            const SizedBox(height: 8),
+            const _StatusInfo(label: "予想待機時間", value: "10分"),
+            const SizedBox(height: 16),
+            _buildBottomInfo(vm),
+          ],
+        ),
       ),
     );
   }
@@ -183,7 +185,7 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
         children: [
           const Text("現在待機チーム",
               style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Colors.white)),
           Row(
@@ -194,7 +196,7 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
               Text(
                 vm.waitingCount.toString(),
                 style: const TextStyle(
-                  fontSize: 60,
+                  fontSize: 50,
                   fontWeight: FontWeight.bold,
                   color: AppColors.roleManager,
                 ),

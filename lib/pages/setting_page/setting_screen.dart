@@ -64,7 +64,7 @@ class _SettingScreenViewState extends State<_SettingScreenView>
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -81,8 +81,11 @@ class _SettingScreenViewState extends State<_SettingScreenView>
                   ? const Center(child: CircularProgressIndicator())
                   : viewModel.storeSettings == null
                       ? Center(
-                          child: Text('設定情報を表示できません。',
-                              style: TextStyle(color: AppColors.textSecondary)))
+                          child: Text(
+                            '設定情報を表示できません。',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                        )
                       : _buildTabBarView(viewModel),
             ),
           ],
