@@ -116,17 +116,11 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
               children: [
                 Row(
                   children: [
-                    Text("#${item.queueNumber}",
+                    Text("#${item.queueNumber} 様",
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
                             color: AppColors.accentPrimary)),
-                    const SizedBox(width: 15),
-                    Text("${item.customerName} 様",
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: AppColors.textPrimary)),
                     const SizedBox(width: 15),
                     Text("${item.partySize}名",
                         style: const TextStyle(
