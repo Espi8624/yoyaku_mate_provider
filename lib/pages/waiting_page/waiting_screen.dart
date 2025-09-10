@@ -40,6 +40,8 @@ class _WaitingView extends StatelessWidget {
       builder: (context, constraints) {
         const double mobileBreakpoint = 700;
         final bool isMobile = constraints.maxWidth < mobileBreakpoint;
+        final String qrCodeData =
+            "http://localhost:3000/waiting-screen-flow?store_id=${vm.storeId}";
 
         if (vm.isLoading) {
           return const Center(child: LoadingIndicator());
@@ -69,17 +71,12 @@ class _WaitingView extends StatelessWidget {
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               elevation: 0,
               actions: [
-                const QRCodeButton(data: 'https://example.com/waiting-screen'),
+                QRCodeButton(data: qrCodeData),
                 IconButton(
                     icon: const Icon(Icons.delete_sweep_rounded),
                     onPressed: () => _showClearConfirmationDialog(context)),
               ],
             ),
-            // floatingActionButton: FloatingActionButton(
-            //   onPressed: () => _showAddWaitingDialog(context),
-            //   backgroundColor: AppColors.accentPrimary,
-            //   child: const Icon(Icons.add, color: Colors.white),
-            // ),
             body: SafeArea(
               top: false,
               child: Stack(
@@ -159,14 +156,13 @@ class _WaitingView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  const Expanded(
+                  Expanded(
                     flex: 1,
                     child: Column(
                       children: [
-                        QRCodeButton(
-                            data: 'https://example.com/waiting-screen'),
+                        QRCodeButton(data: qrCodeData),
                         SizedBox(height: 10),
-                        Expanded(
+                        const Expanded(
                           child: WaitingStatusArea(isInitiallyExpanded: true),
                         ),
                       ],
