@@ -74,46 +74,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// class AuthWrapper extends StatelessWidget {
-//   const AuthWrapper({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return StreamBuilder<User?>(
-//       stream: FirebaseAuth.instance.authStateChanges(),
-//       builder: (context, snapshot) {
-//         if (snapshot.connectionState == ConnectionState.waiting) {
-//           return const Scaffold(
-//               body: Center(child: CircularProgressIndicator()));
-//         }
-//         if (snapshot.hasData) {
-//           return ProfileViewModelProvider(user: snapshot.data!);
-//         }
-//         return const LoginPage();
-//       },
-//     );
-//   }
-// }
-
-// ProfileViewModel を生成し、下位 Widget ツリーに提供
-// 既存　HomeScreenDataLoader & UserProvider を対応
-// class ProfileViewModelProvider extends StatelessWidget {
-//   final User user;
-//   const ProfileViewModelProvider({super.key, required this.user});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return ChangeNotifierProvider(
-//       create: (_) => ProfileScreenViewModel(
-//         profileService:
-//             ProviderProfileService(baseUrl: "http://localhost:8080"),
-//         userId: user.uid, // Firebase UID を使用者 ID で使用
-//       ),
-//       child: const HomeScreen(),
-//     );
-//   }
-// }
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -128,10 +88,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Widget がビルドされた直後に ViewModel のデータローディングメソッドを呼出
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   context.read<ProfileScreenViewModel>().loadProfiles();
-    // });
   }
 
   void _onItemTapped(int index) {

@@ -240,10 +240,9 @@ class _WaitingView extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                Text(item.customerName,
+                Text('#${item.queueNumber.toString()} 番',
                     style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(width: 5),
                 const Text('様を呼出します。', style: TextStyle(fontSize: 16)),
               ],
             ),
@@ -298,10 +297,10 @@ class _WaitingView extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                Text(item.customerName,
+                Text('#${item.queueNumber.toString()} 番',
                     style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold)),
-                const Text(' 様', style: TextStyle(fontSize: 16)),
+                const Text('様', style: TextStyle(fontSize: 16)),
               ],
             ),
             const SizedBox(height: 16),
@@ -360,10 +359,10 @@ class _WaitingView extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                Text(item.customerName,
+                Text('${item.queueNumber} 番',
                     style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold)),
-                const Text(' 様', style: TextStyle(fontSize: 16)),
+                const Text('様', style: TextStyle(fontSize: 16)),
               ],
             ),
             const SizedBox(height: 16),

@@ -269,7 +269,7 @@ class WaitingService {
 
   // 新規待機追加関数
   Future<WaitingList> createWaitingListItem({
-    required String customerName,
+    // required String customerName,
     required int partySize,
     required String contact,
     required String nationality,
@@ -290,7 +290,7 @@ class WaitingService {
       final Map<String, dynamic> requestBody = {
         'store_id': storeId,
         'waiting_id': waitingId,
-        'customer_name': customerName,
+        // 'customer_name': customerName,
         'party_size': partySize,
         'nationality': nationality,
         'contact': contact,
