@@ -1,10 +1,8 @@
-
 class WaitingList {
   final String? id;
   final String storeId;
   final String waitingId;
   final int queueNumber;
-  final String customerName;
   final int partySize;
   final String nationality;
   final DateTime registrationTime;
@@ -20,7 +18,6 @@ class WaitingList {
     required this.storeId,
     required this.waitingId,
     required this.queueNumber,
-    required this.customerName,
     required this.partySize,
     required this.nationality,
     required this.registrationTime,
@@ -39,7 +36,6 @@ class WaitingList {
         storeId: json['store_id'] ?? '',
         waitingId: json['waiting_id'] ?? '',
         queueNumber: json['queue_number'] ?? 0,
-        customerName: json['customer_name'] ?? '',
         partySize: json['party_size'] ?? 1,
         nationality: json['nationality'] ?? '',
         registrationTime: json['registration_time'] != null
@@ -48,9 +44,15 @@ class WaitingList {
         contact: json['contact'],
         status: json['status'] ?? 'waiting',
         notes: json['notes'],
-        calledTime: json['called_time'] != null ? DateTime.parse(json['called_time']) : null,
-        entryTime: json['entry_time'] != null ? DateTime.parse(json['entry_time']) : null,
-        updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+        calledTime: json['called_time'] != null
+            ? DateTime.parse(json['called_time'])
+            : null,
+        entryTime: json['entry_time'] != null
+            ? DateTime.parse(json['entry_time'])
+            : null,
+        updatedAt: json['updated_at'] != null
+            ? DateTime.parse(json['updated_at'])
+            : null,
       );
     } catch (e) {
       print('Error parsing JSON: $e');
@@ -80,7 +82,6 @@ class WaitingList {
       storeId: storeId ?? this.storeId,
       waitingId: waitingId ?? this.waitingId,
       queueNumber: queueNumber ?? this.queueNumber,
-      customerName: customerName ?? this.customerName,
       partySize: partySize ?? this.partySize,
       nationality: nationality ?? this.nationality,
       registrationTime: registrationTime ?? this.registrationTime,
