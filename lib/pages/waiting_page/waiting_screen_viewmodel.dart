@@ -118,7 +118,7 @@ class WaitingScreenViewModel extends ChangeNotifier {
     try {
       final newWaitingItem = await _waitingService.createWaitingListItem(
         storeId: storeId,
-        customerName: data['customerName'],
+        // customerName: data['customerName'],
         partySize: data['partySize'],
         nationality: data['nationality'],
         contact: data['contact'],

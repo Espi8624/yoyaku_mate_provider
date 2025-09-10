@@ -13,7 +13,7 @@ class AddWaitingDialog extends StatefulWidget {
 
 class _AddWaitingDialogState extends State<AddWaitingDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _customerNameController = TextEditingController();
+  // final _customerNameController = TextEditingController();
   final _partySizeController = TextEditingController();
   final _nationalityController = TextEditingController();
   final _contactController = TextEditingController();
@@ -29,7 +29,7 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
 
   @override
   void dispose() {
-    _customerNameController.dispose();
+    // _customerNameController.dispose();
     _partySizeController.dispose();
     _nationalityController.dispose();
     _contactController.dispose();
@@ -40,7 +40,7 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       final newItemData = {
-        'customerName': _customerNameController.text.trim(),
+        // 'customerName': _customerNameController.text.trim(),
         'partySize': int.parse(_partySizeController.text),
         'nationality': _nationalityController.text,
         'contact': _contactController.text.trim(),
@@ -59,36 +59,6 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 国籍ドロップダウン (DropdownSearch)
-            // DropdownSearch<String>(
-            //   asyncItems: (filter) async {
-            //     final String response = await DefaultAssetBundle.of(context)
-            //         .loadString('assets/nationalities.json');
-            //     final data = json.decode(response);
-            //     return List<String>.from(data['nationalities']);
-            //   },
-            //   selectedItem: _selectedNationality,
-            //   onChanged: (newValue) {
-            //     setState(() {
-            //       _selectedNationality = newValue;
-            //       _nationalityController.text = newValue ?? '';
-            //     });
-            //   },
-            //   popupProps: const PopupProps.menu(showSearchBox: true),
-            //   dropdownDecoratorProps: const DropDownDecoratorProps(
-            //     dropdownSearchDecoration: InputDecoration(
-            //         labelText: '国籍', border: OutlineInputBorder()),
-            //   ),
-            // ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _customerNameController,
-              decoration: const InputDecoration(
-                  labelText: 'お客様名', border: OutlineInputBorder()),
-              validator: (v) =>
-                  (v == null || v.isEmpty) ? 'お客様名を入力してください' : null,
-            ),
-            const SizedBox(height: 16),
             TextFormField(
               controller: _partySizeController,
               decoration: const InputDecoration(
