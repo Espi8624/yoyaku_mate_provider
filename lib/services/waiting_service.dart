@@ -134,7 +134,6 @@ class WaitingService {
       if (lastItem.waitingId != newItem.waitingId ||
           lastItem.status != newItem.status ||
           lastItem.queueNumber != newItem.queueNumber ||
-          lastItem.customerName != newItem.customerName ||
           lastItem.partySize != newItem.partySize ||
           lastItem.registrationTime != newItem.registrationTime ||
           lastItem.contact != newItem.contact ||
@@ -277,20 +276,12 @@ class WaitingService {
     required String storeId,
   }) async {
     try {
-      // print('Creating waiting list item with data:');  // Add debug log
-      // print('customerName: $customerName');
-      // print('partySize: $partySize');
-      // print('nationality: $nationality');
-      // print('contact: $contact');
-      // print('notes: $notes');
-      // print('storeId: $storeId');      // Generate waiting_id
       final waitingId = _generateWaitingId();
 
       // Create request body with required fields and waiting_id
       final Map<String, dynamic> requestBody = {
         'store_id': storeId,
         'waiting_id': waitingId,
-        // 'customer_name': customerName,
         'party_size': partySize,
         'nationality': nationality,
         'contact': contact,
