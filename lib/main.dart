@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/firebase_options.dart';
+import 'package:yoyaku_mate_provider/store_selection_view.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen.dart';
@@ -112,6 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // final userProvider = Provider.of<UserProvider>(context, listen: false);
     final profileVM = context.watch<ProfileScreenViewModel>();
 
+    // データローディングスタート
     if (profileVM.userProfile == null &&
         !profileVM.isLoading &&
         profileVM.errorMessage == null &&
@@ -123,6 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
 
+    // ローディング・エラー画面処理
     if (profileVM.isLoading && profileVM.userProfile == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -147,70 +150,81 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // データローディング成功
-    final storeId = profileVM.storeId;
-    final List<Widget> pages = [
-      WaitingScreen(storeId: storeId),
-      MenuManagementScreen(storeId: storeId),
-      const ProfileScreen(),
-      SettingScreen(storeId: storeId),
-      Container(),
-    ];
+    final isStoreSelected = profileVM.storeProfile != null;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // mobile/ desktopを区分する基準点を設定
-        const double mobileBreakpoint = 700;
+    // 選択された店舗がある場合、従来のメインダッシュボードUIを表示
+    if (isStoreSelected) {
+      final storeId = profileVM.storeId;
+      final List<Widget> pages = [
+        WaitingScreen(storeId: storeId),
+        MenuManagementScreen(storeId: storeId),
+        const ProfileScreen(),
+        SettingScreen(storeId: storeId),
+        Container(),
+      ];
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // mobile/ desktopを区分する基準点を設定
+          const double mobileBreakpoint = 700;
 
-        // 設定値より幅が狭い場合mobileレイアウトを表示
-        if (constraints.maxWidth < mobileBreakpoint) {
-          // mobile layout
-          return Scaffold(
-            body: pages[_selectedIndex],
-            bottomNavigationBar: NavigationBarMobile(
-              selectedIndex: _selectedIndex,
-              onItemTapped: _onItemTapped,
-            ),
-          );
-        } else {
-          // desktop layout
-          return Scaffold(
-            body: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  SideNavigationBar(
-                    isExpanded: _isExpanded,
-                    selectedIndex: _selectedIndex,
-                    onItemTapped: _onItemTapped,
-                    onToggle: _toggleSidebar,
-                    onLogout: () async {
-                      await FirebaseAuth.instance.signOut();
-                    },
-                  ),
-                  const SizedBox(
-                    width: 12.0,
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        if (_isExpanded) _toggleSidebar();
+          // 設定値より幅が狭い場合mobileレイアウトを表示
+          if (constraints.maxWidth < mobileBreakpoint) {
+            // mobile layout
+            return Scaffold(
+              body: pages[_selectedIndex],
+              bottomNavigationBar: NavigationBarMobile(
+                selectedIndex: _selectedIndex,
+                onItemTapped: _onItemTapped,
+              ),
+            );
+          } else {
+            // desktop layout
+            return Scaffold(
+              body: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    SideNavigationBar(
+                      isExpanded: _isExpanded,
+                      selectedIndex: _selectedIndex,
+                      onItemTapped: _onItemTapped,
+                      onToggle: _toggleSidebar,
+                      onLogout: () async {
+                        await FirebaseAuth.instance.signOut();
                       },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).canvasColor,
-                          borderRadius: BorderRadius.circular(16),
+                    ),
+                    const SizedBox(
+                      width: 12.0,
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          if (_isExpanded) _toggleSidebar();
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).canvasColor,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: pages[_selectedIndex],
                         ),
-                        child: pages[_selectedIndex],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        }
-      },
-    );
+            );
+          }
+        },
+      );
+    } else {
+      if (profileVM.myStores.isEmpty) {
+        return const Scaffold(
+            body: Center(
+          child: Text('所属された店舗がありません。管理者にお問い合わせください。'),
+        ));
+      }
+      return const StoreSelectionView();
+    }
   }
 }

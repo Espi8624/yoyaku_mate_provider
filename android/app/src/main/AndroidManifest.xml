@@ -24,17 +24,17 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- ▼▼▼ 딥 링크를 위한 인텐트 필터 추가 ▼▼▼ -->
+            <!-- ディップリンクのためのインデントフィルタ追加 -->
             <intent-filter>
-                <!-- 웹 브라우저 등에서 URL을 클릭했을 때 반응하도록 설정 -->
+                <!-- Web browserなどで、URLをクリックした時に反応するように設定 -->
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <!-- 앱을 호출할 주소 형식(URL Scheme)을 여기에 정의합니다. -->
+                <!-- アプリを呼出するアドレス形式形式(URL Scheme)を定義 -->
                 <data android:scheme="yoyaku-mate" />
-            </intent-filter>s
-            <!-- ▲▲▲ 여기까지 추가 ▲▲▲ -->
+            </intent-filter>
+            <!-- 追加箇所 -->
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
@@ -51,6 +51,20 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+         <!-- httpスキームを使用する全てのURLを開けるよう許容 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+         <!-- LINEアプリのカスタムスキームを直接開けるよう許容 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="line" />
         </intent>
     </queries>
     <uses-permission android:name="android.permission.INTERNET"/>
