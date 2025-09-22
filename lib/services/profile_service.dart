@@ -41,6 +41,42 @@ class ProviderProfileService {
     }
   }
 
+  Future<Map<String, dynamic>> fetchAllStores() async {
+    // 現在ログインされているユーザーのIDトークンを取得
+    final token = await _getIdToken();
+    final url = Uri.parse('$baseUrl/api/provider_stores/store-list');
+
+    // print('--- Calling fetchMyStores ---');
+    // print('URL: $url');
+    // print('Token: Bearer ${token.substring(0, 30)}...');
+    // -----------------------
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      // final responseBody = utf8.decode(response.bodyBytes);
+      // print('--- Response from /my-list ---');
+      // print(responseBody);
+      // print('----------------------------');
+
+      // 成功時、JSONデータをデコードして返却
+      return json.decode(utf8.decode(response.bodyBytes));
+    } else {
+      // 失敗時、エラーを投げてViewModelが処理するようにする
+      // print('--- fetchMyStores FAILED ---');
+      // print('Status: ${response.statusCode}');
+      // print('Body: ${response.body}');
+      throw ApiException(
+          'Failed to load my stores. Status: ${response.statusCode}');
+    }
+  }
+
   // ユーザープロフィール更新
   Future<void> updateUserProfile(
       String mongoUserId, Map<String, dynamic> update) async {
@@ -207,6 +243,26 @@ class ProviderProfileService {
       return data['available'];
     } else {
       throw ApiException('Failed to check phone number availability');
+    }
+  }
+
+  Future<Map<String, dynamic>> addNewStore(
+      ProviderProfile profile, String idToken) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/stores/add'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $idToken',
+      },
+      body: jsonEncode(profile.toJson()),
+    );
+
+    if (response.statusCode == 201) {
+      // 201 Created
+      return json.decode(utf8.decode(response.bodyBytes));
+    } else {
+      throw ApiException(
+          'Failed to add new store. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
 }

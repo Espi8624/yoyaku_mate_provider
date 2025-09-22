@@ -4,15 +4,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/provider_profile.dart';
+import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
 
 class SignUpPage extends StatefulWidget {
-  const SignUpPage({super.key});
+  final String? mode; // 'add_store' or null
+
+  const SignUpPage({super.key, this.mode});
 
   @override
   State<SignUpPage> createState() => _SignUpPageState();
@@ -26,7 +30,7 @@ class _SignUpPageState extends State<SignUpPage> {
   File? _licenseImageFile;
   final ImagePicker _picker = ImagePicker();
 
-  final PageController _pageController = PageController();
+  late PageController _pageController;
   int _currentPageIndex = 0;
 
   // コントローラー初期化
@@ -48,6 +52,19 @@ class _SignUpPageState extends State<SignUpPage> {
   @override
   void initState() {
     super.initState();
+
+    // 基本デフォルトページは0
+    int initialPage = 0;
+
+    // 店舗追加モードかを確認し、初期状態を設定
+    if (widget.mode == 'add_store') {
+      _role = 'manager';
+      initialPage = 2;
+    }
+
+    // 計算されたinitialPageでPageControllerを生成
+    _pageController = PageController(initialPage: initialPage);
+
     _pageController.addListener(() {
       if (!mounted) return;
       final newPage = _pageController.page?.round();
@@ -57,6 +74,26 @@ class _SignUpPageState extends State<SignUpPage> {
         });
       }
     });
+
+    if (widget.mode == 'add_store') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          final profileVM = context.read<ProfileScreenViewModel>();
+          final userProfile = profileVM.userProfile;
+
+          if (userProfile != null) {
+            managerEmailController.text = userProfile.email;
+            managerPhoneController.text = userProfile.phone;
+            managerNameController.text = userProfile.name;
+          } else {
+            final currentUser = FirebaseAuth.instance.currentUser;
+            if (currentUser != null) {
+              managerEmailController.text = currentUser.email ?? '';
+            }
+          }
+        }
+      });
+    }
   }
 
   @override
@@ -114,27 +151,49 @@ class _SignUpPageState extends State<SignUpPage> {
       _isLoading = true;
       _errorMessage = null;
     });
+
+    final profileService =
+        ProviderProfileService(baseUrl: 'http://10.0.2.2:8080');
     User? newUser;
+
     try {
-      final email = _role == 'manager'
-          ? managerEmailController.text.trim()
-          : staffEmailController.text.trim();
-      final password = _role == 'manager'
-          ? managerPasswordController.text
-          : staffPasswordController.text;
-      final userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
-      newUser = userCredential.user;
-      if (newUser == null) throw Exception('Firebase user creation failed.');
+      String idToken;
+      String firebaseUid;
+      final isAddingStore = widget.mode == 'add_store';
 
-      final idToken = await newUser.getIdToken(true);
-      if (idToken == null)
-        throw Exception('Failed to retrieve Firebase ID token.');
+      // 認証処理
+      if (isAddingStore) {
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser == null) throw ApiException('ログイン状態が確認できません。');
+        firebaseUid = currentUser.uid;
+        final token = await currentUser.getIdToken(true);
+        if (token == null)
+          throw Exception('Failed to retrieve Firebase ID token.');
+        idToken = token;
+      } else {
+        // 新規加入
+        final email = _role == 'manager'
+            ? managerEmailController.text.trim()
+            : staffEmailController.text.trim();
+        final password = _role == 'manager'
+            ? managerPasswordController.text
+            : staffPasswordController.text;
+        final userCredential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(email: email, password: password);
+        newUser = userCredential.user;
+        if (newUser == null) throw Exception('Firebase user creation failed.');
+        firebaseUid = newUser.uid;
+        final token = await newUser.getIdToken(true);
+        if (token == null)
+          throw Exception('Failed to retrieve Firebase ID token.');
+        idToken = token;
+      }
 
+      // プロフィール情報構築
       late final ProviderProfile profile;
       if (_role == 'manager') {
         profile = ProviderProfile(
-          firebaseUid: newUser.uid,
+          firebaseUid: firebaseUid,
           email: managerEmailController.text.trim(),
           phoneNumber: managerPhoneController.text,
           name: managerNameController.text,
@@ -142,18 +201,15 @@ class _SignUpPageState extends State<SignUpPage> {
           storeName: storeNameController.text,
           storeAddress: storeAddressController.text,
           storeTelNumber: storePhoneController.text,
-          bizNumber: null,
           storeEmail: managerEmailController.text.trim(),
         );
       } else {
         // staff
-        final profileService =
-            ProviderProfileService(baseUrl: 'http://10.0.2.2:8080');
         final storeExists =
             await profileService.checkStoreExists(staffStoreIdController.text);
-        if (!storeExists && mounted) throw ApiException('指定された店番号は存在しません');
+        if (!storeExists) throw ApiException('指定された店番号は存在しません');
         profile = ProviderProfile(
-          firebaseUid: newUser.uid,
+          firebaseUid: firebaseUid,
           email: staffEmailController.text.trim(),
           phoneNumber: staffPhoneController.text,
           name: staffNameController.text,
@@ -162,27 +218,31 @@ class _SignUpPageState extends State<SignUpPage> {
         );
       }
 
-      final profileService =
-          ProviderProfileService(baseUrl: 'http://10.0.2.2:8080');
-      final createdProfileMap = await profileService.signUp(profile, idToken);
+      // Backendにプロフィール情報を送信
+      final Map<String, dynamic> createdProfileMap;
 
-      String? storeId;
-      if (createdProfileMap.containsKey('data') &&
-          createdProfileMap['data'] is Map) {
-        final userData = createdProfileMap['data'] as Map<String, dynamic>;
-        storeId = userData['store_id'] as String?;
-        _lineLoginUrl = userData['line_login_url'] as String?;
+      if (isAddingStore) {
+        // 店舗追加モード
+        createdProfileMap = await profileService.addNewStore(profile, idToken);
+      } else {
+        // 新規加入モード
+        createdProfileMap = await profileService.signUp(profile, idToken);
       }
 
-      if (_role == 'manager' && _licenseImageFile != null && storeId != null) {
-        await profileService.uploadLicenseImage(storeId, _licenseImageFile!);
-      }
+      final userData = createdProfileMap['data'] as Map<String, dynamic>? ?? {};
+      final storeId = userData['store_id'] as String?;
+      _lineLoginUrl = userData['line_login_url'] as String?;
 
-      if (_role == 'manager' &&
-          _lineLoginUrl != null &&
-          _lineLoginUrl!.isNotEmpty) {
+      if (_role == 'manager') {
+        if (_licenseImageFile != null && storeId != null) {
+          await profileService.uploadLicenseImage(storeId, _licenseImageFile!);
+        }
+        if (_lineLoginUrl == null || _lineLoginUrl!.isEmpty) {
+          throw ApiException('LINE連携URLの取得に失敗しました。');
+        }
         _nextPage();
       } else {
+        // staff
         await FirebaseAuth.instance.signOut();
         if (mounted) {
           CustomSnackBar.show(context,
@@ -192,7 +252,10 @@ class _SignUpPageState extends State<SignUpPage> {
         }
       }
     } catch (e) {
-      if (newUser != null) await newUser.delete();
+      // 新規加入に失敗した場合にのみ、作成されたユーザーを削除
+      if (widget.mode != 'add_store' && newUser != null) {
+        await newUser.delete();
+      }
       if (mounted) {
         setState(() {
           _errorMessage =
@@ -211,23 +274,26 @@ class _SignUpPageState extends State<SignUpPage> {
   Future<void> _launchLineLogin() async {
     setState(() => _isLoading = true);
     try {
-      if (_lineLoginUrl == null) return;
+      if (_lineLoginUrl == null)
+        throw Exception('LINE Login URL is not available.');
       final Uri url = Uri.parse(_lineLoginUrl!);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
+
+      if (!await launchUrl(url, mode: LaunchMode.platformDefault)) {
+        throw Exception('Could not launch the URL.');
+      }
+
+      // 店舗追加モードでない場合ログアウトを実行
+      if (widget.mode != 'add_store') {
         await FirebaseAuth.instance.signOut();
-        if (mounted) context.go('/signup/complete');
-      } else {
-        throw Exception('Could not launch LINE login URL');
       }
     } catch (e) {
+      print('Error launching URL: $e');
       if (mounted) {
         setState(() {
           _errorMessage = 'LINEを開けません。アプリが設置されているか確認をお願いします。';
+          _isLoading = false;
         });
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -515,7 +581,16 @@ class _SignUpPageState extends State<SignUpPage> {
         const Spacer(),
         _buildActionButton(
           label: 'LINEで申請完了',
-          onPressed: _launchLineLogin,
+          onPressed: () {
+            // print("--- LINEで申請完了 버튼 클릭됨 ---");
+            // print("현재 _isLoading 상태: $_isLoading");
+            // print("현재 _lineLoginUrl: $_lineLoginUrl");
+
+            // _isLoadingで無い時のみ、関数を呼び出すように防御コードを追加
+            if (!_isLoading) {
+              _launchLineLogin();
+            }
+          },
           isLoading: _isLoading,
           isLineButton: true,
         ),
