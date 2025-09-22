@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/models/store_license.dart';
-import '../../models/store_profile.dart';
-import '../../models/user_profile.dart';
-import '../../services/api_exception.dart';
-import '../../services/profile_service.dart';
+import 'package:yoyaku_mate_provider/models/store_profile.dart';
+import 'package:yoyaku_mate_provider/models/user_profile.dart';
+import 'package:yoyaku_mate_provider/services/api_exception.dart';
+import 'package:yoyaku_mate_provider/services/profile_service.dart';
 
 class ProfileScreenViewModel extends ChangeNotifier {
   final ProviderProfileService _profileService;
-
   final String firebaseUid;
 
   String _mongoUserId = '';
 
   ProfileScreenViewModel({
     required ProviderProfileService profileService,
-    required String userId, // 生成者では Firebase UID を取得
+    required String userId,
   })  : _profileService = profileService,
         firebaseUid = userId;
 
@@ -25,6 +24,9 @@ class ProfileScreenViewModel extends ChangeNotifier {
   UserProfile? _userProfile;
   UserProfile? get userProfile => _userProfile;
 
+  List<StoreProfile> _myStores = [];
+  List<StoreProfile> get myStores => _myStores;
+
   StoreProfile? _storeProfile;
   StoreProfile? get storeProfile => _storeProfile;
 
@@ -34,91 +36,118 @@ class ProfileScreenViewModel extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  String _storeId = '';
-  String get storeId => _storeId;
-
-  void _setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
-  }
+  String get storeId => _storeProfile?.id ?? '';
 
   // プロフィール情報初期化
   void clearProfile() {
     _userProfile = null;
     _storeProfile = null;
     _storeLicense = null;
+    _myStores = [];
     _mongoUserId = '';
-    _storeId = '';
     notifyListeners();
   }
 
-  Future<void> loadProfiles() async {
-    // 既にデータが存在している場合再ロードしない
-    if (_userProfile != null) return;
+  Future<void> loadProfiles({bool forceRefresh = false}) async {
+    if (firebaseUid.isEmpty) return;
+    // forceRefreshがfalseのときのみ重複ロード防止ロジックを実行
+    if (!forceRefresh && _myStores.isNotEmpty) {
+      return;
+    }
 
-    _setLoading(true);
+    _isLoading = true;
     _errorMessage = null;
+    // forceRefresh時、UIが即座にローディング状態になるように通知
+    if (forceRefresh) {
+      _myStores = [];
+      _storeProfile = null;
+      _storeLicense = null;
+    }
+    notifyListeners();
+
     try {
-      // Firebase UID でユーザー情報を取得
-      final userProfileResponse =
-          await _profileService.fetchUserProfile(firebaseUid);
+      final myStoresResponse = await _profileService.fetchAllStores();
 
-      if (!userProfileResponse.containsKey('data') ||
-          userProfileResponse['data'] == null) {
-        throw ApiException('無効なユーザーデータ形式です。');
-      }
-      final userData = userProfileResponse['data'];
-      if (userData is! Map<String, dynamic>) {
-        throw ApiException('無効なユーザーデータ形式です。');
-      }
+      if (myStoresResponse.containsKey('data') &&
+          myStoresResponse['data'] is Map) {
+        final outerData = myStoresResponse['data'] as Map<String, dynamic>;
+        if (outerData.containsKey('data') && outerData['data'] is List) {
+          final storesData = outerData['data'] as List;
+          _myStores =
+              storesData.map((data) => StoreProfile.fromJson(data)).toList();
 
-      // モデル Object を生成し、MongoDB ID と Store ID を ViewModel Status に保存する
-      _userProfile = UserProfile.fromJson(userData);
-      _mongoUserId = _userProfile?.id ?? '';
-      final fetchedStoreId = _userProfile?.storeId;
-
-      if (fetchedStoreId != null && fetchedStoreId.isNotEmpty) {
-        _storeId = fetchedStoreId;
+          _storeProfile = null;
+          _storeLicense = null;
+          await _fetchInitialUserProfile();
+        } else {
+          throw ApiException('無効な店舗リストのデータ形式です。(inner data)');
+        }
       } else {
-        if (_userProfile?.role == 'manager') {
-          throw ApiException('ユーザー情報に店舗IDが含まれていません。');
-        }
-      }
-
-      // 管理者及び storeId がある場合、店舗プロフィールを取得
-      if (_userProfile?.role == 'manager' && _storeId.isNotEmpty) {
-        // Future.waitを使用し、API２つを同時に呼出
-        final responses = await Future.wait([
-          _profileService.fetchStoreProfile(_storeId),
-          _profileService.fetchStoreLicense(_storeId),
-        ]);
-
-        final storeProfileResponse = responses[0];
-        final storeLicenseResponse = responses[1];
-
-        // StoreProfile処理
-        if (!storeProfileResponse.containsKey('data') ||
-            storeProfileResponse['data'] == null) {
-          throw ApiException('無効な店舗データ形式です。');
-        }
-        final storeData = storeProfileResponse['data'] as Map<String, dynamic>;
-        _storeProfile = StoreProfile.fromJson(storeData);
-
-        // StoreLicense処理
-        if (!storeLicenseResponse.containsKey('data') ||
-            storeLicenseResponse['data'] == null) {
-          throw ApiException('無効な店舗ライセンスデータ形式です。');
-        }
-        final licenseData =
-            storeLicenseResponse['data'] as Map<String, dynamic>;
-        _storeLicense = StoreLicense.fromJson(licenseData);
+        throw ApiException('無効な店舗リストのデータ形式です。(outer data)');
       }
     } on ApiException catch (e) {
       _errorMessage = 'データローディング失敗: ${e.message}';
     } catch (e) {
       _errorMessage = '予期せぬエラーが発生しました: $e';
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> selectStore(String storeId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      if (_userProfile == null) {
+        await _fetchInitialUserProfile();
+      }
+      final responses = await Future.wait([
+        _profileService.fetchStoreProfile(storeId),
+        _profileService.fetchStoreLicense(storeId),
+      ]);
+      final storeProfileResponse = responses[0];
+      final storeLicenseResponse = responses[1];
+      if (storeProfileResponse.containsKey('data') &&
+          storeProfileResponse['data'] is Map) {
+        _storeProfile = StoreProfile.fromJson(
+            storeProfileResponse['data'] as Map<String, dynamic>);
+      } else {
+        throw ApiException('無効な店舗データ形式です。');
+      }
+      if (storeLicenseResponse.containsKey('data') &&
+          storeLicenseResponse['data'] is Map) {
+        _storeLicense = StoreLicense.fromJson(
+            storeLicenseResponse['data'] as Map<String, dynamic>);
+      } else {
+        throw ApiException('無効な店舗ライセンスデータ形式です。');
+      }
+    } on ApiException catch (e) {
+      _errorMessage = '店舗詳細情報の読み込みに失敗しました: ${e.message}';
+    } catch (e) {
+      _errorMessage = '予期せぬエラーが発生しました: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _fetchInitialUserProfile() async {
+    if (firebaseUid.isEmpty) return;
+    try {
+      final userProfileResponse =
+          await _profileService.fetchUserProfile(firebaseUid);
+      if (userProfileResponse.containsKey('data') &&
+          userProfileResponse['data'] is Map) {
+        _userProfile = UserProfile.fromJson(
+            userProfileResponse['data'] as Map<String, dynamic>);
+        _mongoUserId = _userProfile?.id ?? '';
+      } else {
+        throw ApiException('無効なユーザーデータ形式です。');
+      }
+    } catch (e) {
+      rethrow;
     }
   }
 
@@ -126,31 +155,29 @@ class ProfileScreenViewModel extends ChangeNotifier {
       {String? userFieldKey,
       String? storeFieldKey,
       required String value}) async {
-    _setLoading(true);
+    _isLoading = true;
+    notifyListeners();
     _errorMessage = null;
     bool success = false;
     try {
       if (userFieldKey != null) {
-        // ユーザープロフィール更新時は MongoDB ID を使用
         if (_mongoUserId.isEmpty) throw ApiException('ユーザーIDが見つかりません。');
         await _profileService
             .updateUserProfile(_mongoUserId, {userFieldKey: value});
-      } else if (storeFieldKey != null && _storeId.isNotEmpty) {
-        // 店舗プロフィール更新時は Store ID を使用
+        await _fetchInitialUserProfile();
+      } else if (storeFieldKey != null && storeId.isNotEmpty) {
         await _profileService
-            .updateStoreProfile(_storeId, {storeFieldKey: value});
+            .updateStoreProfile(storeId, {storeFieldKey: value});
+        await selectStore(storeId);
       }
-
-      // 更新成功後、最新データを再取得するため既存データを初期化
-      clearProfile();
-      await loadProfiles();
       success = true;
     } on ApiException catch (e) {
       _errorMessage = '更新に失敗しました: ${e.message}';
     } catch (e) {
       _errorMessage = '予期せぬエラーが発生しました: $e';
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
     return success;
   }
