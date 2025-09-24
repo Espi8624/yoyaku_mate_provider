@@ -302,17 +302,9 @@ class WaitingService {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         final waitingList = WaitingList.fromJson(jsonResponse);
 
-        // ** 更新権限 ViewModel へ移動
-        // データが変更されたため、 polling 間隔を最小に再設定
-        // _currentPollingInterval = _minPollingInterval;
-        // if (_lastStoreId != null) {
-        //   _restartPolling(_lastStoreId!);
-        // }
-
         return waitingList;
       }
-      throw Exception(
-          'Failed to create waiting list item: ${response.statusCode}\nResponse: ${response.body}');
+      throw Exception(response.body);
     } catch (e) {
       // print('Error creating waiting list item: $e');  // Add debug log
       rethrow;
@@ -326,9 +318,6 @@ class WaitingService {
     required String storeId,
   }) async {
     try {
-      print(
-          'Updating waiting status - waitingId: $waitingId, status: $status, storeId: $storeId');
-
       final response = await http.patch(
         Uri.parse('$_baseUrl/api/waiting-list?action=status'),
         headers: {'Content-Type': 'application/json'},
@@ -339,8 +328,8 @@ class WaitingService {
         }),
       );
 
-      print('Server response status: ${response.statusCode}');
-      print('Server response body: ${response.body}');
+      // print('Server response status: ${response.statusCode}');
+      // print('Server response body: ${response.body}');
 
       if (response.statusCode != 200) {
         throw Exception('Failed to update status: ${response.statusCode}');
@@ -352,7 +341,7 @@ class WaitingService {
         _restartPolling(storeId);
       }
     } catch (e) {
-      print('Error in updateWaitingStatus: $e');
+      // print('Error in updateWaitingStatus: $e');
       rethrow;
     }
   }
