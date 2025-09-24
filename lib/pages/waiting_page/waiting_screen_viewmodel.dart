@@ -115,10 +115,10 @@ class WaitingScreenViewModel extends ChangeNotifier {
   Future<void> addWaitingItem(
       BuildContext context, Map<String, dynamic> data) async {
     _isPerformingOptimisticUpdate = true;
+
     try {
       final newWaitingItem = await _waitingService.createWaitingListItem(
         storeId: storeId,
-        // customerName: data['customerName'],
         partySize: data['partySize'],
         nationality: data['nationality'],
         contact: data['contact'],
@@ -132,12 +132,19 @@ class WaitingScreenViewModel extends ChangeNotifier {
         CustomSnackBar.show(context,
             message: '待機が正常に追加されました', status: SnackBarStatus.success);
       }
-    } on ApiException catch (e) {
+    } catch (e) {
       if (context.mounted) {
+        String errorMessage = e.toString();
+
+        const String prefix = 'Exception: ';
+        if (errorMessage.startsWith(prefix)) {
+          errorMessage = errorMessage.substring(prefix.length);
+        }
+        final finalMessage = errorMessage.trim();
+
         CustomSnackBar.show(context,
-            message: '추가 실패: ${e.message}', status: SnackBarStatus.error);
+            message: '追加失敗: $finalMessage', status: SnackBarStatus.error);
       }
-      // 失敗時、サーバーデータと同期化のためリストを再呼出
       await loadWaitingList();
     } finally {
       _isPerformingOptimisticUpdate = false;
