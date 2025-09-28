@@ -88,7 +88,7 @@ class _ProfileViewState extends State<_ProfileView>
           children: [
             // Header
             const Padding(
-              padding: EdgeInsets.all(24),
+              padding: EdgeInsets.fromLTRB(24, 12, 24, 36),
               child: Text("プロフィール設定",
                   style: TextStyle(
                       fontSize: 24,

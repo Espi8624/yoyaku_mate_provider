@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
-import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 
 class SideNavigationBar extends StatelessWidget {
@@ -77,7 +76,7 @@ class SideNavigationBar extends StatelessWidget {
                   if (isExpanded) ...[
                     InkWell(
                       onTap: () {
-                        onItemTapped(2);
+                        onItemTapped(3);
                         onToggle();
                       },
                       borderRadius: BorderRadius.circular(16),
@@ -168,14 +167,14 @@ class SideNavigationBar extends StatelessWidget {
                     ),
                   ] else ...[
                     InkWell(
-                      onTap: () => onItemTapped(2),
+                      onTap: () => onItemTapped(3),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 4.0),
                         padding: const EdgeInsets.all(4.0),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: selectedIndex == 2
+                          boxShadow: selectedIndex == 3
                               ? [
                                   BoxShadow(
                                     color: AppColors.accentPrimary
@@ -268,7 +267,7 @@ class SideNavigationBar extends StatelessWidget {
                       ? _NavItem(
                           icon: Icons.settings_rounded,
                           label: '設定',
-                          selected: selectedIndex == 3,
+                          selected: selectedIndex == 2,
                           onTap: () {
                             onItemTapped(3);
                             onToggle();
@@ -276,57 +275,57 @@ class SideNavigationBar extends StatelessWidget {
                         )
                       : _NavIcon(
                           icon: Icons.settings_rounded,
-                          selected: selectedIndex == 3,
+                          selected: selectedIndex == 2,
                           label: '設定',
-                          onTap: () => onItemTapped(3),
+                          onTap: () => onItemTapped(2),
                           isExpanded: isExpanded,
                         ),
                   const SizedBox(height: 12),
 
-                  const Divider(
-                    height: 1,
-                    thickness: 0.5,
-                    color: AppColors.border,
-                    indent: 16,
-                    endIndent: 16,
-                  ),
-                  const SizedBox(height: 12),
+                  // const Divider(
+                  //   height: 1,
+                  //   thickness: 0.5,
+                  //   color: AppColors.border,
+                  //   indent: 16,
+                  //   endIndent: 16,
+                  // ),
+                  // const SizedBox(height: 12),
 
-                  isExpanded
-                      ? _NavItem(
-                          icon: Icons.logout_rounded,
-                          label: 'ログアウト',
-                          selected: false,
-                          onTap: () {
-                            if (onLogout != null) {
-                              onLogout!();
-                            } else {
-                              CustomSnackBar.show(
-                                context,
-                                message: 'ログアウトしました',
-                                status: SnackBarStatus.info,
-                              );
-                            }
-                          },
-                        )
-                      : _NavIcon(
-                          icon: Icons.logout_rounded,
-                          selected: false,
-                          label: 'ログアウト',
-                          onTap: () {
-                            if (onLogout != null) {
-                              onLogout!();
-                            } else {
-                              CustomSnackBar.show(
-                                context,
-                                message: 'ログアウトしました',
-                                status: SnackBarStatus.info,
-                              );
-                            }
-                          },
-                          isExpanded: isExpanded,
-                        ),
-                  const SizedBox(height: 20),
+                  // isExpanded
+                  //     ? _NavItem(
+                  //         icon: Icons.logout_rounded,
+                  //         label: 'ログアウト',
+                  //         selected: false,
+                  //         onTap: () {
+                  //           if (onLogout != null) {
+                  //             onLogout!();
+                  //           } else {
+                  //             CustomSnackBar.show(
+                  //               context,
+                  //               message: 'ログアウトしました',
+                  //               status: SnackBarStatus.info,
+                  //             );
+                  //           }
+                  //         },
+                  //       )
+                  //     : _NavIcon(
+                  //         icon: Icons.logout_rounded,
+                  //         selected: false,
+                  //         label: 'ログアウト',
+                  //         onTap: () {
+                  //           if (onLogout != null) {
+                  //             onLogout!();
+                  //           } else {
+                  //             CustomSnackBar.show(
+                  //               context,
+                  //               message: 'ログアウトしました',
+                  //               status: SnackBarStatus.info,
+                  //             );
+                  //           }
+                  //         },
+                  //         isExpanded: isExpanded,
+                  //       ),
+                  // const SizedBox(height: 20),
                 ],
               ),
             ),

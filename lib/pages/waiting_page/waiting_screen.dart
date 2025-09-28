@@ -66,8 +66,8 @@ class _WaitingView extends StatelessWidget {
           // mobile layout
           return Scaffold(
             appBar: AppBar(
-              title: const Text('待機リスト',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              title:
+                  const Text('', style: TextStyle(fontWeight: FontWeight.bold)),
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               elevation: 0,
               actions: [
