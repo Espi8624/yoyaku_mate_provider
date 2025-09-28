@@ -235,12 +235,12 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         // mobile layout
         if (isMobile) {
           return Scaffold(
-            appBar: AppBar(
-              title: const Text('メニュー管理',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              elevation: 0,
-            ),
+            // appBar: AppBar(
+            //   title: const Text('メニュー管理',
+            //       style: TextStyle(fontWeight: FontWeight.bold)),
+            //   backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            //   elevation: 0,
+            // ),
             body: Stack(
               children: [
                 Positioned.fill(

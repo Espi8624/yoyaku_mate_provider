@@ -16,34 +16,60 @@ class NavigationBarMobile extends StatelessWidget {
     return BottomNavigationBar(
       currentIndex: selectedIndex,
       onTap: onItemTapped,
-      selectedItemColor: AppColors.accentPrimary,
-      unselectedItemColor: AppColors.textSecondary.withOpacity(0.8),
+      selectedLabelStyle: const TextStyle(fontSize: 0),
+      unselectedLabelStyle: const TextStyle(fontSize: 0),
       type: BottomNavigationBarType.fixed,
       backgroundColor: AppColors.cardBackground,
       // 各タブの定義
       items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(
-          icon: Icon(Icons.list_alt_rounded),
-          label: '待機リスト',
+          icon: Icon(
+            Icons.list_alt_rounded,
+            color: AppColors.textTertiary,
+          ),
+          activeIcon: Icon(
+            Icons.list_alt_rounded,
+            color: AppColors.accentPrimary,
+          ),
+          label: '',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.table_view_rounded),
-          label: 'メニュー管理',
+          icon: Icon(
+            Icons.table_view_rounded,
+            color: AppColors.textTertiary,
+          ),
+          activeIcon: Icon(
+            Icons.table_view_rounded,
+            color: AppColors.accentPrimary,
+          ),
+          label: '',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline_rounded),
-          activeIcon: Icon(Icons.person),
-          label: 'プロフィール',
+          icon: Icon(
+            Icons.settings_outlined,
+            color: AppColors.textTertiary,
+          ),
+          activeIcon: Icon(
+            Icons.settings_rounded,
+            color: AppColors.accentPrimary,
+          ),
+          label: '',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.settings_outlined),
-          activeIcon: Icon(Icons.settings_rounded),
-          label: '設定',
+          icon: Icon(
+            Icons.person_outline_rounded,
+            color: AppColors.textTertiary,
+          ),
+          activeIcon: Icon(
+            Icons.person,
+            color: AppColors.accentPrimary,
+          ),
+          label: '',
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.logout_rounded),
-          label: 'ログアウト',
-        ),
+        // BottomNavigationBarItem(
+        //   icon: Icon(Icons.logout_rounded),
+        //   label: 'ログアウト',
+        // ),
       ],
     );
   }

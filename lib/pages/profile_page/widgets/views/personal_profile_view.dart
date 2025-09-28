@@ -1,5 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 import '../../../../models/user_profile.dart';
 import '../../../../widgets/common_widgets/custom_snack_bar.dart';
 import '../../profile_screen_viewmodel.dart';
@@ -41,50 +44,96 @@ class PersonalProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return Column(
       children: [
-        ProfileHeader(
-          name: userProfile.name,
-          imageUrl: userProfile.avatarUrl,
-          onTapImage: () => CustomSnackBar.show(context,
-              message: '準備中です', status: SnackBarStatus.info),
-          onTapName: () => _showEditDialog(context,
-              title: 'お名前',
-              fieldKey: 'user_name',
-              initialValue: userProfile.name),
-          subtitle: userProfile.role == 'manager' ? '管理者' : '職員',
+        // 스크롤 가능한 상단 콘텐츠
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            children: [
+              // --- 기존 프로필 정보 UI ---
+              ProfileHeader(
+                name: userProfile.name,
+                imageUrl: userProfile.avatarUrl,
+                onTapImage: () => CustomSnackBar.show(context,
+                    message: '準備中です', status: SnackBarStatus.info),
+                onTapName: () => _showEditDialog(context,
+                    title: 'お名前',
+                    fieldKey: 'user_name',
+                    initialValue: userProfile.name),
+                subtitle: userProfile.role == 'manager' ? '管理者' : '職員',
+              ),
+              const SizedBox(height: 32),
+              ProfileSection(
+                title: '基本情報',
+                children: [
+                  ProfileSettingItem(
+                    title: 'E-mail',
+                    subtitle: userProfile.email,
+                    onTap: () => _showEditDialog(context,
+                        title: 'E-mail',
+                        fieldKey: 'email',
+                        initialValue: userProfile.email),
+                  ),
+                  ProfileSettingItem(
+                    title: 'パスワード',
+                    subtitle: '********',
+                    onTap: () => _showEditDialog(context,
+                        title: 'パスワード変更',
+                        fieldKey: 'password',
+                        initialValue: '',
+                        isPassword: true),
+                  ),
+                  ProfileSettingItem(
+                    title: '電話番号',
+                    subtitle: userProfile.phone,
+                    onTap: () => _showEditDialog(context,
+                        title: '電話番号',
+                        fieldKey: 'phone',
+                        initialValue: userProfile.phone),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24), // 하단 여백 추가
+            ],
+          ),
         ),
-        const SizedBox(height: 32),
-        ProfileSection(
-          title: '基本情報',
-          children: [
-            ProfileSettingItem(
-              title: 'E-mail',
-              subtitle: userProfile.email,
-              onTap: () => _showEditDialog(context,
-                  title: 'E-mail',
-                  fieldKey: 'email',
-                  initialValue: userProfile.email),
+        // 하단 고정 로그아웃 버튼
+        Container(
+          padding: const EdgeInsets.all(24),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.logout_rounded, color: AppColors.error),
+                label: const Text(
+                  'ログアウト',
+                  style: TextStyle(
+                      color: AppColors.error, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () async {
+                  final confirmed = await showConfirmationDialog(
+                    context: context,
+                    title: 'ログアウト',
+                    content: '本当にログアウトしますか？',
+                    confirmText: 'はい。',
+                  );
+                  if (confirmed == true) {
+                    await FirebaseAuth.instance.signOut();
+                  }
+                },
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.error, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  minimumSize: const Size(double.infinity, 50), // 버튼 전체 너비 사용
+                ),
+              ),
             ),
-            ProfileSettingItem(
-              title: 'パスワード',
-              subtitle: '********',
-              onTap: () => _showEditDialog(context,
-                  title: 'パスワード変更',
-                  fieldKey: 'password',
-                  initialValue: '',
-                  isPassword: true),
-            ),
-            ProfileSettingItem(
-              title: '電話番号',
-              subtitle: userProfile.phone,
-              onTap: () => _showEditDialog(context,
-                  title: '電話番号',
-                  fieldKey: 'phone',
-                  initialValue: userProfile.phone),
-            ),
-          ],
+          ),
         ),
       ],
     );
