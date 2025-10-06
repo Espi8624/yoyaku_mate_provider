@@ -40,9 +40,16 @@ class _ProfileViewState extends State<_ProfileView>
   void _onViewModelUpdated() {
     if (!mounted) return;
 
+    // エラー表示
     if (_viewModel.errorMessage != null) {
       CustomSnackBar.show(context,
           message: _viewModel.errorMessage!, status: SnackBarStatus.error);
+    }
+    // 成功表示
+    else if (_viewModel.successMessage != null) {
+      CustomSnackBar.show(context,
+          message: _viewModel.successMessage!, status: SnackBarStatus.success);
+      _viewModel.clearSuccessMessage();
     }
 
     // データが変更される時、TabController 設定を行う

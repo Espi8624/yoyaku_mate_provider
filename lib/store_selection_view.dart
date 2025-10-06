@@ -61,9 +61,17 @@ class StoreSelectionView extends StatelessWidget {
                         final store = stores[index];
                         return StoreCard(
                           store: store,
-                          onTap: () {
+                          onTap: () async {
                             print('Store Card \'${store.name}\' Tapped!');
-                            vm.selectStore(store.id);
+
+                            // ViewModelのselectStoreメソッドを呼出
+                            final success = await vm.selectStore(store.id);
+
+                            // 問題なく成功し、Widgetがまだ画面に存在する場合、
+                            // 現在の画面（StoreSelectionView）を閉る
+                            if (success && context.mounted) {
+                              Navigator.of(context).pop();
+                            }
                           },
                         );
                       },
