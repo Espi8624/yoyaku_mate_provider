@@ -5,16 +5,26 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yoyaku_mate_provider/login_page.dart';
 import 'package:yoyaku_mate_provider/main.dart';
-import 'package:yoyaku_mate_provider/sign_up_complete_page.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up_prompt_page.dart';
+// import 'package:yoyaku_mate_provider/sign_up_complete_page.dart';
 import 'package:yoyaku_mate_provider/sign_up_page.dart';
+
+bool _isSignUpInProgress = false;
+
+void setSignUpInProgress(bool value) {
+  _isSignUpInProgress = value;
+}
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription<User?> _authSubscription;
 
   GoRouterRefreshStream() {
-    _authSubscription = FirebaseAuth.instance
-        .authStateChanges()
-        .listen((_) => notifyListeners());
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) {
+      // SignUp中でない場合のみnotifyListeners呼出
+      if (!_isSignUpInProgress) {
+        notifyListeners();
+      }
+    });
   }
 
   @override
@@ -31,7 +41,6 @@ final GoRouter router = GoRouter(
   // 初期経路
   initialLocation: '/',
 
-  // 3. URL定義
   routes: [
     GoRoute(
       path: '/',
@@ -56,42 +65,47 @@ final GoRouter router = GoRouter(
       },
     ),
     // 会員加入完了ページ
+    // GoRoute(
+    //   path: '/signup/complete',
+    //   builder: (context, state) => const SignUpCompletePage(),
+    // ),
+    // GoRoute(
+    //   path: '/complete',
+    //   builder: (context, state) => const SignUpCompletePage(),
+    // ),
     GoRoute(
-      path: '/signup/complete',
-      builder: (context, state) => const SignUpCompletePage(),
-    ),
-    GoRoute(
-      path: '/complete',
-      builder: (context, state) => const SignUpCompletePage(),
+      path: '/signup-prompt',
+      builder: (context, state) => const SignUpPromptPage(),
     ),
   ],
 
   // 自動でページ移動
   redirect: (BuildContext context, GoRouterState state) {
-    final String location = state.matchedLocation;
-    final String fullUri = state.uri.toString();
-    print(
-        'GoRouter redirecting, matched location: $location, fullUri: $fullUri');
+    final loggedIn = FirebaseAuth.instance.currentUser != null;
+    final location = state.matchedLocation;
 
-    if (location == '/complete' || location == '/signup/complete') {
-      print('Deep link detected. Allowing navigation to /signup/complete.');
-      if (location != '/signup/complete') {
-        return '/signup/complete';
-      }
+    if (_isSignUpInProgress) {
       return null;
     }
 
-    // デイップリンクでない場合のみ、既存のログイン状態検査を実行
-    final bool loggedIn = FirebaseAuth.instance.currentUser != null;
-    final bool isGoingToAuthPage =
-        location == '/login' || location == '/signup';
-    final bool isAddingStore = fullUri.contains('mode=add_store');
+    // SignUpPageに対する例外処理
+    if (location == '/signup') {
+      return null;
+    }
 
-    if (!loggedIn && !isGoingToAuthPage) {
+    // if (location == '/complete') {
+    //   return '/signup/complete';
+    // }
+
+    // ログアウト状態の規則
+    final onAuthFlow = location == '/login' || location == '/signup-prompt';
+    // || location == '/signup/complete';
+    if (!loggedIn && !onAuthFlow) {
       return '/login';
     }
 
-    if (loggedIn && isGoingToAuthPage && !isAddingStore) {
+    // ログイン状態の規則
+    if (loggedIn && location == '/login') {
       return '/';
     }
 

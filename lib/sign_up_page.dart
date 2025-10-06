@@ -1,17 +1,20 @@
-import 'dart:io';
-import 'package:file_picker/file_picker.dart';
+// import 'dart:io';
+// import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
+// import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+// import 'package:url_launcher/url_launcher.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/provider_profile.dart';
+import 'package:yoyaku_mate_provider/models/store_profile.dart';
+import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
-import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
+
+import 'package:yoyaku_mate_provider/routes.dart' show setSignUpInProgress;
 
 class SignUpPage extends StatefulWidget {
   final String? mode; // 'add_store' or null
@@ -26,9 +29,7 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _role;
   bool _isLoading = false;
   String? _errorMessage;
-  String? _lineLoginUrl;
-  File? _licenseImageFile;
-  final ImagePicker _picker = ImagePicker();
+  // String? _lineLoginUrl;
 
   late PageController _pageController;
   int _currentPageIndex = 0;
@@ -53,16 +54,12 @@ class _SignUpPageState extends State<SignUpPage> {
   void initState() {
     super.initState();
 
-    // 基本デフォルトページは0
     int initialPage = 0;
-
-    // 店舗追加モードかを確認し、初期状態を設定
     if (widget.mode == 'add_store') {
       _role = 'manager';
       initialPage = 2;
     }
 
-    // 計算されたinitialPageでPageControllerを生成
     _pageController = PageController(initialPage: initialPage);
 
     _pageController.addListener(() {
@@ -114,38 +111,6 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
-  // イメージ選択する関数
-  Future<void> _pickImage() async {
-    try {
-      File? selectedFile;
-      if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-        final result = await FilePicker.platform
-            .pickFiles(type: FileType.image, allowMultiple: false);
-        if (result != null && result.files.single.path != null) {
-          selectedFile = File(result.files.single.path!);
-        }
-      } else {
-        final XFile? pickedFile =
-            await _picker.pickImage(source: ImageSource.gallery);
-        if (pickedFile != null) {
-          selectedFile = File(pickedFile.path);
-        }
-      }
-      if (selectedFile != null) {
-        setState(() {
-          _licenseImageFile = selectedFile;
-          _errorMessage = null; // エラーメッセージをクリア
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = "イメージ選択中にエラー発生: $e";
-        });
-      }
-    }
-  }
-
   Future<void> _handleSignUp() async {
     setState(() {
       _isLoading = true;
@@ -161,8 +126,49 @@ class _SignUpPageState extends State<SignUpPage> {
       String firebaseUid;
       final isAddingStore = widget.mode == 'add_store';
 
-      // 認証処理
-      if (isAddingStore) {
+      if (!isAddingStore) {
+        setSignUpInProgress(true);
+
+        // print("--- [SignUpPage] Firebase 계정 생성 전, 플래그 미리 설정 ---");
+        if (!mounted) {
+          throw Exception('Widget unmounted before signup');
+        }
+
+        final profileVM = context.read<ProfileScreenViewModel>();
+        profileVM.prepareForSignUp();
+        // print("--- [SignUpPage] prepareForSignUp() 호출 완료 (계정 생성 전) ---");
+
+        // 이제 Firebase 계정 생성
+        final email = _role == 'manager'
+            ? managerEmailController.text.trim()
+            : staffEmailController.text.trim();
+
+        final password = _role == 'manager'
+            ? managerPasswordController.text
+            : staffPasswordController.text;
+
+        final userCredential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(email: email, password: password);
+        newUser = userCredential.user;
+        if (newUser == null) throw Exception('Firebase user creation failed.');
+
+        await newUser.reload();
+        newUser = FirebaseAuth.instance.currentUser;
+        if (newUser == null) throw Exception('Failed to reload Firebase user.');
+
+        firebaseUid = newUser.uid;
+        final token = await newUser.getIdToken(true);
+        if (token == null)
+          throw Exception('Failed to retrieve Firebase ID token.');
+        idToken = token;
+
+        // print("--- [SignUpPage] Firebase 계정 생성 완료 ---");
+
+        if (!mounted) {
+          // print("[SignUpPage] Widget unmounted after Firebase creation");
+          throw Exception('Widget unmounted during signup');
+        }
+      } else {
         final currentUser = FirebaseAuth.instance.currentUser;
         if (currentUser == null) throw ApiException('ログイン状態が確認できません。');
         firebaseUid = currentUser.uid;
@@ -170,26 +176,8 @@ class _SignUpPageState extends State<SignUpPage> {
         if (token == null)
           throw Exception('Failed to retrieve Firebase ID token.');
         idToken = token;
-      } else {
-        // 新規加入
-        final email = _role == 'manager'
-            ? managerEmailController.text.trim()
-            : staffEmailController.text.trim();
-        final password = _role == 'manager'
-            ? managerPasswordController.text
-            : staffPasswordController.text;
-        final userCredential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(email: email, password: password);
-        newUser = userCredential.user;
-        if (newUser == null) throw Exception('Firebase user creation failed.');
-        firebaseUid = newUser.uid;
-        final token = await newUser.getIdToken(true);
-        if (token == null)
-          throw Exception('Failed to retrieve Firebase ID token.');
-        idToken = token;
       }
 
-      // プロフィール情報構築
       late final ProviderProfile profile;
       if (_role == 'manager') {
         profile = ProviderProfile(
@@ -204,7 +192,6 @@ class _SignUpPageState extends State<SignUpPage> {
           storeEmail: managerEmailController.text.trim(),
         );
       } else {
-        // staff
         final storeExists =
             await profileService.checkStoreExists(staffStoreIdController.text);
         if (!storeExists) throw ApiException('指定された店番号は存在しません');
@@ -218,51 +205,58 @@ class _SignUpPageState extends State<SignUpPage> {
         );
       }
 
-      // Backendにプロフィール情報を送信
-      final Map<String, dynamic> createdProfileMap;
+      final Map<String, dynamic> createdProfileMap = isAddingStore
+          ? await profileService.addNewStore(profile, idToken)
+          : await profileService.signUp(profile, idToken);
 
-      if (isAddingStore) {
-        // 店舗追加モード
-        createdProfileMap = await profileService.addNewStore(profile, idToken);
-      } else {
-        // 新規加入モード
-        createdProfileMap = await profileService.signUp(profile, idToken);
+      // print("--- [SignUpPage] 백엔드로부터 받은 원본 응답 ---");
+      // print(createdProfileMap);
+
+      if (!mounted) {
+        // print("[SignUpPage] Widget unmounted after backend response");
+        return;
       }
 
-      final userData = createdProfileMap['data'] as Map<String, dynamic>? ?? {};
-      final storeId = userData['store_id'] as String?;
-      _lineLoginUrl = userData['line_login_url'] as String?;
+      final responseData = createdProfileMap['data'] as Map<String, dynamic>;
+      final userJson = responseData['user'] as Map<String, dynamic>;
+      final profileVM = context.read<ProfileScreenViewModel>();
+
+      // print("--- [SignUpPage] 데이터 주입 시도 ---");
+      // print("  - 현재 ViewModel 인스턴스 해시코드: ${profileVM.hashCode}");
+      // print("  - isAddingStore: $isAddingStore");
 
       if (_role == 'manager') {
-        if (_licenseImageFile != null && storeId != null) {
-          await profileService.uploadLicenseImage(storeId, _licenseImageFile!);
-        }
-        if (_lineLoginUrl == null || _lineLoginUrl!.isEmpty) {
-          throw ApiException('LINE連携URLの取得に失敗しました。');
-        }
-        _nextPage();
-      } else {
-        // staff
-        await FirebaseAuth.instance.signOut();
-        if (mounted) {
-          CustomSnackBar.show(context,
-              message: '会員登録が完了しました。ログインしてください',
-              status: SnackBarStatus.success);
-          context.go('/login');
+        // 店舗追加パターン
+        if (isAddingStore) {
+          final storeJson = responseData['store'] as Map<String, dynamic>?;
+          if (storeJson != null) {
+            final newStoreProfile = StoreProfile.fromJson(storeJson);
+            profileVM.addStore(newStoreProfile);
+          }
+          context.go('/signup-prompt');
+        } else {
+          // 新規登録パターン
+          final storeJson = responseData['store'] as Map<String, dynamic>?;
+          final newUserProfile = UserProfile.fromJson(userJson);
+          final List<StoreProfile> newStores = [];
+          if (storeJson != null) {
+            newStores.add(StoreProfile.fromJson(storeJson));
+          }
+
+          profileVM.setInitialData(newUserProfile, newStores);
+          context.go('/signup-prompt');
         }
       }
     } catch (e) {
-      // 新規加入に失敗した場合にのみ、作成されたユーザーを削除
       if (widget.mode != 'add_store' && newUser != null) {
         await newUser.delete();
       }
-      if (mounted) {
-        setState(() {
-          _errorMessage =
-              "エラー : ${e is ApiException ? e.message : e.toString()}";
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = "エラー : ${e is ApiException ? e.message : e.toString()}";
+      });
     } finally {
+      setSignUpInProgress(false);
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -271,31 +265,36 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
-  Future<void> _launchLineLogin() async {
-    setState(() => _isLoading = true);
-    try {
-      if (_lineLoginUrl == null)
-        throw Exception('LINE Login URL is not available.');
-      final Uri url = Uri.parse(_lineLoginUrl!);
+  // Future<void> _launchLineLogin() async {
+  //   setState(() => _isLoading = true);
+  //   try {
+  //     if (_lineLoginUrl == null)
+  //       throw Exception('LINE Login URL is not available.');
+  //     final Uri url = Uri.parse(_lineLoginUrl!);
 
-      if (!await launchUrl(url, mode: LaunchMode.platformDefault)) {
-        throw Exception('Could not launch the URL.');
-      }
+  //     if (!await launchUrl(url, mode: LaunchMode.platformDefault)) {
+  //       throw Exception('Could not launch the URL.');
+  //     }
 
-      // 店舗追加モードでない場合ログアウトを実行
-      if (widget.mode != 'add_store') {
-        await FirebaseAuth.instance.signOut();
-      }
-    } catch (e) {
-      print('Error launching URL: $e');
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'LINEを開けません。アプリが設置されているか確認をお願いします。';
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  //     if (widget.mode != 'add_store') {
+  //       if (mounted) {
+  //         context.go('/signup-prompt');
+  //       }
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       setState(() {
+  //         _errorMessage = 'LINEを開けません。アプリが設置されているか確認をお願いします。';
+  //       });
+  //     }
+  //   } finally {
+  //     if (mounted) {
+  //       setState(() {
+  //         _isLoading = false;
+  //       });
+  //     }
+  //   }
+  // }
 
   void _nextPage() {
     FocusScope.of(context).unfocus();
@@ -362,7 +361,7 @@ class _SignUpPageState extends State<SignUpPage> {
         _buildRoleStep(),
         _buildManagerInfoStep1(),
         _buildManagerInfoStep2(),
-        _buildLineIntegrationStep()
+        // _buildLineIntegrationStep()
       ];
     } else if (_role == 'staff') {
       return [_buildRoleStep(), _buildStaffInfoStep1(), _buildStaffInfoStep2()];
@@ -388,7 +387,6 @@ class _SignUpPageState extends State<SignUpPage> {
           icon: Icons.storefront,
           onPressed: () {
             setState(() => _role = 'manager');
-            // PageViewのchildrenが変更された後、次のframeでページ移動
             WidgetsBinding.instance.addPostFrameCallback((_) => _nextPage());
           },
         ),
@@ -456,30 +454,6 @@ class _SignUpPageState extends State<SignUpPage> {
               controller: storePhoneController,
               label: '店舗電話番号',
               type: TextInputType.phone),
-          const SizedBox(height: 24),
-          const Text('営業許可証',
-              style: TextStyle(
-                  color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: _pickImage,
-            child: Container(
-              height: 150,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.border),
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.grey.shade100,
-              ),
-              child: _licenseImageFile == null
-                  ? const Center(
-                      child: Icon(Icons.add_a_photo_outlined,
-                          color: AppColors.textSecondary, size: 40))
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(11),
-                      child: Image.file(_licenseImageFile!, fit: BoxFit.cover)),
-            ),
-          ),
           if (_errorMessage != null)
             Padding(
               padding: const EdgeInsets.only(top: 16),
@@ -487,7 +461,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   style: const TextStyle(color: AppColors.error),
                   textAlign: TextAlign.center),
             ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 60),
           _buildActionButton(
             label: '登録',
             onPressed: _handleSignUp,
@@ -561,43 +535,38 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  Widget _buildLineIntegrationStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Spacer(),
-        const Icon(Icons.check_circle_outline, color: Colors.green, size: 80),
-        const SizedBox(height: 24),
-        const Text('申請が仮受付されました。',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center),
-        const SizedBox(height: 16),
-        const Text(
-            '最後に、ご本人確認のためにLINEアカウントを連携してください。下のボタンを押して、LINEで申請を完了してください。',
-            style: TextStyle(
-                fontSize: 15, color: AppColors.textSecondary, height: 1.5),
-            textAlign: TextAlign.center),
-        const Spacer(),
-        _buildActionButton(
-          label: 'LINEで申請完了',
-          onPressed: () {
-            // print("--- LINEで申請完了 버튼 클릭됨 ---");
-            // print("현재 _isLoading 상태: $_isLoading");
-            // print("현재 _lineLoginUrl: $_lineLoginUrl");
-
-            // _isLoadingで無い時のみ、関数を呼び出すように防御コードを追加
-            if (!_isLoading) {
-              _launchLineLogin();
-            }
-          },
-          isLoading: _isLoading,
-          isLineButton: true,
-        ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
+  // Widget _buildLineIntegrationStep() {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.center,
+  //     mainAxisAlignment: MainAxisAlignment.center,
+  //     children: [
+  //       const Spacer(),
+  //       const Icon(Icons.check_circle_outline, color: Colors.green, size: 80),
+  //       const SizedBox(height: 24),
+  //       const Text('申請が仮受付されました。',
+  //           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+  //           textAlign: TextAlign.center),
+  //       const SizedBox(height: 16),
+  //       const Text(
+  //           '最後に、ご本人確認のためにLINEアカウントを連携してください。下のボタンを押して、LINEで申請を完了してください。',
+  //           style: TextStyle(
+  //               fontSize: 15, color: AppColors.textSecondary, height: 1.5),
+  //           textAlign: TextAlign.center),
+  //       const Spacer(),
+  //       _buildActionButton(
+  //         label: 'LINEで申請完了',
+  //         onPressed: () {
+  //           if (!_isLoading) {
+  //             _launchLineLogin();
+  //           }
+  //         },
+  //         isLoading: _isLoading,
+  //         isLineButton: true,
+  //       ),
+  //       const SizedBox(height: 16),
+  //     ],
+  //   );
+  // }
 
   Widget _buildRoleButton(
       {required String label,

@@ -42,18 +42,43 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProxyProvider<User?, ProfileScreenViewModel>(
           create: (context) => ProfileScreenViewModel(
             profileService: context.read<ProviderProfileService>(),
-            userId: '',
+            userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+            autoLoad: true,
           ),
           update: (context, user, previousViewModel) {
             final newUid = user?.uid ?? '';
-            // UIDが変更された時のみ新しいViewModelを生成し、データ損失防止
-            if (previousViewModel == null ||
-                previousViewModel.firebaseUid != newUid) {
+
+            // print("🔄 [ChangeNotifierProxyProvider] update 호출됨!");
+            // print("   - newUid: '$newUid'");
+            // print(
+            //     "   - previousViewModel?.userId: '${previousViewModel?.userId ?? 'null'}'");
+
+            // previousViewModelがnullの場合は新しいインスタンスを作成
+            if (previousViewModel == null) {
+              // print("   ✗ previousViewModel이 null → 새 인스턴스 생성");
               return ProfileScreenViewModel(
                 profileService: context.read<ProviderProfileService>(),
                 userId: newUid,
+                autoLoad: true,
               );
             }
+
+            // 空欄への変更は無視
+            if (newUid.isEmpty && previousViewModel.userId.isNotEmpty) {
+              // print("   ⚠️  newUid가 비어있음 → 무시하고 기존 인스턴스 유지");
+              return previousViewModel;
+            }
+
+            // userIdが同一なら既存のインスタンスを維持
+            if (previousViewModel.userId == newUid) {
+              // print("   ✓ userId 동일 → 기존 인스턴스 유지");
+              return previousViewModel;
+            }
+
+            // userIdが実際に変更された場合のみupdateUserを呼び出す
+            // print(
+            //     "   ✗ userId 변경 감지 ('${previousViewModel.userId}' → '$newUid')");
+            previousViewModel.updateUser(newUid, autoLoad: true);
             return previousViewModel;
           },
         ),
@@ -108,30 +133,22 @@ class _HomeScreenState extends State<HomeScreen> {
     // final userProvider = Provider.of<UserProvider>(context, listen: false);
     final profileVM = context.watch<ProfileScreenViewModel>();
 
-    // データローディングスタート
-    if (profileVM.userProfile == null &&
-        !profileVM.isLoading &&
-        profileVM.errorMessage == null &&
-        profileVM.firebaseUid.isNotEmpty) {
-      // プレイム終了直後に実行
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        // ViewModelを取り戻し、loadProfiles()を呼び出す
-        context.read<ProfileScreenViewModel>().loadProfiles();
-      });
-    }
+    // print("--- [HomeScreen] build 메서드 호출됨! ---");
+    // print("  - 현재 보고 있는 ViewModel 해시코드: ${profileVM.hashCode}");
+    // print("  - myStores 개수: ${profileVM.myStores.length}");
 
     // ローディング・エラー画面処理
     if (profileVM.isLoading && profileVM.userProfile == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    if (!profileVM.isLoading && profileVM.userProfile == null) {
+    if (profileVM.errorMessage != null && profileVM.userProfile == null) {
       return Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('データローディング失敗: ${profileVM.errorMessage ?? "不明なエラー"}'),
+              Text('データローディング失敗: ${profileVM.errorMessage}'),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
@@ -145,7 +162,13 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final isStoreSelected = profileVM.storeProfile != null;
+    // ユーザーのプロフィールがない場合
+    if (profileVM.userProfile == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final bool isStoreSelected = profileVM.storeProfile != null;
+    final bool hasStores = profileVM.myStores.isNotEmpty;
 
     // 選択された店舗がある場合、従来のメインダッシュボードUIを表示
     if (isStoreSelected) {
@@ -211,14 +234,14 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
       );
-    } else {
-      if (profileVM.myStores.isEmpty) {
-        return const Scaffold(
-            body: Center(
-          child: Text('所属された店舗がありません。管理者にお問い合わせください。'),
-        ));
-      }
+    } else if (hasStores) {
       return const StoreSelectionView();
+    } else {
+      return const Scaffold(
+        body: Center(
+          child: Text('所属された店舗がありません。管理者にお問い合わせください。'),
+        ),
+      );
     }
   }
 }
