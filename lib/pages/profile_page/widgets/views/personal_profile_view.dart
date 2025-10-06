@@ -46,12 +46,10 @@ class PersonalProfileView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 스크롤 가능한 상단 콘텐츠
         Expanded(
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             children: [
-              // --- 기존 프로필 정보 UI ---
               ProfileHeader(
                 name: userProfile.name,
                 imageUrl: userProfile.avatarUrl,
@@ -94,11 +92,10 @@ class PersonalProfileView extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 24), // 하단 여백 추가
+              const SizedBox(height: 24),
             ],
           ),
         ),
-        // 하단 고정 로그아웃 버튼
         Container(
           padding: const EdgeInsets.all(24),
           child: SafeArea(
@@ -106,11 +103,13 @@ class PersonalProfileView extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.logout_rounded, color: AppColors.error),
+                icon: const Icon(Icons.logout_rounded,
+                    color: AppColors.textPrimaryLight),
                 label: const Text(
                   'ログアウト',
                   style: TextStyle(
-                      color: AppColors.error, fontWeight: FontWeight.bold),
+                      color: AppColors.textPrimaryLight,
+                      fontWeight: FontWeight.bold),
                 ),
                 onPressed: () async {
                   final confirmed = await showConfirmationDialog(
@@ -124,12 +123,13 @@ class PersonalProfileView extends StatelessWidget {
                   }
                 },
                 style: OutlinedButton.styleFrom(
+                  backgroundColor: AppColors.error,
                   side: const BorderSide(color: AppColors.error, width: 1.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  minimumSize: const Size(double.infinity, 50), // 버튼 전체 너비 사용
+                  minimumSize: const Size(double.infinity, 50),
                 ),
               ),
             ),

@@ -161,7 +161,7 @@ class ProviderProfileService {
       body: jsonEncode(profile.toJson()),
     );
 
-    if (response.statusCode == 201) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(utf8.decode(response.bodyBytes));
     } else {
       throw ApiException(
@@ -257,7 +257,7 @@ class ProviderProfileService {
       body: jsonEncode(profile.toJson()),
     );
 
-    if (response.statusCode == 201) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
       // 201 Created
       return json.decode(utf8.decode(response.bodyBytes));
     } else {
