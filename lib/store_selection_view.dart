@@ -22,8 +22,8 @@ class StoreSelectionView extends StatelessWidget {
 
   Widget _buildStoreList(BuildContext context, ProfileScreenViewModel vm,
       List<StoreProfile> stores, String userName) {
-    void _navigateToSignUp() {
-      context.go('/signup?mode=add_store');
+    void navigateToSignUp() {
+      context.push('/signup?mode=add_store');
     }
 
     return SafeArea(
@@ -83,7 +83,7 @@ class StoreSelectionView extends StatelessWidget {
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.add_business_outlined),
                 label: const Text('新しい店舗を追加'),
-                onPressed: _navigateToSignUp,
+                onPressed: navigateToSignUp,
                 style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 14),

@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/panels/action_button_panel_mobile.dart';
 import '../../models/menu_list.dart';
@@ -158,13 +162,16 @@ class _MenuManagementViewState extends State<_MenuManagementView>
   }
 
   Future<void> _showAddMenuDialog() async {
-    final newMenu = await showDialog<MenuListItem>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => MenuFormDialog(
           storeId: _viewModel.storeId,
           category: _viewModel.categories[_tabController.index]),
     );
-    if (newMenu != null) {
+
+    if (result != null) {
+      final newMenu = result['menu'] as MenuListItem;
+
       _viewModel.addMenu(newMenu);
     }
   }
@@ -172,13 +179,29 @@ class _MenuManagementViewState extends State<_MenuManagementView>
   Future<void> _showEditMenuDialog(int categoryIndex, int menuIndex) async {
     final category = _viewModel.categories[categoryIndex];
     final menuItem = _viewModel.categorizedMenu[category]![menuIndex];
-    final updatedMenu = await showDialog<MenuListItem>(
+
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => MenuFormDialog(
           menuItem: menuItem, storeId: _viewModel.storeId, category: category),
     );
-    if (updatedMenu != null) {
-      _viewModel.editMenu(updatedMenu);
+
+    if (result != null) {
+      final updatedMenu = result['menu'] as MenuListItem;
+      final imageBytes = result['imageFile'] as Uint8List?;
+
+      if (imageBytes != null) {
+        final tempDir = await getTemporaryDirectory();
+
+        final path =
+            '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+        final imageFile = await File(path).writeAsBytes(imageBytes);
+        _viewModel.updateMenuWithImage(updatedMenu, imageFile);
+      } else {
+        // イメージが変更されていない場合
+        _viewModel.editMenu(updatedMenu);
+      }
     }
   }
 

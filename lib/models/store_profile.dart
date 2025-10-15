@@ -4,8 +4,7 @@ class StoreProfile {
   final String address;
   final String phone;
   final String bizNumber;
-  final String? logoUrl;
-  // ★★★ 1. verificationStatus를 nullable(String?)로 변경합니다. ★★★
+  final String? storeImageUrl;
   final String? verificationStatus;
 
   StoreProfile({
@@ -14,7 +13,7 @@ class StoreProfile {
     required this.address,
     required this.phone,
     required this.bizNumber,
-    this.logoUrl,
+    this.storeImageUrl,
     this.verificationStatus,
   });
 
@@ -25,7 +24,7 @@ class StoreProfile {
       address: json['address'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
       bizNumber: json['biz_number'] as String? ?? '',
-      logoUrl: json['logo_url'] as String?, // API 応答に合わせてフィールド名調整
+      storeImageUrl: json['store_image_url'] as String?, // API 応答に合わせてフィールド名調整
       verificationStatus: json['verification_status'] as String?,
     );
   }

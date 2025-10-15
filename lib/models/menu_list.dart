@@ -9,7 +9,7 @@ class MenuListItem extends Equatable {
   final String title;
   final String description;
   final double price;
-  final String imageUrl;
+  final String menuImageUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String menuStatus;
@@ -23,7 +23,7 @@ class MenuListItem extends Equatable {
     required this.title,
     required this.description,
     required this.price,
-    required this.imageUrl,
+    required this.menuImageUrl,
     required this.createdAt,
     required this.updatedAt,
     required this.menuStatus,
@@ -31,7 +31,19 @@ class MenuListItem extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, storeId, menuId, category, title, description, price, imageUrl, createdAt, updatedAt, menuStatus];
+  List<Object?> get props => [
+        id,
+        storeId,
+        menuId,
+        category,
+        title,
+        description,
+        price,
+        menuImageUrl,
+        createdAt,
+        updatedAt,
+        menuStatus
+      ];
 
   MenuListItem copyWith({
     String? id,
@@ -41,7 +53,7 @@ class MenuListItem extends Equatable {
     String? title,
     String? description,
     double? price,
-    String? imageUrl,
+    String? menuImageUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? menuStatus,
@@ -56,11 +68,12 @@ class MenuListItem extends Equatable {
       title: title ?? this.title,
       description: description ?? this.description,
       price: price ?? this.price,
-      imageUrl: imageUrl ?? this.imageUrl,
+      menuImageUrl: menuImageUrl ?? this.menuImageUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       menuStatus: menuStatus ?? this.menuStatus,
-      tempImageBytes: clearTempImage ? null : tempImageBytes ?? this.tempImageBytes,
+      tempImageBytes:
+          clearTempImage ? null : tempImageBytes ?? this.tempImageBytes,
     );
   }
 
@@ -73,9 +86,13 @@ class MenuListItem extends Equatable {
       title: json['title']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
-      imageUrl: json['image']?.toString() ?? '',
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'].toString()) : DateTime.now(),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'].toString()) : DateTime.now(),
+      menuImageUrl: json['menuImageUrl']?.toString() ?? '',
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'].toString())
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'].toString())
+          : DateTime.now(),
       menuStatus: json['menuStatus']?.toString() ?? 'available',
       tempImageBytes: null,
     );
@@ -90,7 +107,7 @@ class MenuListItem extends Equatable {
       'title': title,
       'description': description,
       'price': price,
-      'image': imageUrl,
+      'menu_image_url': menuImageUrl,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'menuStatus': menuStatus,

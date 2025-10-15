@@ -4,18 +4,17 @@ class UserProfile {
   final String role;
   final String email;
   final String phone;
-  final String? avatarUrl;
+  final String? userImageUrl;
   final String? storeId;
 
-  UserProfile({
-    required this.id,
-    required this.name,
-    required this.role,
-    required this.email,
-    required this.phone,
-    this.avatarUrl,
-    this.storeId
-  });
+  UserProfile(
+      {required this.id,
+      required this.name,
+      required this.role,
+      required this.email,
+      required this.phone,
+      this.userImageUrl,
+      this.storeId});
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -24,7 +23,7 @@ class UserProfile {
       role: json['role'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
-      avatarUrl: json['avatar_url'], // API 応答に合わせてフィールド名調整
+      userImageUrl: json['user_image_url'], // API 応答に合わせてフィールド名調整
       storeId: json['store_id']?.toString(),
     );
   }
@@ -37,7 +36,7 @@ class UserProfile {
       role: role,
       email: email ?? this.email,
       phone: phone ?? this.phone,
-      avatarUrl: avatarUrl,
+      userImageUrl: userImageUrl,
       // storeId: this.storeId,
     );
   }
