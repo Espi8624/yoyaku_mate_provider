@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:yoyaku_mate_provider/models/store_profile.dart';
+import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'api_exception.dart';
 import '../models/provider_profile.dart';
 
@@ -92,6 +95,73 @@ class ProviderProfileService {
     if (response.statusCode != 200) {
       throw ApiException(
           'Failed to update user profile. Status: ${response.statusCode}, Body: ${response.body}');
+    }
+  }
+
+  Future<UserProfile> uploadUserImage(File imageFile, String idToken) async {
+    final uri = Uri.parse('$baseUrl/api/provider_user/image');
+    try {
+      var request = http.MultipartRequest('POST', uri);
+
+      request.headers['Authorization'] = 'Bearer $idToken';
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'userImage',
+          imageFile.path,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      );
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      final jsonResponse = json.decode(responseBody);
+
+      if (response.statusCode == 200) {
+        final userData = jsonResponse['data'] ?? jsonResponse;
+        return UserProfile.fromJson(userData);
+      } else {
+        throw ApiException(
+            jsonResponse['message'] ?? 'Failed to upload user image',
+            statusCode: response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Avatar upload failed: ${e.toString()}');
+    }
+  }
+
+  Future<StoreProfile> uploadStoreImage(
+      File imageFile, String storeId, String idToken) async {
+    final uri = Uri.parse('$baseUrl/api/provider_store/$storeId/image');
+    try {
+      var request = http.MultipartRequest('POST', uri);
+
+      request.headers['Authorization'] = 'Bearer $idToken';
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'storeImage',
+          imageFile.path,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      );
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      final jsonResponse = json.decode(responseBody);
+
+      if (response.statusCode == 200) {
+        final storeData = jsonResponse['data'] ?? jsonResponse;
+        return StoreProfile.fromJson(storeData);
+      } else {
+        throw ApiException(
+            jsonResponse['message'] ?? 'Failed to upload store image',
+            statusCode: response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Store logo upload failed: ${e.toString()}');
     }
   }
 

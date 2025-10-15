@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:yoyaku_mate_provider/models/store_license.dart';
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
 import 'package:yoyaku_mate_provider/models/user_profile.dart';
@@ -57,6 +59,11 @@ class ProfileScreenViewModel extends ChangeNotifier {
 
   void clearSuccessMessage() {
     _successMessage = null;
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
   }
 
   String get storeId => _storeProfile?.id ?? '';
@@ -324,6 +331,73 @@ class ProfileScreenViewModel extends ChangeNotifier {
     }
 
     return success;
+  }
+
+  Future<void> uploadUserImage() async {
+    final picker = ImagePicker();
+    final XFile? pickedFile =
+        await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile == null) return;
+
+    final imageFile = File(pickedFile.path);
+
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) throw ApiException('User not logged in.');
+      final idToken = await currentUser.getIdToken(true);
+      if (idToken == null) throw ApiException('Could not get auth token.');
+
+      final updatedUserProfile =
+          await _profileService.uploadUserImage(imageFile, idToken);
+
+      _userProfile = updatedUserProfile;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'An unexpected error occurred: $e';
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> uploadStoreImage() async {
+    if (_storeProfile == null) {
+      _errorMessage = "店舗が選択されていません。";
+      notifyListeners();
+      return;
+    }
+
+    final picker = ImagePicker();
+    final XFile? pickedFile =
+        await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+
+    final imageFile = File(pickedFile.path);
+
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) throw ApiException('User not logged in.');
+      final idToken = await currentUser.getIdToken(true);
+      if (idToken == null) throw ApiException('Could not get auth token.');
+
+      final updatedStoreProfile = await _profileService.uploadStoreImage(
+          imageFile, _storeProfile!.id, idToken);
+
+      _storeProfile = updatedStoreProfile;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'An unexpected error occurred: $e';
+    } finally {
+      _setLoading(false);
+    }
   }
 
   Future<bool> uploadStoreLicense(File imageFile) async {

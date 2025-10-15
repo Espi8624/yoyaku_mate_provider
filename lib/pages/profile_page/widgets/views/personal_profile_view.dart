@@ -44,6 +44,8 @@ class PersonalProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.read<ProfileScreenViewModel>();
+
     return Column(
       children: [
         Expanded(
@@ -52,9 +54,10 @@ class PersonalProfileView extends StatelessWidget {
             children: [
               ProfileHeader(
                 name: userProfile.name,
-                imageUrl: userProfile.avatarUrl,
-                onTapImage: () => CustomSnackBar.show(context,
-                    message: '準備中です', status: SnackBarStatus.info),
+                imageUrl: userProfile.userImageUrl,
+                onTapImage: () {
+                  vm.uploadUserImage();
+                },
                 onTapName: () => _showEditDialog(context,
                     title: 'お名前',
                     fieldKey: 'user_name',

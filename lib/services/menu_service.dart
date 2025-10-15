@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../models/menu_list.dart';
 import 'api_exception.dart';
 
@@ -64,13 +66,45 @@ class MenuService {
     }
   }
 
+  Future<MenuListItem> uploadMenuImage(String menuId, File imageFile) async {
+    final uri = Uri.parse('$_baseUrl/api/menus/$menuId/image');
+    try {
+      // multipart/form-data要請生成
+      var request = http.MultipartRequest('POST', uri);
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'menuImage',
+          imageFile.path,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      );
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      final jsonResponse = json.decode(responseBody);
+
+      if (response.statusCode == 200) {
+        final menuData = jsonResponse['data'] ?? jsonResponse;
+        return MenuListItem.fromJson(menuData);
+      } else {
+        throw ApiException(
+            jsonResponse['message'] ?? 'Failed to upload menu image',
+            statusCode: response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Menu image upload failed: ${e.toString()}');
+    }
+  }
+
   Future<void> saveMenuItems(
       Map<String, List<MenuListItem>> categorizedMenu, String storeId) async {
     List<Map<String, dynamic>> itemsToSave = [];
 
     for (var entry in categorizedMenu.entries) {
       for (var item in entry.value) {
-        String finalImageUrl = item.imageUrl;
+        String finalImageUrl = item.menuImageUrl;
         if (item.tempImageBytes != null) {
           try {
             final filename = '${item.menuId}.jpg';
@@ -80,7 +114,7 @@ class MenuService {
           }
         }
         final itemToSave = item.copyWith(
-          imageUrl: finalImageUrl,
+          menuImageUrl: finalImageUrl,
           storeId: item.storeId.isNotEmpty ? item.storeId : storeId,
           updatedAt: DateTime.now(),
           clearTempImage: true,

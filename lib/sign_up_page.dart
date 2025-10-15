@@ -315,6 +315,8 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isAddStoreMode = widget.mode == 'add_store';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -325,6 +327,11 @@ class _SignUpPageState extends State<SignUpPage> {
             children: [
               InkWell(
                 onTap: () {
+                  if (isAddStoreMode) {
+                    context.pop();
+                    return;
+                  }
+
                   if (_currentPageIndex == 0) {
                     context.go('/login');
                   } else {
