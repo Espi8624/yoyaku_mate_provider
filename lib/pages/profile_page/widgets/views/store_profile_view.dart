@@ -91,10 +91,11 @@ class StoreProfileView extends StatelessWidget {
             children: [
               ProfileHeader(
                 name: storeProfile.name,
-                imageUrl: storeProfile.logoUrl,
+                imageUrl: storeProfile.storeImageUrl,
                 icon: Icons.store,
-                onTapImage: () => CustomSnackBar.show(context,
-                    message: '準備中です', status: SnackBarStatus.info),
+                onTapImage: () {
+                  vm.uploadStoreImage();
+                },
                 onTapName: () => _showEditDialog(context,
                     title: '店舗名',
                     fieldKey: 'store_name',

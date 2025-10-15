@@ -51,7 +51,8 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
   void _submit() {
     if (_formKey.currentState!.validate()) {
       final now = DateTime.now();
-      final result = MenuListItem(
+
+      final menuItem = MenuListItem(
         id: _isEditing ? widget.menuItem!.id : '',
         storeId: _isEditing ? widget.menuItem!.storeId : widget.storeId,
         menuId: _isEditing
@@ -61,12 +62,18 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         price: double.parse(_priceController.text),
-        imageUrl: _isEditing ? widget.menuItem!.imageUrl : '',
+        menuImageUrl: _isEditing ? widget.menuItem!.menuImageUrl : '',
         createdAt: _isEditing ? widget.menuItem!.createdAt : now,
         updatedAt: now,
         menuStatus: _isEditing ? widget.menuItem!.menuStatus : 'available',
         tempImageBytes: _tempImageBytes,
       );
+
+      final result = {
+        'menu': menuItem,
+        'imageFile': _tempImageBytes,
+      };
+
       Navigator.of(context).pop(result);
     }
   }
@@ -84,7 +91,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
           children: [
             ImagePickerBox(
               initialImageBytes: _tempImageBytes,
-              initialImageUrl: widget.menuItem?.imageUrl,
+              initialImageUrl: widget.menuItem?.menuImageUrl,
               onImagePicked: (bytes) => _tempImageBytes = bytes,
             ),
             const SizedBox(height: 16),

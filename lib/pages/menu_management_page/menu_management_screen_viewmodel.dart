@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../../models/menu_list.dart';
 import '../../services/api_exception.dart';
@@ -124,12 +126,53 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
     _updateAndBackupCategorizedMenu();
   }
 
+  Future<void> updateMenuWithImage(
+      MenuListItem menuData, File imageFile) async {
+    _setLoading(true);
+    _errorMessage = null;
+    try {
+      final uploadedMenu =
+          await _menuService.uploadMenuImage(menuData.id, imageFile);
+
+      final finalUpdatedMenu = uploadedMenu.copyWith(
+        title: menuData.title,
+        description: menuData.description,
+        price: menuData.price,
+        category: menuData.category,
+      );
+
+      editMenu(finalUpdatedMenu);
+
+      // ローカルデータ更新
+      final index = _originalMenuData[finalUpdatedMenu.category]
+          ?.indexWhere((item) => item.id == finalUpdatedMenu.id);
+      if (index != null && index != -1) {
+        _originalMenuData[finalUpdatedMenu.category]![index] = finalUpdatedMenu;
+      }
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   void editMenu(MenuListItem updatedMenu) {
     final index = _menuItems.indexWhere((item) =>
-        item.id == updatedMenu.id || item.menuId == updatedMenu.menuId);
+        (item.id.isNotEmpty && item.id == updatedMenu.id) ||
+        (item.id.isEmpty && item.menuId == updatedMenu.menuId));
+
     if (index != -1) {
       _menuItems[index] = updatedMenu;
-      _updateAndBackupCategorizedMenu();
+      // ローカルデータ更新
+      final newCategorizedMenu = <String, List<MenuListItem>>{};
+      for (var item in _menuItems) {
+        final category = item.category.isNotEmpty ? item.category : '未分類';
+        (newCategorizedMenu[category] ??= []).add(item);
+      }
+      _categorizedMenu = newCategorizedMenu;
+      _categories = newCategorizedMenu.keys.toList();
+      notifyListeners();
     }
   }
 
