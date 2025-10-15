@@ -88,8 +88,8 @@ class MenuItemCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: menuItem.tempImageBytes != null
             ? Image.memory(menuItem.tempImageBytes!, fit: BoxFit.cover)
-            : menuItem.imageUrl.isNotEmpty
-                ? Image.network(menuItem.imageUrl,
+            : menuItem.menuImageUrl.isNotEmpty
+                ? Image.network(menuItem.menuImageUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                         Icons.image_not_supported,
