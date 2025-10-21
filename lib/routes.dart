@@ -8,6 +8,7 @@ import 'package:yoyaku_mate_provider/main.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up_prompt_page.dart';
 // import 'package:yoyaku_mate_provider/sign_up_complete_page.dart';
 import 'package:yoyaku_mate_provider/sign_up_page.dart';
+import 'package:yoyaku_mate_provider/verify_email_page.dart';
 
 bool _isSignUpInProgress = false;
 
@@ -76,6 +77,10 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/signup-prompt',
       builder: (context, state) => const SignUpPromptPage(),
+    ),
+    GoRoute(
+      path: '/verify-email',
+      builder: (context, state) => const VerifyEmailPage(),
     ),
   ],
 
