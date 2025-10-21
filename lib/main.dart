@@ -42,43 +42,25 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProxyProvider<User?, ProfileScreenViewModel>(
           create: (context) => ProfileScreenViewModel(
             profileService: context.read<ProviderProfileService>(),
-            userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-            autoLoad: true,
+            userId: '',
+            autoLoad: false,
           ),
           update: (context, user, previousViewModel) {
-            final newUid = user?.uid ?? '';
-
-            // print("🔄 [ChangeNotifierProxyProvider] update 호출됨!");
-            // print("   - newUid: '$newUid'");
-            // print(
-            //     "   - previousViewModel?.userId: '${previousViewModel?.userId ?? 'null'}'");
-
-            // previousViewModelがnullの場合は新しいインスタンスを作成
             if (previousViewModel == null) {
-              // print("   ✗ previousViewModel이 null → 새 인스턴스 생성");
               return ProfileScreenViewModel(
-                profileService: context.read<ProviderProfileService>(),
-                userId: newUid,
-                autoLoad: true,
-              );
+                  profileService: context.read<ProviderProfileService>(),
+                  userId: '',
+                  autoLoad: false);
             }
 
-            // 空欄への変更は無視
-            if (newUid.isEmpty && previousViewModel.userId.isNotEmpty) {
-              // print("   ⚠️  newUid가 비어있음 → 무시하고 기존 인스턴스 유지");
+            final newUid = user?.uid ?? '';
+            final oldUid = previousViewModel.firebaseUid;
+
+            if (newUid == oldUid) {
               return previousViewModel;
             }
 
-            // userIdが同一なら既存のインスタンスを維持
-            if (previousViewModel.userId == newUid) {
-              // print("   ✓ userId 동일 → 기존 인스턴스 유지");
-              return previousViewModel;
-            }
-
-            // userIdが実際に変更された場合のみupdateUserを呼び出す
-            // print(
-            //     "   ✗ userId 변경 감지 ('${previousViewModel.userId}' → '$newUid')");
-            previousViewModel.updateUser(newUid, autoLoad: true);
+            previousViewModel.updateUser(newUid);
             return previousViewModel;
           },
         ),
