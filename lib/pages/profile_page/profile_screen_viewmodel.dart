@@ -20,19 +20,9 @@ class ProfileScreenViewModel extends ChangeNotifier {
   ProfileScreenViewModel({
     required ProviderProfileService profileService,
     required String userId,
-    bool autoLoad = true,
+    bool autoLoad = false,
   })  : _profileService = profileService,
-        firebaseUid = userId {
-    // print("--- [ViewModel] 새로운 인스턴스 생성됨! ---");
-    // print("  - 해시코드: $hashCode");
-    // print("  - 할당된 firebaseUid: '$firebaseUid'");
-    // print("  - autoLoad: $autoLoad");
-
-    // autoLoadがtrueのときのみ自動でプロフィールをロード
-    if (autoLoad && firebaseUid.isNotEmpty) {
-      loadProfiles();
-    }
-  }
+        firebaseUid = userId;
 
   // --- State ---
   bool _isLoading = false;
@@ -68,11 +58,11 @@ class ProfileScreenViewModel extends ChangeNotifier {
 
   String get storeId => _storeProfile?.id ?? '';
 
-  bool _isInitializedBySignUp = false;
-  void prepareForSignUp() {
-    // print("--- [ViewModel] prepareForSignUp: SignUp 플래그 설정 ---");
-    _isInitializedBySignUp = true;
-  }
+  // bool _isInitializedBySignUp = false;
+  // void prepareForSignUp() {
+  //   // print("--- [ViewModel] prepareForSignUp: SignUp 플래그 설정 ---");
+  //   _isInitializedBySignUp = true;
+  // }
 
   // プロフィール情報初期化
   void clearProfile() {
@@ -81,7 +71,7 @@ class ProfileScreenViewModel extends ChangeNotifier {
     _storeLicense = null;
     _myStores = [];
     _mongoUserId = '';
-    _isInitializedBySignUp = false;
+    // _isInitializedBySignUp = false;
     notifyListeners();
   }
 
@@ -96,36 +86,25 @@ class ProfileScreenViewModel extends ChangeNotifier {
     _myStores = stores;
     _isLoading = false;
     _errorMessage = null;
-    _isInitializedBySignUp = true; // SignUpに初期化されていることを表示
+    // _isInitializedBySignUp = true; // SignUpに初期化されていることを表示
 
     // print("  - _isInitializedBySignUp 플래그 설정됨");
     notifyListeners();
   }
 
   // Firebase UID変更時呼出
-  void updateUser(String newUid, {bool autoLoad = true}) {
-    // print("--- [ViewModel] updateUser 호출됨 ---");
-    // print("  - 기존 UID: '$firebaseUid'");
-    // print("  - 새로운 UID: '$newUid'");
-    // print("  - autoLoad: $autoLoad");
-    // print("  - _isInitializedBySignUp: $_isInitializedBySignUp");
-
+  void updateUser(String newUid) {
+    // UIDが変わっていない場合は何もしない
     if (firebaseUid == newUid) {
-      // print("  → UID가 동일하여 아무 작업도 하지 않습니다.");
       return;
     }
 
     firebaseUid = newUid;
 
-    // SignUp直後ならデータを消さない
-    if (!_isInitializedBySignUp) {
-      clearProfile();
-    }
+    clearProfile();
 
-    if (autoLoad && firebaseUid.isNotEmpty && !_isInitializedBySignUp) {
-      // print("  → 프로필 자동 로딩을 시작합니다.");
-      _isLoading = true;
-      notifyListeners();
+    // 新しいUIDがあれば（ログインした場合）、データローディングを開始
+    if (newUid.isNotEmpty) {
       loadProfiles();
     }
   }
@@ -149,45 +128,24 @@ class ProfileScreenViewModel extends ChangeNotifier {
   }
 
   Future<void> loadProfiles({bool forceRefresh = false}) async {
-    // print("--- [ViewModel] loadProfiles 호출됨 ---");
+    // print("--- [ViewModel] loadProfiles 시작 ---");
     // print("  - firebaseUid: '$firebaseUid'");
-    // print("  - forceRefresh: $forceRefresh");
-    // print("  - _isInitializedBySignUp: $_isInitializedBySignUp");
-    // print("  - _myStores.length: ${_myStores.length}");
-    // print("  - _userProfile: ${_userProfile?.name ?? 'null'}");
-
-    // SignUp直後、初期化されてたら自動ローディングをスキップ
-    if (_isInitializedBySignUp && !forceRefresh) {
-      // print("   → SignUpPage에 의해 초기화되었으므로 자동 로딩을 건너뜁니다.");
-      _isInitializedBySignUp = false; // flag　reset
-      return;
-    }
 
     if (firebaseUid.isEmpty) {
-      // print("   → firebaseUid가 비어있어 건너뜁니다.");
+      // print("   → firebaseUid가 비어있어 즉시 종료.");
+      _isLoading = false;
+      notifyListeners();
       return;
     }
-
-    // データが既に存在し、forceRefreshがfalseならスキップ
-    if (!forceRefresh && _myStores.isNotEmpty && _userProfile != null) {
-      // print("   → 데이터가 이미 존재하여 건너뜁니다.");
-      return;
-    }
-    // print("   → 프로필 로딩을 시작합니다.");
 
     _isLoading = true;
     _errorMessage = null;
-
-    if (forceRefresh) {
-      _myStores = [];
-      _storeProfile = null;
-      _storeLicense = null;
-    }
-
     notifyListeners();
 
     try {
+      // print("   → (1) 가게 목록(fetchAllStores) API 호출 시작...");
       final myStoresResponse = await _profileService.fetchAllStores();
+      // print("   → (2) 가게 목록 API 응답 받음.");
 
       if (myStoresResponse.containsKey('data') &&
           myStoresResponse['data'] is Map) {
@@ -196,30 +154,38 @@ class ProfileScreenViewModel extends ChangeNotifier {
           final storesData = outerData['data'] as List;
           _myStores =
               storesData.map((data) => StoreProfile.fromJson(data)).toList();
-          _storeProfile = null;
-          _storeLicense = null;
+          // print("   → (3) 가게 목록 파싱 완료: ${_myStores.length}개");
 
-          // print("   → 가게 목록 로딩 완료: ${_myStores.length}개");
-
-          // 店舗リストローディング成功後、使用者プロフィールもロード
+          // 店舗リストローディング後、ユーザープロフィールロード
+          // print("   → (4) 사용자 프로필(_fetchInitialUserProfile) 호출 시작...");
           await _fetchInitialUserProfile();
-          // print("   → 사용자 프로필 로딩 완료");
+          // print("   → (5) 사용자 프로필 호출 완료.");
+
+          if (_userProfile != null) {
+            // print(
+            //     "   → (6) 성공: _userProfile이 정상적으로 설정되었습니다. (이름: ${_userProfile!.name})");
+          } else {
+            // print(
+            //     "   → (6) 실패: _fetchInitialUserProfile 후에도 _userProfile이 여전히 null입니다!");
+            throw ApiException(
+                'User profile could not be loaded or parsed correctly.');
+          }
         } else {
-          throw ApiException('無効な店舗リストのデータ形式です。(inner data)');
+          throw ApiException('店舗リストデータ形式が異なります。(inner data)');
         }
       } else {
-        throw ApiException('無効な店舗リストのデータ形式です。(outer data)');
+        throw ApiException('店舗リストデータ形式が異なります。(outer data)');
       }
     } on ApiException catch (e) {
       _errorMessage = 'データローディング失敗: ${e.message}';
       // print("   ✗ API 에러: ${e.message}");
     } catch (e) {
-      _errorMessage = '予期せぬエラーが発生しました: $e';
+      _errorMessage = '予期しないエラーが発生しました。: $e';
       // print("   ✗ 예상치 못한 에러: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
-      // print("   → loadProfiles 완료");
+      // print("--- [ViewModel] loadProfiles 종료 (isLoading: $_isLoading) ---");
     }
   }
 
@@ -279,21 +245,24 @@ class ProfileScreenViewModel extends ChangeNotifier {
 
   Future<void> _fetchInitialUserProfile() async {
     if (firebaseUid.isEmpty) return;
-
+    // print("     L-- [_fetchInitialUserProfile] 시작 (uid: $firebaseUid)");
     try {
       final userProfileResponse =
           await _profileService.fetchUserProfile(firebaseUid);
+      // print("     L-- API 응답 받음.");
 
       if (userProfileResponse.containsKey('data') &&
           userProfileResponse['data'] is Map) {
         _userProfile = UserProfile.fromJson(
             userProfileResponse['data'] as Map<String, dynamic>);
         _mongoUserId = _userProfile?.id ?? '';
+        // print("     L-- UserProfile 파싱 성공! (이름: ${_userProfile?.name})");
       } else {
         throw ApiException('無効なユーザーデータ形式です。');
       }
     } catch (e) {
-      rethrow;
+      // print("     L-- ✗ 에러 발생: ${e.toString()}");
+      rethrow; // 에러를 상위 함수(loadProfiles)로 다시 던짐
     }
   }
 

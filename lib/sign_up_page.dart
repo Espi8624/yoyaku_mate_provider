@@ -144,11 +144,10 @@ class _SignUpPageState extends State<SignUpPage> {
           throw Exception('Widget unmounted before signup');
         }
 
-        final profileVM = context.read<ProfileScreenViewModel>();
-        profileVM.prepareForSignUp();
+        // final profileVM = context.read<ProfileScreenViewModel>();
+        // profileVM.prepareForSignUp();
         // print("--- [SignUpPage] prepareForSignUp() 호출 완료 (계정 생성 전) ---");
 
-        // 이제 Firebase 계정 생성
         final email = _role == 'manager'
             ? managerEmailController.text.trim()
             : staffEmailController.text.trim();
