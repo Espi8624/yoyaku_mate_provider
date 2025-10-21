@@ -34,9 +34,15 @@ class _SignUpPageState extends State<SignUpPage> {
   late PageController _pageController;
   int _currentPageIndex = 0;
 
+  // bool _isEmailVerified = false;
+
+  final GlobalKey<FormState> _passwordFormKey = GlobalKey<FormState>();
+
   // コントローラー初期化
   final TextEditingController managerEmailController = TextEditingController();
   final TextEditingController managerPasswordController =
+      TextEditingController();
+  final TextEditingController managerConfirmPasswordController =
       TextEditingController();
   final TextEditingController managerPhoneController = TextEditingController();
   final TextEditingController managerNameController = TextEditingController();
@@ -47,6 +53,8 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController staffStoreIdController = TextEditingController();
   final TextEditingController staffEmailController = TextEditingController();
   final TextEditingController staffPasswordController = TextEditingController();
+  final TextEditingController staffConfirmPasswordController =
+      TextEditingController();
   final TextEditingController staffPhoneController = TextEditingController();
   final TextEditingController staffNameController = TextEditingController();
 
@@ -57,7 +65,7 @@ class _SignUpPageState extends State<SignUpPage> {
     int initialPage = 0;
     if (widget.mode == 'add_store') {
       _role = 'manager';
-      initialPage = 2;
+      initialPage = 4; // 店舗情報入力index
     }
 
     _pageController = PageController(initialPage: initialPage);
@@ -98,6 +106,7 @@ class _SignUpPageState extends State<SignUpPage> {
     _pageController.dispose();
     managerEmailController.dispose();
     managerPasswordController.dispose();
+    managerConfirmPasswordController.dispose();
     managerPhoneController.dispose();
     managerNameController.dispose();
     storeNameController.dispose();
@@ -106,6 +115,7 @@ class _SignUpPageState extends State<SignUpPage> {
     staffStoreIdController.dispose();
     staffEmailController.dispose();
     staffPasswordController.dispose();
+    staffConfirmPasswordController.dispose();
     staffPhoneController.dispose();
     staffNameController.dispose();
     super.dispose();
@@ -151,6 +161,13 @@ class _SignUpPageState extends State<SignUpPage> {
             .createUserWithEmailAndPassword(email: email, password: password);
         newUser = userCredential.user;
         if (newUser == null) throw Exception('Firebase user creation failed.');
+
+        // email認証
+        try {
+          await newUser.sendEmailVerification();
+        } catch (e) {
+          print('Failed to send verification email: $e');
+        }
 
         await newUser.reload();
         newUser = FirebaseAuth.instance.currentUser;
@@ -363,17 +380,28 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   List<Widget> _buildPages() {
+    if (widget.mode == 'add_store') {
+      return [_buildManagerInfoStep2()];
+    }
+
     if (_role == 'manager') {
       return [
-        _buildRoleStep(),
-        _buildManagerInfoStep1(),
-        _buildManagerInfoStep2(),
-        // _buildLineIntegrationStep()
+        _buildRoleStep(), // 0: role
+        _buildEmailStep(), // 1: email
+        _buildPasswordStep(), // 2: password
+        _buildManagerInfoStep(), // 3: user info
+        _buildManagerInfoStep2(), // 4: store info
       ];
     } else if (_role == 'staff') {
-      return [_buildRoleStep(), _buildStaffInfoStep1(), _buildStaffInfoStep2()];
+      return [
+        _buildRoleStep(), // 0: role
+        _buildEmailStep(), // 1: email
+        _buildPasswordStep(), // 2: password
+        _buildStaffInfoStep1(), // 3: store number
+        _buildStaffInfoStep2(), // 4: user info
+      ];
     }
-    return [_buildRoleStep()];
+    return [_buildRoleStep()]; // role選択前
   }
 
   Widget _buildRoleStep() {
@@ -411,37 +439,37 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  Widget _buildManagerInfoStep1() {
-    return SingleChildScrollView(
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('管理者情報',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text('ログイン及び本人確認のために情報を入力してください。',
-              style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
-          const SizedBox(height: 32),
-          _buildTextField(
-              controller: managerEmailController,
-              label: 'メールアドレス',
-              type: TextInputType.emailAddress),
-          _buildTextField(
-              controller: managerPasswordController,
-              label: 'パスワード',
-              isPassword: true),
-          _buildTextField(
-              controller: managerPhoneController,
-              label: '電話番号',
-              type: TextInputType.phone),
-          _buildTextField(controller: managerNameController, label: '名前'),
-          const SizedBox(height: 40),
-          _buildActionButton(onPressed: _nextPage),
-        ],
-      ),
-    );
-  }
+  // Widget _buildManagerInfoStep1() {
+  //   return SingleChildScrollView(
+  //     keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         const Text('管理者情報',
+  //             style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+  //         const SizedBox(height: 8),
+  //         const Text('ログイン及び本人確認のために情報を入力してください。',
+  //             style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+  //         const SizedBox(height: 32),
+  //         _buildTextField(
+  //             controller: managerEmailController,
+  //             label: 'メールアドレス',
+  //             type: TextInputType.emailAddress),
+  //         _buildTextField(
+  //             controller: managerPasswordController,
+  //             label: 'パスワード',
+  //             isPassword: true),
+  //         _buildTextField(
+  //             controller: managerPhoneController,
+  //             label: '電話番号',
+  //             type: TextInputType.phone),
+  //         _buildTextField(controller: managerNameController, label: '名前'),
+  //         const SizedBox(height: 40),
+  //         _buildActionButton(onPressed: _nextPage),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildManagerInfoStep2() {
     return SingleChildScrollView(
@@ -542,6 +570,118 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
+  Widget _buildEmailStep() {
+    final emailController =
+        _role == 'manager' ? managerEmailController : staffEmailController;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('メールアドレス認証',
+            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        const Text('まず、使用するメールアドレスを認証してください。',
+            style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+        const SizedBox(height: 32),
+        TextFormField(
+          controller: emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(labelText: 'メールアドレス'),
+        ),
+        const Spacer(),
+        _buildActionButton(onPressed: _nextPage),
+      ],
+    );
+  }
+
+  Widget _buildPasswordStep() {
+    final passwordController = _role == 'manager'
+        ? managerPasswordController
+        : staffPasswordController;
+    final confirmPasswordController = _role == 'manager'
+        ? managerConfirmPasswordController
+        : staffConfirmPasswordController;
+
+    // 次へボタン押下時実行
+    void submit() {
+      if (_passwordFormKey.currentState!.validate()) {
+        _nextPage();
+      }
+    }
+
+    return SingleChildScrollView(
+      child: Form(
+        key: _passwordFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('パスワード設定',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('ログインに使用するパスワードを設定してください。',
+                style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+            const SizedBox(height: 32),
+            _buildTextField(
+              controller: passwordController,
+              label: 'パスワード',
+              isPassword: true,
+              // 有効性検査機(validator)追加
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'パスワードを入力してください。';
+                }
+                if (value.length < 6) {
+                  return '6文字以上で入力してください。';
+                }
+                return null;
+              },
+            ),
+            _buildTextField(
+              controller: confirmPasswordController,
+              label: 'パスワードの確認',
+              isPassword: true,
+              // 有効性検査機(validator)追加
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'パスワードをもう一度入力してください。';
+                }
+                if (value != passwordController.text) {
+                  return 'パスワードが一致しません。';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 40),
+            _buildActionButton(onPressed: submit),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildManagerInfoStep() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('管理者情報',
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('本人確認のために情報を入力してください。',
+              style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+          const SizedBox(height: 32),
+          _buildTextField(
+              controller: managerPhoneController,
+              label: '電話番号',
+              type: TextInputType.phone),
+          _buildTextField(controller: managerNameController, label: '名前'),
+          const SizedBox(height: 40),
+          _buildActionButton(onPressed: _nextPage),
+        ],
+      ),
+    );
+  }
+
   // Widget _buildLineIntegrationStep() {
   //   return Column(
   //     crossAxisAlignment: CrossAxisAlignment.center,
@@ -597,11 +737,13 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  Widget _buildTextField(
-      {required TextEditingController controller,
-      required String label,
-      bool isPassword = false,
-      TextInputType? type}) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    bool isPassword = false,
+    TextInputType? type,
+    String? Function(String?)? validator,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
@@ -614,6 +756,7 @@ class _SignUpPageState extends State<SignUpPage> {
           focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: AppColors.accentPrimary, width: 2)),
         ),
+        validator: validator,
       ),
     );
   }

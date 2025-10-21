@@ -18,11 +18,11 @@ class PersonalProfileView extends StatelessWidget {
   Future<void> _showEditDialog(
     BuildContext context, {
     required String title,
-    required String fieldKey,
+    String? fieldKey,
     required String initialValue,
     bool isPassword = false,
   }) async {
-    final newValue = await showDialog<String>(
+    await showDialog(
       context: context,
       builder: (_) => EditProfileDialog(
         title: title,
@@ -31,13 +31,24 @@ class PersonalProfileView extends StatelessWidget {
       ),
     );
 
-    if (newValue != null && newValue.isNotEmpty) {
-      final vm = context.read<ProfileScreenViewModel>();
-      final success =
-          await vm.updateProfileField(userFieldKey: fieldKey, value: newValue);
-      if (success && context.mounted) {
-        CustomSnackBar.show(context,
-            message: '変更が保存されました', status: SnackBarStatus.success);
+    if (!isPassword) {
+      final newValue = await showDialog<String>(
+        context: context,
+        builder: (_) => EditProfileDialog(
+          title: title,
+          initialValue: initialValue,
+          isPassword: false,
+        ),
+      );
+
+      if (newValue != null && newValue.isNotEmpty) {
+        final vm = context.read<ProfileScreenViewModel>();
+        final success = await vm.updateProfileField(
+            userFieldKey: fieldKey!, value: newValue);
+        if (success && context.mounted) {
+          CustomSnackBar.show(context,
+              message: '変更が保存されました', status: SnackBarStatus.success);
+        }
       }
     }
   }
@@ -71,19 +82,23 @@ class PersonalProfileView extends StatelessWidget {
                   ProfileSettingItem(
                     title: 'E-mail',
                     subtitle: userProfile.email,
-                    onTap: () => _showEditDialog(context,
-                        title: 'E-mail',
-                        fieldKey: 'email',
-                        initialValue: userProfile.email),
+                    onTap: null,
+                    showTrailingIcon: false,
                   ),
                   ProfileSettingItem(
                     title: 'パスワード',
                     subtitle: '********',
-                    onTap: () => _showEditDialog(context,
-                        title: 'パスワード変更',
-                        fieldKey: 'password',
-                        initialValue: '',
-                        isPassword: true),
+                    onTap: () {
+                      // isPasswordフラグと同時にEditProfileDialogを直接呼出
+                      showDialog(
+                        context: context,
+                        builder: (_) => const EditProfileDialog(
+                          title: 'パスワード変更',
+                          initialValue: '',
+                          isPassword: true,
+                        ),
+                      );
+                    },
                   ),
                   ProfileSettingItem(
                     title: '電話番号',
