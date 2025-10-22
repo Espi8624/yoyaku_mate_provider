@@ -46,7 +46,7 @@ class WaitingListPanel extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         // 待機がない場合
         Expanded(
           child: waitingList.isEmpty
