@@ -1,4 +1,3 @@
-// pages/waiting_page/widgets/waiting_item_card.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
@@ -47,32 +46,11 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
   void _updateWaitingTime() {
     if (!mounted) return;
     final duration = DateTime.now().difference(widget.item.registrationTime);
+    final minutes = duration.inMinutes > 0 ? duration.inMinutes : 0;
+    final seconds = duration.inSeconds > 0 ? duration.inSeconds % 60 : 0;
     setState(() {
-      _waitingTime = '${duration.inMinutes}分 ${duration.inSeconds % 60}秒';
+      _waitingTime = '${minutes}分 ${seconds}秒';
     });
-  }
-
-  Color _getStatusBorderColor(String status) {
-    switch (status) {
-      case 'notified':
-        return AppColors.accentSecondary;
-      case 'cancelled':
-        return AppColors.error;
-      case 'completed':
-        return AppColors.textSecondary;
-      default:
-        return AppColors.border;
-    }
-  }
-
-  Color _getStatusBackgroundColor(String status) {
-    switch (status) {
-      case 'completed':
-      case 'cancelled':
-        return AppColors.background.withOpacity(0.5);
-      default:
-        return AppColors.cardBackground;
-    }
   }
 
   IconData _getStatusIcon(String status) {
@@ -81,8 +59,6 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
         return Icons.notifications_active_rounded;
       case 'notified':
         return Icons.check_circle_outline;
-      case 'completed':
-      case 'cancelled':
       default:
         return Icons.info_outline;
     }
@@ -91,69 +67,115 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
-    // notes が null、空欄ではない場合表示
-    // 違う場合'なし'表示
     final notesText =
         (item.notes != null && item.notes!.isNotEmpty) ? item.notes! : 'なし';
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _getStatusBackgroundColor(item.status),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _getStatusBorderColor(item.status),
-          width: item.status != 'waiting' ? 1.5 : 1,
-        ),
+    // ▼▼▼ [수정] 여기가 MenuItemCard의 스타일과 100% 동일하게 수정된 부분입니다. ▼▼▼
+    return Card(
+      // 1. MenuItemCard와 동일한 margin, color, elevation, shadowColor, shape 적용
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      color: AppColors.cardBackground,
+      elevation: 4,
+      shadowColor: AppColors.textSecondary.withOpacity(0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        // 2. MenuItemCard와 동일한 테두리 스타일 적용
+        side: BorderSide(color: AppColors.border.withOpacity(0.4), width: 1),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      child: Opacity(
+        // 3. 기존의 상태별 기능(완료/취소 시 반투명 처리)은 그대로 유지
+        opacity: (item.status == 'completed' || item.status == 'cancelled')
+            ? 0.5
+            : 1.0,
+        child: Padding(
+          // 4. MenuItemCard와 동일한 내부 여백(padding) 적용
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // --- 왼쪽 정보 영역 ---
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("#${item.queueNumber} 様",
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: AppColors.accentPrimary)),
-                    const SizedBox(width: 15),
-                    Text("${item.partySize}名",
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: AppColors.accentPrimary)),
+                    Text(
+                      "#${item.queueNumber} 様   ${item.partySize}名",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (item.status == 'completed' && item.entryTime != null)
+                      // "완료" 상태이고 입장 시간이 있으면, 입장 시간을 표시
+                      _buildInfoRow(
+                          "入場時間",
+                          // 예: 10:55
+                          '${item.entryTime!.hour.toString().padLeft(2, '0')}:${item.entryTime!.minute.toString().padLeft(2, '0')}')
+                    else
+                      // 그 외의 모든 상태에서는 기존의 대기 시간을 표시
+                      _buildInfoRow("待機時間", _waitingTime),
+                    const SizedBox(height: 4),
+                    _buildInfoRow("備考", notesText),
                   ],
                 ),
-                const Divider(height: 16, thickness: 0.5),
-                Text("待機時間　・・・　$_waitingTime",
-                    style: const TextStyle(
-                        fontSize: 13, color: AppColors.textSecondary)),
-                Text("備考　　　・・・　$notesText",
-                    style: const TextStyle(
-                        fontSize: 13, color: AppColors.textSecondary)),
-              ],
-            ),
+              ),
+              const SizedBox(width: 16),
+
+              // --- 오른쪽 알림 버튼 영역 ---
+              ElevatedButton(
+                onPressed:
+                    (item.status == 'completed' || item.status == 'cancelled')
+                        ? null // 완료/취소 시 버튼 비활성화
+                        : widget.onAction,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.textPrimary,
+                  foregroundColor: Colors.white,
+                  fixedSize: const Size(80, 80),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16), // 일관성을 위해 16으로 조정
+                  ),
+                  elevation: 2,
+                ),
+                child: Icon(_getStatusIcon(item.status), size: 36),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          ElevatedButton(
-            onPressed: widget.onAction,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.textPrimary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(75, 75),
-              padding: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            child: Icon(_getStatusIcon(item.status), size: 30),
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  // [수정] 정보 행(Row)을 만드는 헬퍼 위젯 (더 간결하게)
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 60, // 레이블 너비를 고정하여 줄 맞춤
+          child: Text(
+            label,
+            style:
+                const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          ),
+        ),
+        const Text(
+          ': ',
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
