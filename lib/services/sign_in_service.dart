@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 // ログイン
-Future<void> loginAndFetchUserInfo(String email, String password, Function(Map<String, dynamic>) onUserInfoLoaded) async {
+Future<void> loginAndFetchUserInfo(String email, String password,
+    Function(Map<String, dynamic>) onUserInfoLoaded) async {
   final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
     email: email,
     password: password,
@@ -13,7 +14,8 @@ Future<void> loginAndFetchUserInfo(String email, String password, Function(Map<S
 
   // user_info 取得
   final response = await http.get(
-    Uri.parse('http://localhost:8080/api/provider_user/firebase_uid?uid=$uid'),
+    Uri.parse(
+        'https://saboten-server.fly.dev/api/provider_user/firebase_uid?uid=$uid'),
     headers: {'Authorization': 'Bearer $idToken'},
   );
   if (response.statusCode == 200) {

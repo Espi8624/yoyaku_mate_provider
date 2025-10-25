@@ -128,7 +128,7 @@ class _SignUpPageState extends State<SignUpPage> {
     });
 
     final profileService =
-        ProviderProfileService(baseUrl: 'http://10.0.2.2:8080');
+        ProviderProfileService(baseUrl: 'https://saboten-server.fly.dev');
     User? newUser;
 
     try {

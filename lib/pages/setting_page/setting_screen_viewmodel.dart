@@ -4,7 +4,8 @@ import '../../services/store_settings_service.dart';
 
 class SettingScreenViewModel extends ChangeNotifier {
   final String storeId;
-  final _service = StoreSettingsService(baseUrl: 'http://10.0.2.2:8080');
+  final _service =
+      StoreSettingsService(baseUrl: 'https://saboten-server.fly.dev');
 
   SettingScreenViewModel({required this.storeId}) {
     fetchSettings();

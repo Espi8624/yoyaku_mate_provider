@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
       providers: [
         Provider<ProviderProfileService>(
           create: (_) =>
-              ProviderProfileService(baseUrl: "http://10.0.2.2:8080"),
+              ProviderProfileService(baseUrl: 'https://saboten-server.fly.dev'),
         ),
         StreamProvider<User?>(
           create: (_) => FirebaseAuth.instance.authStateChanges(),
