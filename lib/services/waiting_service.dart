@@ -8,7 +8,7 @@ class WaitingService {
   late StreamController<List<WaitingList>> _waitingListController;
   bool _isConnected = false;
   Timer? _pollingTimer;
-  static const String _baseUrl = 'http://10.0.2.2:8080';
+  static const String _baseUrl = 'https://saboten-server.fly.dev';
 
   // 基本 polling 間隔と最大間隔設定
   static const Duration _minPollingInterval = Duration(seconds: 1);
