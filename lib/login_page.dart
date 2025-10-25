@@ -122,18 +122,22 @@ class _LoginPageState extends State<LoginPage> {
                     SizedBox(
                         height: MediaQuery.of(context).size.height *
                             (isLandscape ? 0.05 : 0.1)),
-                    Icon(Icons.calendar_month_rounded,
-                        size: isLandscape ? 60 : 80,
-                        color: AppColors.accentPrimary),
+                    Text(
+                      '🌵',
+                      style: TextStyle(
+                        fontSize: isLandscape ? 60 : 80,
+                        color: AppColors.accentPrimary,
+                      ),
+                    ),
                     SizedBox(height: isLandscape ? 16 : 24),
-                    Text('Yoyaku Mate\n始めましょう',
+                    Text('sabotenへ\nようこそ。',
                         style: TextStyle(
-                            fontSize: isLandscape ? 32 : 40,
+                            fontSize: isLandscape ? 28 : 36,
                             fontWeight: FontWeight.bold,
                             height: 1.2,
                             color: AppColors.textPrimary)),
                     SizedBox(height: isLandscape ? 8 : 12),
-                    const Text('待機管理をより簡単に',
+                    const Text('店舗管理始めましょう！',
                         style: TextStyle(
                             fontSize: 16, color: AppColors.textSecondary)),
                   ],
