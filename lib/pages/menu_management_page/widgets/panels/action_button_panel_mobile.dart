@@ -5,7 +5,7 @@ class ActionButtonsPanelMobile extends StatelessWidget {
   final bool isCategoryEmpty;
   final VoidCallback onAddCategory;
   final VoidCallback onAddMenu;
-  final VoidCallback onSaveChanges;
+  // final VoidCallback onSaveChanges;
   final VoidCallback onResetAll;
 
   const ActionButtonsPanelMobile({
@@ -13,7 +13,7 @@ class ActionButtonsPanelMobile extends StatelessWidget {
     required this.isCategoryEmpty,
     required this.onAddCategory,
     required this.onAddMenu,
-    required this.onSaveChanges,
+    // required this.onSaveChanges,
     required this.onResetAll,
   });
 
@@ -64,15 +64,15 @@ class ActionButtonsPanelMobile extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: _buildButton(
-                  onPressed: onSaveChanges,
-                  label: '保存',
-                  icon: Icons.save_alt_outlined,
-                  isPrimary: true,
-                ),
-              ),
-              const SizedBox(width: 12),
+              // Expanded(
+              //   child: _buildButton(
+              //     onPressed: onSaveChanges,
+              //     label: '保存',
+              //     icon: Icons.save_alt_outlined,
+              //     isPrimary: true,
+              //   ),
+              // ),
+              // const SizedBox(width: 12),
               Expanded(
                 child: _buildButton(
                   onPressed: onResetAll,
