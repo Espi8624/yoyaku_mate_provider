@@ -55,6 +55,7 @@ dependencies:
   app_links: ^6.4.1
   go_router: ^16.2.0 
   http_parser: ^4.1.2
+  libphonenumber_plugin: ^0.2.3
 
   flutter_localizations:
     sdk: flutter
