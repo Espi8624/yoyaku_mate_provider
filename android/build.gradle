@@ -1,5 +1,8 @@
+buildscript {
+    ext.kotlin_version = '1.8.10'  // バージョンを1.8.10に更新
+}
+
 allprojects {
-    ext.kotlin_version = '2.1.0'
     repositories {
         google()
         mavenCentral()
