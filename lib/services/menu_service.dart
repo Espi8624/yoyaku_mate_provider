@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-// import 'dart:typed_data';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../models/menu_list.dart';
@@ -45,34 +44,26 @@ class MenuService {
     }
   }
 
-  // Future<String> _uploadImage(Uint8List imageBytes, String filename) async {
-  //   final uri = Uri.parse('$_baseUrl/api/upload-image');
-  //   try {
-  //     var request = http.MultipartRequest('POST', uri);
-  //     request.files.add(http.MultipartFile.fromBytes('image', imageBytes,
-  //         filename: filename));
-  //     final response = await request.send();
-  //     final responseBody = await response.stream.bytesToString();
+  Future<String> _uploadImage(Uint8List imageBytes, String filename) async {
+    final uri = Uri.parse('$_baseUrl/api/upload-image');
+    try {
+      var request = http.MultipartRequest('POST', uri);
+      request.files.add(http.MultipartFile.fromBytes('image', imageBytes,
+          filename: filename));
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
 
-  //     if (response.statusCode == 200) {
-  //       return json.decode(responseBody)['url'];
-  //     } else {
-  //       throw ApiException(
-  //           json.decode(responseBody)['message'] ?? 'Failed to upload image',
-  //           statusCode: response.statusCode);
-  //     }
-  //   } catch (e) {
-  //     if (e is ApiException) rethrow;
-  //     throw ApiException('Image upload failed: ${e.toString()}');
-  //   }
-  // }
-
-  Future<String> _getIdToken() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw ApiException('User not logged in.');
-    final token = await user.getIdToken();
-    if (token == null) throw ApiException('Failed to get auth token.');
-    return token;
+      if (response.statusCode == 200) {
+        return json.decode(responseBody)['url'];
+      } else {
+        throw ApiException(
+            json.decode(responseBody)['message'] ?? 'Failed to upload image',
+            statusCode: response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Image upload failed: ${e.toString()}');
+    }
   }
 
   Future<MenuListItem> uploadMenuImage(String menuId, File imageFile) async {
@@ -80,9 +71,6 @@ class MenuService {
     try {
       // multipart/form-data要請生成
       var request = http.MultipartRequest('POST', uri);
-
-      final token = await _getIdToken();
-      request.headers['Authorization'] = 'Bearer $token';
 
       request.files.add(
         await http.MultipartFile.fromPath(
@@ -110,158 +98,50 @@ class MenuService {
     }
   }
 
-  Future<List<MenuListItem>> saveMenuItems(
+  Future<void> saveMenuItems(
       Map<String, List<MenuListItem>> categorizedMenu, String storeId) async {
-    final List<Map<String, dynamic>> itemsToSave = [];
-    categorizedMenu.forEach((_, menuList) {
-      for (var item in menuList) {
-        itemsToSave.add(item.toJson());
+    List<Map<String, dynamic>> itemsToSave = [];
+
+    for (var entry in categorizedMenu.entries) {
+      for (var item in entry.value) {
+        String finalImageUrl = item.menuImageUrl;
+        if (item.tempImageBytes != null) {
+          try {
+            final filename = '${item.menuId}.jpg';
+            finalImageUrl = await _uploadImage(item.tempImageBytes!, filename);
+          } catch (e) {
+            print('Image upload failed for ${item.title}: $e');
+          }
+        }
+        final itemToSave = item.copyWith(
+          menuImageUrl: finalImageUrl,
+          storeId: item.storeId.isNotEmpty ? item.storeId : storeId,
+          updatedAt: DateTime.now(),
+          clearTempImage: true,
+        );
+        itemsToSave.add(itemToSave.toJson());
       }
-    });
+    }
 
     final uri =
         Uri.parse('$_baseUrl/api/menu-list/bulk-save?store_id=$storeId');
     try {
-      final token = await _getIdToken();
-      final response = await _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode(itemsToSave),
-      );
+      final response = await _client.post(uri,
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode(itemsToSave));
+      final decodedBody = utf8.decode(response.bodyBytes);
+      final jsonResponse = json.decode(decodedBody);
 
       if (response.statusCode != 200) {
-        final decodedBody = utf8.decode(response.bodyBytes);
-        final jsonResponse = json.decode(decodedBody);
         throw ApiException(jsonResponse['message'] ?? 'Failed to save menus',
             statusCode: response.statusCode);
       }
-
-      // 応答パーシング
-      final decodedBody = utf8.decode(response.bodyBytes);
-      final jsonResponse = json.decode(decodedBody);
-
-      if (jsonResponse['status'] == 'success') {
-        final List<dynamic> data = jsonResponse['data'] ?? [];
-        return data.map((item) => MenuListItem.fromJson(item)).toList();
+      if (jsonResponse['status'] != 'success') {
+        throw ApiException(jsonResponse['message'] ?? 'Failed to save menus');
       }
-
-      return [];
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to save menus: ${e.toString()}');
-    }
-  }
-
-  // 単一メニュー更新
-  Future<MenuListItem> updateSingleMenu(MenuListItem menu) async {
-    final uri = Uri.parse('$_baseUrl/api/menu-list');
-    try {
-      final token = await _getIdToken();
-      final response = await _client.patch(
-        uri,
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode(menu.toJson()),
-      );
-
-      final decodedBody = utf8.decode(response.bodyBytes);
-      final jsonResponse = json.decode(decodedBody);
-
-      if (response.statusCode == 200) {
-        if (jsonResponse['status'] != 'success') {
-          throw ApiException(
-              jsonResponse['message'] ?? 'Failed to update menu');
-        }
-        final menuData = jsonResponse['data'] ?? jsonResponse;
-        return MenuListItem.fromJson(menuData);
-      } else {
-        throw ApiException(jsonResponse['message'] ?? 'Failed to update menu',
-            statusCode: response.statusCode);
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Menu update failed: ${e.toString()}');
-    }
-  }
-
-  // 新規メニュー保存
-  Future<MenuListItem> createSingleMenu(
-      MenuListItem menu, String storeId) async {
-    final uri =
-        Uri.parse('$_baseUrl/api/menu-list/bulk-save?store_id=$storeId');
-    try {
-      final token = await _getIdToken();
-      final response = await _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode([menu.toJson()]),
-      );
-
-      final decodedBody = utf8.decode(response.bodyBytes);
-      final jsonResponse = json.decode(decodedBody);
-
-      if (response.statusCode == 200) {
-        if (jsonResponse['status'] != 'success') {
-          throw ApiException(
-              jsonResponse['message'] ?? 'Failed to create menu');
-        }
-        final List<dynamic> data = jsonResponse['data'] ?? [];
-        if (data.isEmpty) {
-          throw ApiException('No menu returned from server');
-        }
-        return MenuListItem.fromJson(data.first);
-      } else {
-        throw ApiException(jsonResponse['message'] ?? 'Failed to create menu',
-            statusCode: response.statusCode);
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Menu creation failed: ${e.toString()}');
-    }
-  }
-
-  // メニュー削除（状態変更）
-  Future<MenuListItem> deleteSingleMenu(String menuId) async {
-    final uri = Uri.parse('$_baseUrl/api/menu-list');
-    try {
-      final token = await _getIdToken();
-      final response = await _client.patch(
-        uri,
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode({
-          'id': menuId,
-          'menu_status': 'disable',
-        }),
-      );
-
-      final decodedBody = utf8.decode(response.bodyBytes);
-      final jsonResponse = json.decode(decodedBody);
-
-      if (response.statusCode == 200) {
-        if (jsonResponse['status'] != 'success') {
-          throw ApiException(
-              jsonResponse['message'] ?? 'Failed to delete menu');
-        }
-        final menuData = jsonResponse['data'] ?? jsonResponse;
-        return MenuListItem.fromJson(menuData);
-      } else {
-        throw ApiException(jsonResponse['message'] ?? 'Failed to delete menu',
-            statusCode: response.statusCode);
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Menu deletion failed: ${e.toString()}');
     }
   }
 }
