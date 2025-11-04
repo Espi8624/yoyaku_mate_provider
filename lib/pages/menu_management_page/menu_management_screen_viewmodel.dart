@@ -1,29 +1,22 @@
-import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../../models/menu_list.dart';
 import '../../services/api_exception.dart';
 import '../../services/menu_service.dart';
 
-// 保存ステータス列挙型
-enum SaveStatus { saved, saving, error }
-
 class MenuManagementScreenViewModel extends ChangeNotifier {
   final MenuService _menuService;
   final String storeId;
 
-  MenuManagementScreenViewModel({
-    required this.storeId,
-    required MenuService menuService,
-  }) : _menuService = menuService {
+  MenuManagementScreenViewModel(
+      {required this.storeId, required MenuService menuService})
+      : _menuService = menuService {
     loadMenuData();
   }
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
-
-  SaveStatus _saveStatus = SaveStatus.saved;
-  SaveStatus get saveStatus => _saveStatus;
 
   List<MenuListItem> _menuItems = [];
   Map<String, List<MenuListItem>> _categorizedMenu = {};
@@ -32,24 +25,13 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
   List<String> _categories = [];
   List<String> get categories => _categories;
 
+  late Map<String, List<MenuListItem>> _originalMenuData;
+
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  Timer? _autoSaveTimer;
-
-  @override
-  void dispose() {
-    _autoSaveTimer?.cancel();
-    super.dispose();
-  }
-
   void _setLoading(bool value) {
     _isLoading = value;
-    notifyListeners();
-  }
-
-  void _setSaveStatus(SaveStatus status) {
-    _saveStatus = status;
     notifyListeners();
   }
 
@@ -58,7 +40,7 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
     _errorMessage = null;
     try {
       _menuItems = await _menuService.fetchMenuItems(storeId);
-      _updateCategorizedMenu();
+      _updateAndBackupCategorizedMenu();
     } on ApiException catch (e) {
       _errorMessage = e.message;
     } finally {
@@ -66,15 +48,45 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
     }
   }
 
-  void _updateCategorizedMenu() {
+  void _updateAndBackupCategorizedMenu() {
     final newCategorizedMenu = <String, List<MenuListItem>>{};
     for (var item in _menuItems) {
       final category = item.category.isNotEmpty ? item.category : '未分類';
       (newCategorizedMenu[category] ??= []).add(item);
     }
     _categorizedMenu = newCategorizedMenu;
+    _originalMenuData = {
+      for (var entry in _categorizedMenu.entries)
+        entry.key: List.from(entry.value)
+    };
     _categories = newCategorizedMenu.keys.toList();
     notifyListeners();
+  }
+
+  bool hasChanges() {
+    if (_categorizedMenu.keys.toSet() != _originalMenuData.keys.toSet())
+      return true;
+    for (final category in _categorizedMenu.keys) {
+      final currentItems = _categorizedMenu[category]!;
+      final originalItems = _originalMenuData[category]!;
+      if (currentItems.length != originalItems.length) return true;
+      if (Set.from(currentItems) != Set.from(originalItems)) return true;
+    }
+    return false;
+  }
+
+  Future<void> saveChanges() async {
+    _setLoading(true);
+    _errorMessage = null;
+    try {
+      await _menuService.saveMenuItems(_categorizedMenu, storeId);
+      await loadMenuData();
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
   }
 
   void addCategory(String categoryName) {
@@ -85,89 +97,35 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> editCategory(String oldName, String newName) async {
-    if (!_categories.contains(oldName) || _categories.contains(newName)) {
-      return;
-    }
-
-    _setSaveStatus(SaveStatus.saving);
-    try {
-      final menuList = _categorizedMenu[oldName] ?? [];
-
-      // 모든 메뉴의 카테고리를 업데이트
-      for (var item in menuList) {
-        final updatedItem = item.copyWith(category: newName);
-        await _menuService.updateSingleMenu(updatedItem);
-      }
-
-      // ローカルステータス更新
+  void editCategory(String oldName, String newName) {
+    if (_categories.contains(oldName) && !_categories.contains(newName)) {
       final index = _categories.indexOf(oldName);
       _categories[index] = newName;
+      final menuList = _categorizedMenu.remove(oldName) ?? [];
       _categorizedMenu[newName] =
           menuList.map((item) => item.copyWith(category: newName)).toList();
-      _categorizedMenu.remove(oldName);
-
       _menuItems = _menuItems
           .map((item) => item.category == oldName
               ? item.copyWith(category: newName)
               : item)
           .toList();
-
-      _setSaveStatus(SaveStatus.saved);
       notifyListeners();
-    } on ApiException catch (e) {
-      _errorMessage = e.message;
-      _setSaveStatus(SaveStatus.error);
-      rethrow;
     }
   }
 
-  // カテゴリ削除 - 即時サーバーに反映
-  Future<void> deleteCategory(int index) async {
+  void deleteCategory(int index) {
     final category = _categories[index];
-    final menuList = _categorizedMenu[category] ?? [];
-
-    _setSaveStatus(SaveStatus.saving);
-    try {
-      // 全てのメニューをdisableに変更
-      for (var item in menuList) {
-        await _menuService.deleteSingleMenu(item.id);
-      }
-
-      // ローカルステータス更新
-      _menuItems.removeWhere((item) => item.category == category);
-      _categories.removeAt(index);
-      _categorizedMenu.remove(category);
-
-      _setSaveStatus(SaveStatus.saved);
-      notifyListeners();
-    } on ApiException catch (e) {
-      _errorMessage = e.message;
-      _setSaveStatus(SaveStatus.error);
-      rethrow;
-    }
+    _menuItems.removeWhere((item) => item.category == category);
+    _categories.removeAt(index);
+    _categorizedMenu.remove(category);
+    notifyListeners();
   }
 
-  // 新規メニュー追加
-  Future<MenuListItem?> addMenu(MenuListItem newMenu) async {
-    _setSaveStatus(SaveStatus.saving);
-    try {
-      final savedMenu = await _menuService.createSingleMenu(newMenu, storeId);
-
-      _menuItems.add(savedMenu);
-      _updateCategorizedMenu();
-
-      _setSaveStatus(SaveStatus.saved);
-      return savedMenu;
-    } on ApiException catch (e) {
-      _errorMessage = e.message;
-      _setSaveStatus(SaveStatus.error);
-      notifyListeners();
-      return null;
-    }
+  void addMenu(MenuListItem newMenu) {
+    _menuItems.add(newMenu);
+    _updateAndBackupCategorizedMenu();
   }
 
-  // イメージ付きメニュー更新
   Future<void> updateMenuWithImage(
       MenuListItem menuData, File imageFile) async {
     _setLoading(true);
@@ -183,12 +141,13 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
         category: menuData.category,
       );
 
-      // ローカルステータス更新
-      final index =
-          _menuItems.indexWhere((item) => item.id == finalUpdatedMenu.id);
-      if (index != -1) {
-        _menuItems[index] = finalUpdatedMenu;
-        _updateCategorizedMenu();
+      editMenu(finalUpdatedMenu);
+
+      // ローカルデータ更新
+      final index = _originalMenuData[finalUpdatedMenu.category]
+          ?.indexWhere((item) => item.id == finalUpdatedMenu.id);
+      if (index != null && index != -1) {
+        _originalMenuData[finalUpdatedMenu.category]![index] = finalUpdatedMenu;
       }
     } on ApiException catch (e) {
       _errorMessage = e.message;
@@ -198,83 +157,41 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
     }
   }
 
-  // メニュー編集（テキスト情報のみ）
-  Future<void> editMenu(MenuListItem updatedMenu) async {
+  void editMenu(MenuListItem updatedMenu) {
     final index = _menuItems.indexWhere((item) =>
         (item.id.isNotEmpty && item.id == updatedMenu.id) ||
         (item.id.isEmpty && item.menuId == updatedMenu.menuId));
 
     if (index != -1) {
       _menuItems[index] = updatedMenu;
-      _updateCategorizedMenu();
-    }
-
-    _autoSave(updatedMenu);
-  }
-
-  void _autoSave(MenuListItem menu) {
-    _autoSaveTimer?.cancel();
-    _setSaveStatus(SaveStatus.saving);
-
-    _autoSaveTimer = Timer(Duration(seconds: 1), () async {
-      try {
-        await _menuService.updateSingleMenu(menu);
-        _setSaveStatus(SaveStatus.saved);
-      } on ApiException catch (e) {
-        _errorMessage = e.message;
-        _setSaveStatus(SaveStatus.error);
-        notifyListeners();
-      }
-    });
-  }
-
-  // メニュー削除（状態変更）
-  Future<void> deleteMenu(String category, int menuIndex) async {
-    final menuItem = _categorizedMenu[category]![menuIndex];
-
-    _setSaveStatus(SaveStatus.saving);
-    try {
-      await _menuService.deleteSingleMenu(menuItem.id);
-
-      // ローカルステータス更新
-      final index = _menuItems.indexWhere((item) => item.id == menuItem.id);
-      if (index != -1) {
-        _menuItems[index] = menuItem.copyWith(
-          menuStatus: 'disable',
-          updatedAt: DateTime.now(),
-        );
-        _updateCategorizedMenu();
-      }
-
-      _setSaveStatus(SaveStatus.saved);
-    } on ApiException catch (e) {
-      _errorMessage = e.message;
-      _setSaveStatus(SaveStatus.error);
-      rethrow;
-    }
-  }
-
-  // 全体メニュー削除（状態変更）
-  Future<void> deleteAllMenus() async {
-    _setSaveStatus(SaveStatus.saving);
-    try {
+      // ローカルデータ更新
+      final newCategorizedMenu = <String, List<MenuListItem>>{};
       for (var item in _menuItems) {
-        if (item.menuStatus != 'disable') {
-          await _menuService.deleteSingleMenu(item.id);
-        }
+        final category = item.category.isNotEmpty ? item.category : '未分類';
+        (newCategorizedMenu[category] ??= []).add(item);
       }
-
-      _menuItems = _menuItems
-          .map((item) =>
-              item.copyWith(menuStatus: 'disable', updatedAt: DateTime.now()))
-          .toList();
-      _updateCategorizedMenu();
-
-      _setSaveStatus(SaveStatus.saved);
-    } on ApiException catch (e) {
-      _errorMessage = e.message;
-      _setSaveStatus(SaveStatus.error);
-      rethrow;
+      _categorizedMenu = newCategorizedMenu;
+      _categories = newCategorizedMenu.keys.toList();
+      notifyListeners();
     }
+  }
+
+  void deleteMenu(String category, int menuIndex) {
+    final menuItem = _categorizedMenu[category]![menuIndex];
+    final index = _menuItems.indexWhere(
+        (item) => item.id == menuItem.id && item.menuId == menuItem.menuId);
+    if (index != -1) {
+      _menuItems[index] =
+          menuItem.copyWith(menuStatus: 'disable', updatedAt: DateTime.now());
+      _updateAndBackupCategorizedMenu();
+    }
+  }
+
+  void deleteAllMenus() {
+    _menuItems = _menuItems
+        .map((item) =>
+            item.copyWith(menuStatus: 'disable', updatedAt: DateTime.now()))
+        .toList();
+    _updateAndBackupCategorizedMenu();
   }
 }

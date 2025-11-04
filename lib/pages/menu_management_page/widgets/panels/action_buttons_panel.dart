@@ -5,7 +5,7 @@ class ActionButtonsPanel extends StatelessWidget {
   final bool isCategoryEmpty;
   final VoidCallback onAddCategory;
   final VoidCallback onAddMenu;
-  // final VoidCallback onSaveChanges;
+  final VoidCallback onSaveChanges;
   final VoidCallback onResetAll;
 
   const ActionButtonsPanel({
@@ -13,7 +13,7 @@ class ActionButtonsPanel extends StatelessWidget {
     required this.isCategoryEmpty,
     required this.onAddCategory,
     required this.onAddMenu,
-    // required this.onSaveChanges,
+    required this.onSaveChanges,
     required this.onResetAll,
   });
 
@@ -53,12 +53,12 @@ class ActionButtonsPanel extends StatelessWidget {
                       icon: Icons.add_shopping_cart_rounded,
                     ),
                     const Spacer(),
-                    // _buildButton(
-                    //   onPressed: onSaveChanges,
-                    //   label: '保存',
-                    //   icon: Icons.save_alt_rounded,
-                    //   isPrimary: true,
-                    // ),
+                    _buildButton(
+                      onPressed: onSaveChanges,
+                      label: '保存',
+                      icon: Icons.save_alt_rounded,
+                      isPrimary: true,
+                    ),
                     const SizedBox(height: 16),
                     _buildButton(
                       onPressed: onResetAll,

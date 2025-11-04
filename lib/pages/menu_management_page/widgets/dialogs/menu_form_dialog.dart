@@ -27,7 +27,6 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
   Uint8List? _tempImageBytes;
-  bool _imageRemoved = false;
   bool get _isEditing => widget.menuItem != null;
 
   @override
@@ -63,9 +62,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         price: double.parse(_priceController.text),
-        menuImageUrl: _imageRemoved
-            ? ''
-            : (_isEditing ? widget.menuItem!.menuImageUrl : ''),
+        menuImageUrl: _isEditing ? widget.menuItem!.menuImageUrl : '',
         createdAt: _isEditing ? widget.menuItem!.createdAt : now,
         updatedAt: now,
         menuStatus: _isEditing ? widget.menuItem!.menuStatus : 'available',
@@ -75,7 +72,6 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
       final result = {
         'menu': menuItem,
         'imageFile': _tempImageBytes,
-        'imageRemoved': _imageRemoved,
       };
 
       Navigator.of(context).pop(result);
@@ -96,14 +92,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
             ImagePickerBox(
               initialImageBytes: _tempImageBytes,
               initialImageUrl: widget.menuItem?.menuImageUrl,
-              onImagePicked: (bytes) {
-                setState(() {
-                  _tempImageBytes = bytes;
-
-                  final currentImageUrl = widget.menuItem?.menuImageUrl ?? '';
-                  _imageRemoved = bytes == null && currentImageUrl.isNotEmpty;
-                });
-              },
+              onImagePicked: (bytes) => _tempImageBytes = bytes,
             ),
             const SizedBox(height: 16),
             TextFormField(
