@@ -16,6 +16,8 @@ import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/routes.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar_mobile.dart';
 
+//
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
