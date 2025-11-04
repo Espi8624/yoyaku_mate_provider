@@ -13,6 +13,7 @@ import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
+import 'package:libphonenumber_plugin/libphonenumber_plugin.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart' show setSignUpInProgress;
 
@@ -174,8 +175,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
         firebaseUid = newUser.uid;
         final token = await newUser.getIdToken(true);
-        if (token == null)
+        if (token == null) {
           throw Exception('Failed to retrieve Firebase ID token.');
+        }
         idToken = token;
 
         // print("--- [SignUpPage] Firebase 계정 생성 완료 ---");
@@ -186,11 +188,14 @@ class _SignUpPageState extends State<SignUpPage> {
         }
       } else {
         final currentUser = FirebaseAuth.instance.currentUser;
-        if (currentUser == null) throw ApiException('ログイン状態が確認できません。');
+        if (currentUser == null) {
+          throw ApiException('ログイン状態が確認できません。');
+        }
         firebaseUid = currentUser.uid;
         final token = await currentUser.getIdToken(true);
-        if (token == null)
+        if (token == null) {
           throw Exception('Failed to retrieve Firebase ID token.');
+        }
         idToken = token;
       }
 
@@ -327,6 +332,34 @@ class _SignUpPageState extends State<SignUpPage> {
     }
     _pageController.previousPage(
         duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+  }
+
+  // 電話番号フォーマット用の関数を修正
+  Future<String> _formatPhoneNumber(String text) async {
+    if (text.isEmpty) return '';
+
+    // 数字以外を除去
+    final onlyNumbers = text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    try {
+      // 日本の電話番号としてフォーマット
+      final isValid = await PhoneNumberUtil.isValidPhoneNumber(
+          onlyNumbers, // 位置引数として渡す
+          'JP' // 位置引数として渡す
+          );
+
+      if (isValid == true) {
+        final formattedNumber = await PhoneNumberUtil.formatAsYouType(
+            onlyNumbers, // 位置引数として渡す
+            'JP' // 位置引数として渡す
+            );
+        return formattedNumber ?? text;
+      }
+    } catch (e) {
+      debugPrint('Phone formatting error: $e');
+    }
+
+    return text;
   }
 
   @override
@@ -729,13 +762,15 @@ class _SignUpPageState extends State<SignUpPage> {
           foregroundColor: AppColors.textPrimary,
           padding: const EdgeInsets.symmetric(vertical: 24),
           side: const BorderSide(color: AppColors.border),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       ),
     );
   }
 
+  // TextFieldのビルダーを修正
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -745,17 +780,33 @@ class _SignUpPageState extends State<SignUpPage> {
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextFormField(
-        controller: controller,
-        obscureText: isPassword,
-        keyboardType: type,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const UnderlineInputBorder(),
-          focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.accentPrimary, width: 2)),
+      child: Focus(
+        // Focusウィジェットを追加
+        onFocusChange: (hasFocus) async {
+          // フォーカスが外れた時に電話番号をフォーマット
+          if (!hasFocus && type == TextInputType.phone) {
+            final formatted = await _formatPhoneNumber(controller.text);
+            if (formatted != controller.text) {
+              controller.value = TextEditingValue(
+                text: formatted,
+                selection: TextSelection.collapsed(offset: formatted.length),
+              );
+            }
+          }
+        },
+        child: TextFormField(
+          controller: controller,
+          obscureText: isPassword,
+          keyboardType: type,
+          decoration: InputDecoration(
+            labelText: label,
+            border: const UnderlineInputBorder(),
+            focusedBorder: const UnderlineInputBorder(
+                borderSide:
+                    BorderSide(color: AppColors.accentPrimary, width: 2)),
+          ),
+          validator: validator,
         ),
-        validator: validator,
       ),
     );
   }
