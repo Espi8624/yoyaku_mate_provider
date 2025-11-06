@@ -13,7 +13,6 @@ import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
-import 'package:libphonenumber_plugin/libphonenumber_plugin.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart' show setSignUpInProgress;
 
@@ -456,34 +455,6 @@ class _SignUpPageState extends State<SignUpPage> {
     }
     _pageController.previousPage(
         duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
-  }
-
-  // 電話番号フォーマット用の関数を修正
-  Future<String> _formatPhoneNumber(String text) async {
-    if (text.isEmpty) return '';
-
-    // 数字以外を除去
-    final onlyNumbers = text.replaceAll(RegExp(r'[^0-9]'), '');
-
-    try {
-      // 日本の電話番号としてフォーマット
-      final isValid = await PhoneNumberUtil.isValidPhoneNumber(
-          onlyNumbers, // 位置引数として渡す
-          'JP' // 位置引数として渡す
-          );
-
-      if (isValid == true) {
-        final formattedNumber = await PhoneNumberUtil.formatAsYouType(
-            onlyNumbers, // 位置引数として渡す
-            'JP' // 位置引数として渡す
-            );
-        return formattedNumber ?? text;
-      }
-    } catch (e) {
-      debugPrint('Phone formatting error: $e');
-    }
-
-    return text;
   }
 
   @override
