@@ -6,7 +6,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/panels/action_button_panel_mobile.dart';
 import '../../models/menu_list.dart';
-import '../../services/api_exception.dart';
 import '../../services/menu_service.dart';
 import '../../widgets/common_dialogs/confirmation_dialog.dart';
 import '../../widgets/common_widgets/custom_snack_bar.dart';
@@ -171,8 +170,29 @@ class _MenuManagementViewState extends State<_MenuManagementView>
 
     if (result != null) {
       final newMenu = result['menu'] as MenuListItem;
+      final imageBytes = result['imageFile'] as Uint8List?;
 
-      _viewModel.addMenu(newMenu);
+      // メニュー保存
+      final savedMenu = await _viewModel.addMenu(newMenu);
+
+      if (savedMenu == null) {
+        CustomSnackBar.show(context,
+            message: 'メニュー追加に失敗しました', status: SnackBarStatus.error);
+        return;
+      }
+
+      // イメージが選択されていればアップロード
+      if (imageBytes != null && savedMenu.id.isNotEmpty) {
+        final tempDir = await getTemporaryDirectory();
+        final path =
+            '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final imageFile = await File(path).writeAsBytes(imageBytes);
+
+        await _viewModel.updateMenuWithImage(savedMenu, imageFile);
+      }
+
+      CustomSnackBar.show(context,
+          message: 'メニューが追加されました', status: SnackBarStatus.success);
     }
   }
 
@@ -189,17 +209,23 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     if (result != null) {
       final updatedMenu = result['menu'] as MenuListItem;
       final imageBytes = result['imageFile'] as Uint8List?;
+      final imageRemoved = result['imageRemoved'] as bool? ?? false;
 
       if (imageBytes != null) {
+        // 新しいイメージ選択 → アップロード
         final tempDir = await getTemporaryDirectory();
-
         final path =
             '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-
         final imageFile = await File(path).writeAsBytes(imageBytes);
-        _viewModel.updateMenuWithImage(updatedMenu, imageFile);
+        await _viewModel.updateMenuWithImage(updatedMenu, imageFile);
+      } else if (imageRemoved) {
+        // イメージ削除　→ 空の文字列で更新
+        final menuWithoutImage = updatedMenu.copyWith(menuImageUrl: '');
+        _viewModel.editMenu(menuWithoutImage);
+        CustomSnackBar.show(context,
+            message: '画像が削除されました', status: SnackBarStatus.success);
       } else {
-        // イメージが変更されていない場合
+        // テキスト情報のみ更新
         _viewModel.editMenu(updatedMenu);
       }
     }
@@ -228,23 +254,6 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     }
   }
 
-  Future<void> _saveChanges() async {
-    if (!_viewModel.hasChanges()) {
-      CustomSnackBar.show(context,
-          message: '変更がありません', status: SnackBarStatus.info);
-      return;
-    }
-    try {
-      await _viewModel.saveChanges();
-      CustomSnackBar.show(context,
-          message: 'メニューが保存されました', status: SnackBarStatus.success);
-    } on ApiException catch (e) {
-      CustomSnackBar.show(context,
-          message: '保存に失敗しました: ${e.message}', status: SnackBarStatus.error);
-    }
-  }
-
-  @override
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<MenuManagementScreenViewModel>();
@@ -266,6 +275,12 @@ class _MenuManagementViewState extends State<_MenuManagementView>
             // ),
             body: Stack(
               children: [
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: _SaveStatusIndicator(status: vm.saveStatus),
+                ),
+
                 Positioned.fill(
                   bottom: 150,
                   child: MenuListPanel(
@@ -288,7 +303,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                     isCategoryEmpty: vm.categories.isEmpty,
                     onAddCategory: _showAddCategoryDialog,
                     onAddMenu: _showAddMenuDialog,
-                    onSaveChanges: _saveChanges,
+                    // onSaveChanges: _saveChanges,
                     onResetAll: _showDeleteAllMenusDialog,
                   ),
                 ),
@@ -301,6 +316,17 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         } else {
           // desktop layout
           return Scaffold(
+            appBar: AppBar(
+              title: const Text('メニュー管理'),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              elevation: 0,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: _SaveStatusIndicator(status: vm.saveStatus),
+                ),
+              ],
+            ),
             body: Stack(
               children: [
                 Row(
@@ -324,7 +350,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                         isCategoryEmpty: vm.categories.isEmpty,
                         onAddCategory: _showAddCategoryDialog,
                         onAddMenu: _showAddMenuDialog,
-                        onSaveChanges: _saveChanges,
+                        // onSaveChanges: _saveChanges,
                         onResetAll: _showDeleteAllMenusDialog,
                       ),
                     ),
@@ -337,5 +363,69 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         }
       },
     );
+  }
+}
+
+class _SaveStatusIndicator extends StatelessWidget {
+  final SaveStatus status;
+
+  const _SaveStatusIndicator({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    switch (status) {
+      case SaveStatus.saving:
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade100,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 8),
+              Text('保存中...', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+        );
+      case SaveStatus.error:
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.red.shade100,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 16, color: Colors.red),
+              SizedBox(width: 8),
+              Text('保存失敗', style: TextStyle(fontSize: 12, color: Colors.red)),
+            ],
+          ),
+        );
+      case SaveStatus.saved:
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.green.shade100,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle, size: 16, color: Colors.green),
+              SizedBox(width: 8),
+              Text('保存済み', style: TextStyle(fontSize: 12, color: Colors.green)),
+            ],
+          ),
+        );
+    }
   }
 }
