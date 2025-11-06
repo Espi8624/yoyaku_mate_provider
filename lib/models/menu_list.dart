@@ -80,37 +80,44 @@ class MenuListItem extends Equatable {
   factory MenuListItem.fromJson(Map<String, dynamic> json) {
     return MenuListItem(
       id: json['id']?.toString() ?? '',
-      storeId: json['storeId']?.toString() ?? '',
-      menuId: json['menuId']?.toString() ?? '',
+      storeId: json['store_id']?.toString() ?? '',
+      menuId: json['menu_id']?.toString() ?? '',
       category: json['category']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
-      menuImageUrl: json['menuImageUrl']?.toString() ?? '',
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'].toString())
+      menuImageUrl: json['menu_image_url']?.toString() ?? '',
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'].toString())
           : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'].toString())
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'].toString())
           : DateTime.now(),
-      menuStatus: json['menuStatus']?.toString() ?? 'available',
+      menuStatus: json['menu_status']?.toString() ?? 'available',
       tempImageBytes: null,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = {
       'id': id,
-      'storeId': storeId,
-      'menuId': menuId,
+      'store_id': storeId,
+      'menu_id': menuId,
       'category': category,
       'title': title,
       'description': description,
       'price': price,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'menu_status': menuStatus,
       'menu_image_url': menuImageUrl,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'menuStatus': menuStatus,
     };
+
+    // menu_image_urlが空でない場合のみ追加
+    if (menuImageUrl.isNotEmpty) {
+      json['menu_image_url'] = menuImageUrl;
+    }
+
+    return json;
   }
 }
