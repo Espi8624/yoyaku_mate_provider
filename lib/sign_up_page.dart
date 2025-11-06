@@ -30,14 +30,17 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _role;
   bool _isLoading = false;
   String? _errorMessage;
-  // String? _lineLoginUrl;
+
+  // 電話番号認証関連
+  String? _verificationId;
+  bool _isPhoneVerified = false;
+  int? _resendToken;
 
   late PageController _pageController;
   int _currentPageIndex = 0;
 
-  // bool _isEmailVerified = false;
-
   final GlobalKey<FormState> _passwordFormKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _phoneFormKey = GlobalKey<FormState>();
 
   // コントローラー初期化
   final TextEditingController managerEmailController = TextEditingController();
@@ -58,6 +61,10 @@ class _SignUpPageState extends State<SignUpPage> {
       TextEditingController();
   final TextEditingController staffPhoneController = TextEditingController();
   final TextEditingController staffNameController = TextEditingController();
+
+  // 認証コード入力用
+  final TextEditingController verificationCodeController =
+      TextEditingController();
 
   @override
   void initState() {
@@ -119,10 +126,176 @@ class _SignUpPageState extends State<SignUpPage> {
     staffConfirmPasswordController.dispose();
     staffPhoneController.dispose();
     staffNameController.dispose();
+    verificationCodeController.dispose();
     super.dispose();
   }
 
+  // 電話番ご形式検証
+  String? _validatePhoneNumber(String? value) {
+    if (value == null || value.isEmpty) {
+      return '電話番号を入力してください。';
+    }
+
+    // 日本電話番号形式チェック
+    final phoneRegex = RegExp(r'^0\d{9,10}$');
+    if (!phoneRegex.hasMatch(value.replaceAll(RegExp(r'[-\s]'), ''))) {
+      return '正しい電話番号を入力してください。';
+    }
+
+    return null;
+  }
+
+  // 電話番号を国際形式に変換 (+81)
+  String _formatPhoneNumber(String phone) {
+    String cleaned = phone.replaceAll(RegExp(r'[-\s]'), '');
+    if (cleaned.startsWith('0')) {
+      cleaned = cleaned.substring(1);
+    }
+    return '+81$cleaned';
+  }
+
+  // 電話番号認証コード送信
+  Future<void> _sendPhoneVerification() async {
+    if (!_phoneFormKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final phoneController =
+        _role == 'manager' ? managerPhoneController : staffPhoneController;
+
+    final phoneNumber = _formatPhoneNumber(phoneController.text.trim());
+
+    try {
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        timeout: const Duration(seconds: 60),
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          // 自動検証完了時（Androidのみ）
+          setState(() {
+            _isPhoneVerified = true;
+          });
+          _nextPage();
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          if (!mounted) return;
+          setState(() {
+            _isLoading = false;
+            if (e.code == 'invalid-phone-number') {
+              _errorMessage = '電話番号の形式が正しくありません。';
+            } else if (e.code == 'too-many-requests') {
+              _errorMessage = '試行回数が多すぎます。しばらくしてから再度お試しください。';
+            } else {
+              _errorMessage = '認証に失敗しました: ${e.message}';
+            }
+          });
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          if (!mounted) return;
+          setState(() {
+            _verificationId = verificationId;
+            _resendToken = resendToken;
+            _isLoading = false;
+          });
+          _nextPage();
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          setState(() {
+            _verificationId = verificationId;
+          });
+        },
+        forceResendingToken: _resendToken,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'エラーが発生しました: $e';
+      });
+    }
+  }
+
+  // 認証コード確認
+  Future<void> _verifyPhoneCode() async {
+    final code = verificationCodeController.text.trim();
+
+    if (code.isEmpty || code.length != 6) {
+      setState(() {
+        _errorMessage = '6桁の認証コードを入力してください。';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    // 会員加入プロセスが進行中であることを通知
+    setSignUpInProgress(true);
+
+    try {
+      final credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId!,
+        smsCode: code,
+      );
+
+      // 仮ローグインプロセス
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      await FirebaseAuth.instance.signOut();
+
+      if (!mounted) return;
+
+      setState(() {
+        _isPhoneVerified = true;
+      });
+
+      _nextPage();
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        if (e.code == 'invalid-verification-code') {
+          _errorMessage = '認証コードが正しくありません。';
+        } else if (e.code == 'session-expired') {
+          _errorMessage = '認証コードの有効期限が切れました。再度送信してください。';
+        } else {
+          _errorMessage = '認証に失敗しました: ${e.message}';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'エラーが発生しました: $e';
+      });
+    } finally {
+      setSignUpInProgress(false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // 認証コード再送信
+  Future<void> _resendVerificationCode() async {
+    verificationCodeController.clear();
+    await _sendPhoneVerification();
+  }
+
   Future<void> _handleSignUp() async {
+    // 電話番号認証確認
+    if (!_isPhoneVerified && widget.mode != 'add_store') {
+      setState(() {
+        _errorMessage = '電話番号認証を完了してください。';
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -140,14 +313,9 @@ class _SignUpPageState extends State<SignUpPage> {
       if (!isAddingStore) {
         setSignUpInProgress(true);
 
-        // print("--- [SignUpPage] Firebase 계정 생성 전, 플래그 미리 설정 ---");
         if (!mounted) {
           throw Exception('Widget unmounted before signup');
         }
-
-        // final profileVM = context.read<ProfileScreenViewModel>();
-        // profileVM.prepareForSignUp();
-        // print("--- [SignUpPage] prepareForSignUp() 호출 완료 (계정 생성 전) ---");
 
         final email = _role == 'manager'
             ? managerEmailController.text.trim()
@@ -180,10 +348,7 @@ class _SignUpPageState extends State<SignUpPage> {
         }
         idToken = token;
 
-        // print("--- [SignUpPage] Firebase 계정 생성 완료 ---");
-
         if (!mounted) {
-          // print("[SignUpPage] Widget unmounted after Firebase creation");
           throw Exception('Widget unmounted during signup');
         }
       } else {
@@ -230,11 +395,7 @@ class _SignUpPageState extends State<SignUpPage> {
           ? await profileService.addNewStore(profile, idToken)
           : await profileService.signUp(profile, idToken);
 
-      // print("--- [SignUpPage] 백엔드로부터 받은 원본 응답 ---");
-      // print(createdProfileMap);
-
       if (!mounted) {
-        // print("[SignUpPage] Widget unmounted after backend response");
         return;
       }
 
@@ -242,12 +403,7 @@ class _SignUpPageState extends State<SignUpPage> {
       final userJson = responseData['user'] as Map<String, dynamic>;
       final profileVM = context.read<ProfileScreenViewModel>();
 
-      // print("--- [SignUpPage] 데이터 주입 시도 ---");
-      // print("  - 현재 ViewModel 인스턴스 해시코드: ${profileVM.hashCode}");
-      // print("  - isAddingStore: $isAddingStore");
-
       if (_role == 'manager') {
-        // 店舗追加パターン
         if (isAddingStore) {
           final storeJson = responseData['store'] as Map<String, dynamic>?;
           if (storeJson != null) {
@@ -256,7 +412,6 @@ class _SignUpPageState extends State<SignUpPage> {
           }
           context.go('/signup-prompt');
         } else {
-          // 新規登録パターン
           final storeJson = responseData['store'] as Map<String, dynamic>?;
           final newUserProfile = UserProfile.fromJson(userJson);
           final List<StoreProfile> newStores = [];
@@ -285,37 +440,6 @@ class _SignUpPageState extends State<SignUpPage> {
       }
     }
   }
-
-  // Future<void> _launchLineLogin() async {
-  //   setState(() => _isLoading = true);
-  //   try {
-  //     if (_lineLoginUrl == null)
-  //       throw Exception('LINE Login URL is not available.');
-  //     final Uri url = Uri.parse(_lineLoginUrl!);
-
-  //     if (!await launchUrl(url, mode: LaunchMode.platformDefault)) {
-  //       throw Exception('Could not launch the URL.');
-  //     }
-
-  //     if (widget.mode != 'add_store') {
-  //       if (mounted) {
-  //         context.go('/signup-prompt');
-  //       }
-  //     }
-  //   } catch (e) {
-  //     if (mounted) {
-  //       setState(() {
-  //         _errorMessage = 'LINEを開けません。アプリが設置されているか確認をお願いします。';
-  //       });
-  //     }
-  //   } finally {
-  //     if (mounted) {
-  //       setState(() {
-  //         _isLoading = false;
-  //       });
-  //     }
-  //   }
-  // }
 
   void _nextPage() {
     FocusScope.of(context).unfocus();
@@ -421,19 +545,23 @@ class _SignUpPageState extends State<SignUpPage> {
         _buildRoleStep(), // 0: role
         _buildEmailStep(), // 1: email
         _buildPasswordStep(), // 2: password
-        _buildManagerInfoStep(), // 3: user info
-        _buildManagerInfoStep2(), // 4: store info
+        _buildPhoneNumberStep(), // 3: phone number input
+        _buildVerificationCodeStep(), // 4: verification code
+        _buildManagerInfoStep(), // 5: user info
+        _buildManagerInfoStep2(), // 6: store info
       ];
     } else if (_role == 'staff') {
       return [
         _buildRoleStep(), // 0: role
         _buildEmailStep(), // 1: email
         _buildPasswordStep(), // 2: password
-        _buildStaffInfoStep1(), // 3: store number
-        _buildStaffInfoStep2(), // 4: user info
+        _buildPhoneNumberStep(), // 3: phone number input
+        _buildVerificationCodeStep(), // 4: verification code
+        _buildStaffInfoStep1(), // 5: store number
+        _buildStaffInfoStep2(), // 6: user info
       ];
     }
-    return [_buildRoleStep()]; // role選択前
+    return [_buildRoleStep()];
   }
 
   Widget _buildRoleStep() {
@@ -471,37 +599,112 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  // Widget _buildManagerInfoStep1() {
-  //   return SingleChildScrollView(
-  //     keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         const Text('管理者情報',
-  //             style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-  //         const SizedBox(height: 8),
-  //         const Text('ログイン及び本人確認のために情報を入力してください。',
-  //             style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
-  //         const SizedBox(height: 32),
-  //         _buildTextField(
-  //             controller: managerEmailController,
-  //             label: 'メールアドレス',
-  //             type: TextInputType.emailAddress),
-  //         _buildTextField(
-  //             controller: managerPasswordController,
-  //             label: 'パスワード',
-  //             isPassword: true),
-  //         _buildTextField(
-  //             controller: managerPhoneController,
-  //             label: '電話番号',
-  //             type: TextInputType.phone),
-  //         _buildTextField(controller: managerNameController, label: '名前'),
-  //         const SizedBox(height: 40),
-  //         _buildActionButton(onPressed: _nextPage),
-  //       ],
-  //     ),
-  //   );
-  // }
+  // 電話番号入力画面
+  Widget _buildPhoneNumberStep() {
+    final phoneController =
+        _role == 'manager' ? managerPhoneController : staffPhoneController;
+
+    return SingleChildScrollView(
+      child: Form(
+        key: _phoneFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('電話番号認証',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('本人確認のために電話番号を認証してください。',
+                style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+            const SizedBox(height: 32),
+            TextFormField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: '電話番号',
+                hintText: '09012345678',
+                border: UnderlineInputBorder(),
+                focusedBorder: UnderlineInputBorder(
+                    borderSide:
+                        BorderSide(color: AppColors.accentPrimary, width: 2)),
+              ),
+              validator: _validatePhoneNumber,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '※ハイフンなしで入力してください\n※認証コードがSMSで送信されます',
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(_errorMessage!,
+                    style: const TextStyle(color: AppColors.error)),
+              ),
+            const SizedBox(height: 40),
+            _buildActionButton(
+              label: '認証コードを送信',
+              onPressed: _sendPhoneVerification,
+              isLoading: _isLoading,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 認証コード入力画面
+  Widget _buildVerificationCodeStep() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('認証コード入力',
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('SMSで送信された6桁のコードを入力してください。',
+              style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+          const SizedBox(height: 32),
+          TextField(
+            controller: verificationCodeController,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 24, letterSpacing: 8),
+            decoration: const InputDecoration(
+              labelText: '認証コード',
+              hintText: '',
+              border: UnderlineInputBorder(),
+              focusedBorder: UnderlineInputBorder(
+                  borderSide:
+                      BorderSide(color: AppColors.accentPrimary, width: 2)),
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: 24),
+          Center(
+            child: TextButton(
+              onPressed: _isLoading ? null : _resendVerificationCode,
+              child: const Text('コードを再送信',
+                  style: TextStyle(color: AppColors.accentPrimary)),
+            ),
+          ),
+          if (_errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(_errorMessage!,
+                  style: const TextStyle(color: AppColors.error),
+                  textAlign: TextAlign.center),
+            ),
+          const SizedBox(height: 40),
+          _buildActionButton(
+            label: '認証',
+            onPressed: _verifyPhoneCode,
+            isLoading: _isLoading,
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildManagerInfoStep2() {
     return SingleChildScrollView(
@@ -571,18 +774,6 @@ class _SignUpPageState extends State<SignUpPage> {
           const Text('ログインに使用する情報を入力してください。',
               style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
           const SizedBox(height: 32),
-          _buildTextField(
-              controller: staffEmailController,
-              label: 'メールアドレス',
-              type: TextInputType.emailAddress),
-          _buildTextField(
-              controller: staffPasswordController,
-              label: 'パスワード',
-              isPassword: true),
-          _buildTextField(
-              controller: staffPhoneController,
-              label: '電話番号',
-              type: TextInputType.phone),
           _buildTextField(controller: staffNameController, label: '名前'),
           if (_errorMessage != null)
             Padding(
@@ -634,7 +825,6 @@ class _SignUpPageState extends State<SignUpPage> {
         ? managerConfirmPasswordController
         : staffConfirmPasswordController;
 
-    // 次へボタン押下時実行
     void submit() {
       if (_passwordFormKey.currentState!.validate()) {
         _nextPage();
@@ -657,7 +847,6 @@ class _SignUpPageState extends State<SignUpPage> {
               controller: passwordController,
               label: 'パスワード',
               isPassword: true,
-              // 有効性検査機(validator)追加
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'パスワードを入力してください。';
@@ -672,7 +861,6 @@ class _SignUpPageState extends State<SignUpPage> {
               controller: confirmPasswordController,
               label: 'パスワードの確認',
               isPassword: true,
-              // 有効性検査機(validator)追加
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'パスワードをもう一度入力してください。';
@@ -702,10 +890,6 @@ class _SignUpPageState extends State<SignUpPage> {
           const Text('本人確認のために情報を入力してください。',
               style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
           const SizedBox(height: 32),
-          _buildTextField(
-              controller: managerPhoneController,
-              label: '電話番号',
-              type: TextInputType.phone),
           _buildTextField(controller: managerNameController, label: '名前'),
           const SizedBox(height: 40),
           _buildActionButton(onPressed: _nextPage),
@@ -713,39 +897,6 @@ class _SignUpPageState extends State<SignUpPage> {
       ),
     );
   }
-
-  // Widget _buildLineIntegrationStep() {
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.center,
-  //     mainAxisAlignment: MainAxisAlignment.center,
-  //     children: [
-  //       const Spacer(),
-  //       const Icon(Icons.check_circle_outline, color: Colors.green, size: 80),
-  //       const SizedBox(height: 24),
-  //       const Text('申請が仮受付されました。',
-  //           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-  //           textAlign: TextAlign.center),
-  //       const SizedBox(height: 16),
-  //       const Text(
-  //           '最後に、ご本人確認のためにLINEアカウントを連携してください。下のボタンを押して、LINEで申請を完了してください。',
-  //           style: TextStyle(
-  //               fontSize: 15, color: AppColors.textSecondary, height: 1.5),
-  //           textAlign: TextAlign.center),
-  //       const Spacer(),
-  //       _buildActionButton(
-  //         label: 'LINEで申請完了',
-  //         onPressed: () {
-  //           if (!_isLoading) {
-  //             _launchLineLogin();
-  //           }
-  //         },
-  //         isLoading: _isLoading,
-  //         isLineButton: true,
-  //       ),
-  //       const SizedBox(height: 16),
-  //     ],
-  //   );
-  // }
 
   Widget _buildRoleButton(
       {required String label,
