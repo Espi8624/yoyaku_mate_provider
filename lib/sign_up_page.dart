@@ -72,11 +72,6 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController verificationCodeController =
       TextEditingController();
 
-  // 既存のフィールドの下に追加
-  String _internalManagerPhone = '';
-  String _internalStorePhone = '';
-  String _internalStaffPhone = '';
-
   @override
   void initState() {
     super.initState();
@@ -466,17 +461,18 @@ class _SignUpPageState extends State<SignUpPage> {
     final phoneController =
         _role == 'manager' ? managerPhoneController : staffPhoneController;
 
-    // フォーマット適用を修正
+    // 元データ
+    final rawPhoneNumber = phoneController.text.trim();
+
+    final internalNumberString =
+        PhoneFormatter.formatPhoneNumberForInternal(rawPhoneNumber);
+
+    // 国際形式に変更
+    final phoneNumberForFirebase = _formatPhoneNumber(internalNumberString);
+
+    // テキストフィールド表示用フォーマット更新
     final displayFormatted =
-        PhoneFormatter.formatPhoneNumberForDisplay(phoneController.text.trim());
-    final internalFormatted = PhoneFormatter.formatPhoneNumberForInternal(
-        phoneController.text.trim());
-
-    // デバッグ出力を追加
-    debugPrint('Phone number debug:');
-    debugPrint('Display format: $displayFormatted');
-    debugPrint('Internal format: $internalFormatted');
-
+        PhoneFormatter.formatPhoneNumberForDisplay(rawPhoneNumber);
     if (displayFormatted != phoneController.text) {
       phoneController.value = TextEditingValue(
         text: displayFormatted,
@@ -484,26 +480,12 @@ class _SignUpPageState extends State<SignUpPage> {
       );
     }
 
-    // 内部値の更新
-    if (_role == 'manager') {
-      setState(() {
-        _internalManagerPhone = internalFormatted;
-      });
-    } else {
-      setState(() {
-        _internalStaffPhone = internalFormatted;
-      });
-    }
-
-    final phoneNumber = _formatPhoneNumber(displayFormatted);
-    debugPrint('International format: $phoneNumber');
-
     try {
       await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
+        phoneNumber: phoneNumberForFirebase,
         timeout: const Duration(seconds: 60),
         verificationCompleted: (PhoneAuthCredential credential) async {
-          // 自動検証完了時（Androidのみ）
+          if (!mounted) return;
           setState(() {
             _isPhoneVerified = true;
           });
@@ -532,6 +514,7 @@ class _SignUpPageState extends State<SignUpPage> {
           _nextPage();
         },
         codeAutoRetrievalTimeout: (String verificationId) {
+          if (!mounted) return;
           setState(() {
             _verificationId = verificationId;
           });
@@ -616,6 +599,11 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _handleSignUp() async {
+    final internalManagerPhone = PhoneFormatter.formatPhoneNumberForInternal(
+        managerPhoneController.text);
+    final internalStaffPhone =
+        PhoneFormatter.formatPhoneNumberForInternal(staffPhoneController.text);
+
     // メール認証確認
     if (!_isEmailVerified && widget.mode != 'add_store') {
       setState(() {
@@ -701,12 +689,12 @@ class _SignUpPageState extends State<SignUpPage> {
         profile = ProviderProfile(
           firebaseUid: firebaseUid,
           email: managerEmailController.text.trim(),
-          phoneNumber: _internalManagerPhone, // 内部電話番号を使用
+          phoneNumber: internalManagerPhone,
           name: managerNameController.text,
           role: 'manager',
           storeName: storeNameController.text,
           storeAddress: storeAddressController.text,
-          storeTelNumber: _internalStorePhone, // 内部電話番号を使用
+          storeTelNumber: storePhoneController.text,
           storeEmail: managerEmailController.text.trim(),
         );
       } else {
@@ -716,7 +704,7 @@ class _SignUpPageState extends State<SignUpPage> {
         profile = ProviderProfile(
           firebaseUid: firebaseUid,
           email: staffEmailController.text.trim(),
-          phoneNumber: _internalStaffPhone, // 内部電話番号を使用
+          phoneNumber: internalStaffPhone,
           name: staffNameController.text,
           role: 'staff',
           storeId: staffStoreIdController.text,
@@ -799,22 +787,27 @@ class _SignUpPageState extends State<SignUpPage> {
       context.go('/login');
     } else {
       final shouldGoBack = await _showCancelConfirmDialog();
+
       if (shouldGoBack && mounted) {
-        // アカウント生成済み場合はアカウントを削除
         if (_pendingUser != null) {
           try {
-            // 削除のため再ログイン
             final credential =
                 await FirebaseAuth.instance.signInWithEmailAndPassword(
-              email: managerEmailController.text.trim(),
-              password: managerPasswordController.text,
+              email: _role == 'manager'
+                  ? managerEmailController.text.trim()
+                  : staffEmailController.text.trim(),
+              password: _role == 'manager'
+                  ? managerPasswordController.text
+                  : staffPasswordController.text,
             );
             await credential.user?.delete();
-            // print("취소된 계정(${credential.user?.email})을 삭제했습니다.");
           } catch (e) {
-            // print("취소된 계정 삭제 중 오류 발생: $e");
+            // ユーザー削除失敗時は無視
           }
         }
+
+        if (!mounted) return;
+
         // ステータス初期化
         setState(() {
           _role = null;
@@ -1069,17 +1062,10 @@ class _SignUpPageState extends State<SignUpPage> {
             const Text('本人確認のために電話番号を認証してください。',
                 style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
             const SizedBox(height: 32),
-            TextFormField(
+            _buildTextField(
               controller: phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: '電話番号',
-                hintText: '09012345678',
-                border: UnderlineInputBorder(),
-                focusedBorder: UnderlineInputBorder(
-                    borderSide:
-                        BorderSide(color: AppColors.accentPrimary, width: 2)),
-              ),
+              label: '電話番号',
+              type: TextInputType.phone,
               validator: _validatePhoneNumber,
             ),
             const SizedBox(height: 16),
@@ -1176,12 +1162,12 @@ class _SignUpPageState extends State<SignUpPage> {
           _buildTextField(
             controller: storePhoneController,
             label: '店舗電話番号',
-            type: TextInputType.phone, // TextInputType.phoneを指定
+            type: TextInputType.phone,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return '店舗電話番号を入力してください';
+                return '店舗電話を入力してください。';
               }
-              return null;
+              return _validatePhoneNumber(value);
             },
           ),
           if (_errorMessage != null)
@@ -1379,39 +1365,15 @@ class _SignUpPageState extends State<SignUpPage> {
       child: Focus(
         onFocusChange: (hasFocus) {
           if (!hasFocus && type == TextInputType.phone) {
-            final formatted =
+            final displayFormatted =
                 PhoneFormatter.formatPhoneNumberForDisplay(controller.text);
-            final internal =
-                PhoneFormatter.formatPhoneNumberForInternal(controller.text);
 
-            // デバッグ出力
-            debugPrint('Phone number debug:');
-            debugPrint('Display format: $formatted');
-            debugPrint('Internal format: $internal');
-
-            if (formatted != controller.text) {
+            if (displayFormatted != controller.text) {
               controller.value = TextEditingValue(
-                text: formatted,
-                selection: TextSelection.collapsed(offset: formatted.length),
+                text: displayFormatted,
+                selection:
+                    TextSelection.collapsed(offset: displayFormatted.length),
               );
-            }
-
-            // 内部値の更新とデバッグ出力
-            if (controller == managerPhoneController) {
-              setState(() {
-                _internalManagerPhone = internal;
-              });
-              debugPrint('Manager phone updated: $_internalManagerPhone');
-            } else if (controller == storePhoneController) {
-              setState(() {
-                _internalStorePhone = internal;
-              });
-              debugPrint('Store phone updated: $_internalStorePhone');
-            } else if (controller == staffPhoneController) {
-              setState(() {
-                _internalStaffPhone = internal;
-              });
-              debugPrint('Staff phone updated: $_internalStaffPhone');
             }
           }
         },
@@ -1419,24 +1381,6 @@ class _SignUpPageState extends State<SignUpPage> {
           controller: controller,
           obscureText: isPassword,
           keyboardType: type,
-          onChanged: type == TextInputType.phone
-              ? (value) {
-                  final formatted =
-                      PhoneFormatter.formatPhoneNumberForDisplay(value);
-                  // 入力時のデバッグ出力
-                  debugPrint('Phone input changed:');
-                  debugPrint('Raw input: $value');
-                  debugPrint('Formatted: $formatted');
-
-                  if (formatted != value) {
-                    controller.value = TextEditingValue(
-                      text: formatted,
-                      selection:
-                          TextSelection.collapsed(offset: formatted.length),
-                    );
-                  }
-                }
-              : null,
           decoration: InputDecoration(
             labelText: label,
             border: const UnderlineInputBorder(),
