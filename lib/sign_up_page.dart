@@ -13,6 +13,7 @@ import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
+import 'package:yoyaku_mate_provider/utils/phone_formatter.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart' show setSignUpInProgress;
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
@@ -70,6 +71,11 @@ class _SignUpPageState extends State<SignUpPage> {
   // 認証コード入力用
   final TextEditingController verificationCodeController =
       TextEditingController();
+
+  // 既存のフィールドの下に追加
+  String _internalManagerPhone = '';
+  String _internalStorePhone = '';
+  String _internalStaffPhone = '';
 
   @override
   void initState() {
@@ -460,7 +466,37 @@ class _SignUpPageState extends State<SignUpPage> {
     final phoneController =
         _role == 'manager' ? managerPhoneController : staffPhoneController;
 
-    final phoneNumber = _formatPhoneNumber(phoneController.text.trim());
+    // フォーマット適用を修正
+    final displayFormatted =
+        PhoneFormatter.formatPhoneNumberForDisplay(phoneController.text.trim());
+    final internalFormatted = PhoneFormatter.formatPhoneNumberForInternal(
+        phoneController.text.trim());
+
+    // デバッグ出力を追加
+    debugPrint('Phone number debug:');
+    debugPrint('Display format: $displayFormatted');
+    debugPrint('Internal format: $internalFormatted');
+
+    if (displayFormatted != phoneController.text) {
+      phoneController.value = TextEditingValue(
+        text: displayFormatted,
+        selection: TextSelection.collapsed(offset: displayFormatted.length),
+      );
+    }
+
+    // 内部値の更新
+    if (_role == 'manager') {
+      setState(() {
+        _internalManagerPhone = internalFormatted;
+      });
+    } else {
+      setState(() {
+        _internalStaffPhone = internalFormatted;
+      });
+    }
+
+    final phoneNumber = _formatPhoneNumber(displayFormatted);
+    debugPrint('International format: $phoneNumber');
 
     try {
       await FirebaseAuth.instance.verifyPhoneNumber(
@@ -665,12 +701,12 @@ class _SignUpPageState extends State<SignUpPage> {
         profile = ProviderProfile(
           firebaseUid: firebaseUid,
           email: managerEmailController.text.trim(),
-          phoneNumber: managerPhoneController.text,
+          phoneNumber: _internalManagerPhone, // 内部電話番号を使用
           name: managerNameController.text,
           role: 'manager',
           storeName: storeNameController.text,
           storeAddress: storeAddressController.text,
-          storeTelNumber: storePhoneController.text,
+          storeTelNumber: _internalStorePhone, // 内部電話番号を使用
           storeEmail: managerEmailController.text.trim(),
         );
       } else {
@@ -680,7 +716,7 @@ class _SignUpPageState extends State<SignUpPage> {
         profile = ProviderProfile(
           firebaseUid: firebaseUid,
           email: staffEmailController.text.trim(),
-          phoneNumber: staffPhoneController.text,
+          phoneNumber: _internalStaffPhone, // 内部電話番号を使用
           name: staffNameController.text,
           role: 'staff',
           storeId: staffStoreIdController.text,
@@ -1138,9 +1174,16 @@ class _SignUpPageState extends State<SignUpPage> {
           _buildTextField(controller: storeNameController, label: '店名'),
           _buildTextField(controller: storeAddressController, label: '住所'),
           _buildTextField(
-              controller: storePhoneController,
-              label: '店舗電話番号',
-              type: TextInputType.phone),
+            controller: storePhoneController,
+            label: '店舗電話番号',
+            type: TextInputType.phone, // TextInputType.phoneを指定
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return '店舗電話番号を入力してください';
+              }
+              return null;
+            },
+          ),
           if (_errorMessage != null)
             Padding(
               padding: const EdgeInsets.only(top: 16),
@@ -1334,14 +1377,41 @@ class _SignUpPageState extends State<SignUpPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Focus(
-        onFocusChange: (hasFocus) async {
+        onFocusChange: (hasFocus) {
           if (!hasFocus && type == TextInputType.phone) {
-            final formatted = _formatPhoneNumber(controller.text);
+            final formatted =
+                PhoneFormatter.formatPhoneNumberForDisplay(controller.text);
+            final internal =
+                PhoneFormatter.formatPhoneNumberForInternal(controller.text);
+
+            // デバッグ出力
+            debugPrint('Phone number debug:');
+            debugPrint('Display format: $formatted');
+            debugPrint('Internal format: $internal');
+
             if (formatted != controller.text) {
               controller.value = TextEditingValue(
                 text: formatted,
                 selection: TextSelection.collapsed(offset: formatted.length),
               );
+            }
+
+            // 内部値の更新とデバッグ出力
+            if (controller == managerPhoneController) {
+              setState(() {
+                _internalManagerPhone = internal;
+              });
+              debugPrint('Manager phone updated: $_internalManagerPhone');
+            } else if (controller == storePhoneController) {
+              setState(() {
+                _internalStorePhone = internal;
+              });
+              debugPrint('Store phone updated: $_internalStorePhone');
+            } else if (controller == staffPhoneController) {
+              setState(() {
+                _internalStaffPhone = internal;
+              });
+              debugPrint('Staff phone updated: $_internalStaffPhone');
             }
           }
         },
@@ -1349,12 +1419,30 @@ class _SignUpPageState extends State<SignUpPage> {
           controller: controller,
           obscureText: isPassword,
           keyboardType: type,
+          onChanged: type == TextInputType.phone
+              ? (value) {
+                  final formatted =
+                      PhoneFormatter.formatPhoneNumberForDisplay(value);
+                  // 入力時のデバッグ出力
+                  debugPrint('Phone input changed:');
+                  debugPrint('Raw input: $value');
+                  debugPrint('Formatted: $formatted');
+
+                  if (formatted != value) {
+                    controller.value = TextEditingValue(
+                      text: formatted,
+                      selection:
+                          TextSelection.collapsed(offset: formatted.length),
+                    );
+                  }
+                }
+              : null,
           decoration: InputDecoration(
             labelText: label,
             border: const UnderlineInputBorder(),
             focusedBorder: const UnderlineInputBorder(
-                borderSide:
-                    BorderSide(color: AppColors.accentPrimary, width: 2)),
+              borderSide: BorderSide(color: AppColors.accentPrimary, width: 2),
+            ),
           ),
           validator: validator,
         ),
