@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "SIMPIL YU.com.example.yoyakuMateProvider",
+        "paths": [ "/verify" ]
+      }
+    ]
+  }
+}
