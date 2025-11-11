@@ -16,6 +16,7 @@ import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/utils/phone_formatter.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart' show setSignUpInProgress;
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 
 class SignUpPage extends StatefulWidget {
   final String? mode; // 'add_store' or null
@@ -36,11 +37,16 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _isPhoneVerified = false;
   int? _resendToken;
 
+  // メール認証関連
+  bool _isEmailVerified = false;
+  User? _pendingUser; // 認証待機中のユーザー
+
   late PageController _pageController;
   int _currentPageIndex = 0;
 
   final GlobalKey<FormState> _passwordFormKey = GlobalKey<FormState>();
   final GlobalKey<FormState> _phoneFormKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _emailFormKey = GlobalKey<FormState>();
 
   // コントローラー初期化
   final TextEditingController managerEmailController = TextEditingController();
@@ -135,7 +141,21 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
-  // 電話番ご形式検証
+  // メール形式検証
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'メールアドレスを入力してください。';
+    }
+
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value)) {
+      return '正しいメールアドレスを入力してください。';
+    }
+
+    return null;
+  }
+
+  // 電話番号形式検証
   String? _validatePhoneNumber(String? value) {
     if (value == null || value.isEmpty) {
       return '電話番号を入力してください。';
@@ -159,8 +179,281 @@ class _SignUpPageState extends State<SignUpPage> {
     return '+81$cleaned';
   }
 
+  // メールアドレス重複チェック
+  Future<void> _checkEmailDuplicate() async {
+    if (!_emailFormKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final emailController =
+        _role == 'manager' ? managerEmailController : staffEmailController;
+    final email = emailController.text.trim();
+
+    try {
+      // メール重複確認
+      final signInMethods =
+          await FirebaseAuth.instance.fetchSignInMethodsForEmail(email);
+
+      if (signInMethods.isNotEmpty) {
+        throw FirebaseAuthException(
+          code: 'email-already-in-use',
+          message: 'このメールアドレスは既に使用されています。',
+        );
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      _nextPage();
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        if (e.code == 'invalid-email') {
+          _errorMessage = 'メールアドレスの形式が正しくありません。';
+        } else if (e.code == 'email-already-in-use') {
+          _errorMessage = 'このメールアドレスは既に使用されています。';
+        } else {
+          _errorMessage = 'エラーが発生しました: ${e.message}';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'エラーが発生しました: $e';
+      });
+    }
+  }
+
+  // アカウント作成 & メール認証リンク送信
+  Future<void> _createAccountAndSendEmail() async {
+    if (!_passwordFormKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final emailController =
+        _role == 'manager' ? managerEmailController : staffEmailController;
+    final passwordController = _role == 'manager'
+        ? managerPasswordController
+        : staffPasswordController;
+
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    try {
+      setSignUpInProgress(true);
+
+      // Firebaseアカウント生成
+      final userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      _pendingUser = userCredential.user;
+
+      if (_pendingUser == null) {
+        throw Exception('アカウント作成に失敗しました。');
+      }
+
+      // 認証メール送信
+      await _pendingUser!.sendEmailVerification();
+
+      await FirebaseAuth.instance.signOut();
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('認証メールを送信しました。メールボックスをご確認ください。'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      _nextPage();
+    } on FirebaseAuthException catch (e) {
+      // アカウント生成失敗時
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        if (e.code == 'email-already-in-use') {
+          _errorMessage = 'このメールアドレスは既に使用されています。';
+        } else if (e.code == 'weak-password') {
+          _errorMessage = 'パスワードが弱すぎます。';
+        } else {
+          _errorMessage = 'アカウント作成に失敗しました: ${e.message}';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'エラーが発生しました: $e';
+      });
+    } finally {
+      setSignUpInProgress(false);
+    }
+  }
+
+  // メール認証完了確認
+  Future<void> _verifyEmailComplete() async {
+    if (_pendingUser == null) {
+      setState(() {
+        _errorMessage = 'セッションが無効です。最初からやり直してください。';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      setSignUpInProgress(true);
+
+      final emailController =
+          _role == 'manager' ? managerEmailController : staffEmailController;
+      final passwordController = _role == 'manager'
+          ? managerPasswordController
+          : staffPasswordController;
+
+      // 再ログイン
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+      );
+
+      // 使用者情報リロード
+      await credential.user?.reload();
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        throw Exception('ユーザー情報を取得できませんでした。');
+      }
+
+      // メール認証状態確認
+      if (user.emailVerified) {
+        await FirebaseAuth.instance.signOut();
+
+        if (!mounted) return;
+
+        setState(() {
+          _isEmailVerified = true;
+          _isLoading = false;
+        });
+
+        _nextPage();
+      } else {
+        await FirebaseAuth.instance.signOut();
+
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'まだメール認証が完了していません。\nメールの認証リンクをクリックしてから再度お試しください。';
+        });
+      }
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        if (e.code == 'user-not-found') {
+          _errorMessage = 'アカウントが見つかりません。';
+        } else if (e.code == 'wrong-password') {
+          _errorMessage = 'パスワードが正しくありません。';
+        } else {
+          _errorMessage = 'メール認証の確認に失敗しました: ${e.message}';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'エラーが発生しました: $e';
+      });
+    } finally {
+      setSignUpInProgress(false);
+    }
+  }
+
+  // メール認証リンク再送信
+  Future<void> _resendEmailLink() async {
+    if (_pendingUser == null) {
+      setState(() {
+        _errorMessage = 'セッションが無効です。最初からやり直してください。';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      setSignUpInProgress(true);
+
+      final emailController =
+          _role == 'manager' ? managerEmailController : staffEmailController;
+      final passwordController = _role == 'manager'
+          ? managerPasswordController
+          : staffPasswordController;
+
+      // 再ログイン
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+      );
+
+      // 認証メール再送信
+      await credential.user?.sendEmailVerification();
+
+      await FirebaseAuth.instance.signOut();
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('認証メールを再送信しました。'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'メールの再送信に失敗しました: $e';
+      });
+    } finally {
+      setSignUpInProgress(false);
+    }
+  }
+
   // 電話番号認証コード送信
-  Future<void> _sendPhoneVerification() async {
+  Future<void> _sendPhoneCode() async {
     if (!_phoneFormKey.currentState!.validate()) {
       return;
     }
@@ -279,7 +572,7 @@ class _SignUpPageState extends State<SignUpPage> {
         smsCode: code,
       );
 
-      // 仮ローグインプロセス
+      // 仮ログインプロセス
       await FirebaseAuth.instance.signInWithCredential(credential);
       await FirebaseAuth.instance.signOut();
 
@@ -317,12 +610,20 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   // 認証コード再送信
-  Future<void> _resendVerificationCode() async {
+  Future<void> _resendPhoneCode() async {
     verificationCodeController.clear();
-    await _sendPhoneVerification();
+    await _sendPhoneCode();
   }
 
   Future<void> _handleSignUp() async {
+    // メール認証確認
+    if (!_isEmailVerified && widget.mode != 'add_store') {
+      setState(() {
+        _errorMessage = 'メール認証を完了してください。';
+      });
+      return;
+    }
+
     // 電話番号認証確認
     if (!_isPhoneVerified && widget.mode != 'add_store') {
       setState(() {
@@ -360,18 +661,14 @@ class _SignUpPageState extends State<SignUpPage> {
             ? managerPasswordController.text
             : staffPasswordController.text;
 
+        // 既にアカウントが作成されている為、ログインのみ実施
         final userCredential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(email: email, password: password);
+            .signInWithEmailAndPassword(email: email, password: password);
+
         newUser = userCredential.user;
-        if (newUser == null) throw Exception('Firebase user creation failed.');
+        if (newUser == null) throw Exception('Firebase login failed.');
 
-        // email認証
-        try {
-          await newUser.sendEmailVerification();
-        } catch (e) {
-          print('Failed to send verification email: $e');
-        }
-
+        // 使用者情報リロード
         await newUser.reload();
         newUser = FirebaseAuth.instance.currentUser;
         if (newUser == null) throw Exception('Failed to reload Firebase user.');
@@ -459,9 +756,6 @@ class _SignUpPageState extends State<SignUpPage> {
         }
       }
     } catch (e) {
-      if (widget.mode != 'add_store' && newUser != null) {
-        await newUser.delete();
-      }
       if (!mounted) return;
       setState(() {
         _errorMessage = "エラー : ${e is ApiException ? e.message : e.toString()}";
@@ -482,21 +776,83 @@ class _SignUpPageState extends State<SignUpPage> {
         duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
   }
 
-  void _previousPage() {
-    FocusScope.of(context).unfocus();
-    if (_currentPageIndex == 1) {
-      setState(() {
-        _role = null;
-      });
+  // 会員加入戻る確認ダイアログ表示
+  Future<bool> _showCancelConfirmDialog() async {
+    final result = await showConfirmationDialog(
+      context: context,
+      title: '登録キャンセル',
+      content: '戻ると最初からやり直す必要があります。\n本当に戻りますか？',
+      confirmText: 'はい',
+    );
+
+    return result ?? false;
+  }
+
+  // 戻るボタン処理
+  Future<void> _handleBackButton() async {
+    if (widget.mode == 'add_store') {
+      context.pop();
+      return;
     }
-    _pageController.previousPage(
-        duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+
+    if (_currentPageIndex == 0) {
+      context.go('/login');
+    } else {
+      final shouldGoBack = await _showCancelConfirmDialog();
+      if (shouldGoBack && mounted) {
+        // アカウント生成済み場合はアカウントを削除
+        if (_pendingUser != null) {
+          try {
+            // 削除のため再ログイン
+            final credential =
+                await FirebaseAuth.instance.signInWithEmailAndPassword(
+              email: managerEmailController.text.trim(),
+              password: managerPasswordController.text,
+            );
+            await credential.user?.delete();
+            // print("취소된 계정(${credential.user?.email})을 삭제했습니다.");
+          } catch (e) {
+            // print("취소된 계정 삭제 중 오류 발생: $e");
+          }
+        }
+        // ステータス初期化
+        setState(() {
+          _role = null;
+          _isEmailVerified = false;
+          _isPhoneVerified = false;
+          _pendingUser = null;
+          _verificationId = null;
+          _errorMessage = null;
+
+          // コントローラー初期化
+          managerEmailController.clear();
+          managerPasswordController.clear();
+          managerConfirmPasswordController.clear();
+          managerPhoneController.clear();
+          managerNameController.clear();
+          storeNameController.clear();
+          storeAddressController.clear();
+          storePhoneController.clear();
+
+          staffStoreIdController.clear();
+          staffEmailController.clear();
+          staffPasswordController.clear();
+          staffConfirmPasswordController.clear();
+          staffPhoneController.clear();
+          staffNameController.clear();
+
+          verificationCodeController.clear();
+        });
+
+        // 初ページへ移動
+        _pageController.jumpToPage(0);
+        _currentPageIndex = 0;
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isAddStoreMode = widget.mode == 'add_store';
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -506,18 +862,7 @@ class _SignUpPageState extends State<SignUpPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               InkWell(
-                onTap: () {
-                  if (isAddStoreMode) {
-                    context.pop();
-                    return;
-                  }
-
-                  if (_currentPageIndex == 0) {
-                    context.go('/login');
-                  } else {
-                    _previousPage();
-                  }
-                },
+                onTap: _handleBackButton,
                 borderRadius: BorderRadius.circular(24),
                 child: Container(
                   padding: const EdgeInsets.all(8),
@@ -550,22 +895,24 @@ class _SignUpPageState extends State<SignUpPage> {
     if (_role == 'manager') {
       return [
         _buildRoleStep(), // 0: role
-        _buildEmailStep(), // 1: email
-        _buildPasswordStep(), // 2: password
-        _buildPhoneNumberStep(), // 3: phone number input
-        _buildVerificationCodeStep(), // 4: verification code
-        _buildManagerInfoStep(), // 5: user info
-        _buildManagerInfoStep2(), // 6: store info
+        _buildEmailStep(), // 1: email input + 重複確認
+        _buildPasswordStep(), // 2: password (アカウント生成 + メール送信)
+        _buildEmailVerificationStep(), // 3: email verification waiting
+        _buildPhoneNumberStep(), // 4: phone number input
+        _buildVerificationCodeStep(), // 5: phone verification code
+        _buildManagerInfoStep(), // 6: user info
+        _buildManagerInfoStep2(), // 7: store info
       ];
     } else if (_role == 'staff') {
       return [
         _buildRoleStep(), // 0: role
-        _buildEmailStep(), // 1: email
-        _buildPasswordStep(), // 2: password
-        _buildPhoneNumberStep(), // 3: phone number input
-        _buildVerificationCodeStep(), // 4: verification code
-        _buildStaffInfoStep1(), // 5: store number
-        _buildStaffInfoStep2(), // 6: user info
+        _buildEmailStep(), // 1: email input + 重複確認
+        _buildPasswordStep(), // 2: password password (アカウント生成 + メール送信)
+        _buildEmailVerificationStep(), // 3: email verification waiting
+        _buildPhoneNumberStep(), // 4: phone number input
+        _buildVerificationCodeStep(), // 5: phone verification code
+        _buildStaffInfoStep1(), // 6: store number
+        _buildStaffInfoStep2(), // 7: user info
       ];
     }
     return [_buildRoleStep()];
@@ -603,6 +950,105 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
         const Spacer(),
       ],
+    );
+  }
+
+  // メールアドレス入力画面
+  Widget _buildEmailStep() {
+    final emailController =
+        _role == 'manager' ? managerEmailController : staffEmailController;
+
+    return SingleChildScrollView(
+      child: Form(
+        key: _emailFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('メールアドレス認証',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('使用するメールアドレスを入力してください。',
+                style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+            const SizedBox(height: 32),
+            TextFormField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'メールアドレス',
+                hintText: 'example@email.com',
+                border: UnderlineInputBorder(),
+                focusedBorder: UnderlineInputBorder(
+                    borderSide:
+                        BorderSide(color: AppColors.accentPrimary, width: 2)),
+              ),
+              validator: _validateEmail,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '※メールアドレスの重複をチェックします',
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(_errorMessage!,
+                    style: const TextStyle(color: AppColors.error)),
+              ),
+            const SizedBox(height: 40),
+            _buildActionButton(
+              label: '次へ',
+              onPressed: _checkEmailDuplicate,
+              isLoading: _isLoading,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // メール認証待機画面
+  Widget _buildEmailVerificationStep() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Text('メール認証',
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('送信されたメールの認証リンクをクリックしてください。',
+              style: TextStyle(fontSize: 15, color: AppColors.textSecondary),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 48),
+          const Icon(Icons.mark_email_read_outlined,
+              size: 80, color: AppColors.accentPrimary),
+          const SizedBox(height: 32),
+          const Text(
+            '1. メールボックスを確認\n2. 認証リンクをクリック\n3. アプリに戻って「認証完了」をタップ',
+            style: TextStyle(
+                fontSize: 15, color: AppColors.textSecondary, height: 1.8),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          TextButton(
+            onPressed: _isLoading ? null : _resendEmailLink,
+            child: const Text('メールを再送信',
+                style: TextStyle(color: AppColors.accentPrimary)),
+          ),
+          if (_errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(_errorMessage!,
+                  style: const TextStyle(color: AppColors.error),
+                  textAlign: TextAlign.center),
+            ),
+          const SizedBox(height: 40),
+          _buildActionButton(
+            label: '認証完了',
+            onPressed: _verifyEmailComplete,
+            isLoading: _isLoading,
+          ),
+        ],
+      ),
     );
   }
 
@@ -650,7 +1096,7 @@ class _SignUpPageState extends State<SignUpPage> {
             const SizedBox(height: 40),
             _buildActionButton(
               label: '認証コードを送信',
-              onPressed: _sendPhoneVerification,
+              onPressed: _sendPhoneCode,
               isLoading: _isLoading,
             ),
           ],
@@ -690,7 +1136,7 @@ class _SignUpPageState extends State<SignUpPage> {
           const SizedBox(height: 24),
           Center(
             child: TextButton(
-              onPressed: _isLoading ? null : _resendVerificationCode,
+              onPressed: _isLoading ? null : _resendPhoneCode,
               child: const Text('コードを再送信',
                   style: TextStyle(color: AppColors.accentPrimary)),
             ),
@@ -807,30 +1253,6 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  Widget _buildEmailStep() {
-    final emailController =
-        _role == 'manager' ? managerEmailController : staffEmailController;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('メールアドレス認証',
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Text('まず、使用するメールアドレスを認証してください。',
-            style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
-        const SizedBox(height: 32),
-        TextFormField(
-          controller: emailController,
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(labelText: 'メールアドレス'),
-        ),
-        const Spacer(),
-        _buildActionButton(onPressed: _nextPage),
-      ],
-    );
-  }
-
   Widget _buildPasswordStep() {
     final passwordController = _role == 'manager'
         ? managerPasswordController
@@ -841,7 +1263,8 @@ class _SignUpPageState extends State<SignUpPage> {
 
     void submit() {
       if (_passwordFormKey.currentState!.validate()) {
-        _nextPage();
+        // パスワード設定後、すぐにアカウントを作成し、メールを送信
+        _createAccountAndSendEmail();
       }
     }
 
@@ -885,8 +1308,17 @@ class _SignUpPageState extends State<SignUpPage> {
                 return null;
               },
             ),
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(_errorMessage!,
+                    style: const TextStyle(color: AppColors.error)),
+              ),
             const SizedBox(height: 40),
-            _buildActionButton(onPressed: submit),
+            _buildActionButton(
+              onPressed: submit,
+              isLoading: _isLoading,
+            ),
           ],
         ),
       ),
@@ -935,7 +1367,6 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  // TextFieldのビルダーを修正
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,

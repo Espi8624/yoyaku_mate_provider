@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.example.yoyaku_mate_provider",
+    "sha256_cert_fingerprints": ["F0:20:93:02:23:ED:91:FE:5A:19:74:12:48:6E:D4:52:07:AC:54:81:A7:F2:EB:9F:62:ED:6F:B6:2D:5D:EF:53"]
+  }
+}]
