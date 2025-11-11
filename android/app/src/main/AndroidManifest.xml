@@ -34,6 +34,12 @@
                 <!-- アプリを呼出するアドレス形式形式(URL Scheme)を定義 -->
                 <data android:scheme="yoyaku-mate" />
             </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="yoyaku-mate-provider.firebaseapp.com" />
+            </intent-filter>
             <!-- 追加箇所 -->
         </activity>
         <!-- Don't delete the meta-data below.
@@ -56,16 +62,16 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
         </intent>
-         <!-- httpスキームを使用する全てのURLを開けるよう許容 -->
+        <!-- httpスキームを使用する全てのURLを開けるよう許容 -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="http" />
         </intent>
-         <!-- LINEアプリのカスタムスキームを直接開けるよう許容 -->
+        <!-- LINEアプリのカスタムスキームを直接開けるよう許容 -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="line" />
         </intent>
     </queries>
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.INTERNET" />
 </manifest>
