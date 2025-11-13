@@ -1,11 +1,8 @@
 // import 'dart:io';
-// import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-// import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-// import 'package:url_launcher/url_launcher.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/provider_profile.dart';
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
@@ -84,15 +81,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     _pageController = PageController(initialPage: initialPage);
 
-    _pageController.addListener(() {
-      if (!mounted) return;
-      final newPage = _pageController.page?.round();
-      if (newPage != null && newPage != _currentPageIndex) {
-        setState(() {
-          _currentPageIndex = newPage;
-        });
-      }
-    });
+    _pageController.addListener(_pageControllerListener);
 
     if (widget.mode == 'add_store') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -115,8 +104,19 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
+  void _pageControllerListener() {
+    if (!mounted) return;
+    final newPage = _pageController.page?.round();
+    if (newPage != null && newPage != _currentPageIndex) {
+      setState(() {
+        _currentPageIndex = newPage;
+      });
+    }
+  }
+
   @override
   void dispose() {
+    _pageController.removeListener(_pageControllerListener);
     _pageController.dispose();
     managerEmailController.dispose();
     managerPasswordController.dispose();
@@ -742,6 +742,13 @@ class _SignUpPageState extends State<SignUpPage> {
           profileVM.setInitialData(newUserProfile, newStores);
           context.go('/signup-prompt');
         }
+      } else if (_role == 'staff') {
+        // データを再ロード
+        await profileVM.loadProfiles();
+
+        if (mounted) {
+          context.go('/signup-prompt');
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -791,14 +798,17 @@ class _SignUpPageState extends State<SignUpPage> {
       if (shouldGoBack && mounted) {
         if (_pendingUser != null) {
           try {
+            final email = _role == 'manager'
+                ? managerEmailController.text.trim()
+                : staffEmailController.text.trim();
+            final password = _role == 'manager'
+                ? managerPasswordController.text
+                : staffPasswordController.text;
+
             final credential =
                 await FirebaseAuth.instance.signInWithEmailAndPassword(
-              email: _role == 'manager'
-                  ? managerEmailController.text.trim()
-                  : staffEmailController.text.trim(),
-              password: _role == 'manager'
-                  ? managerPasswordController.text
-                  : staffPasswordController.text,
+              email: email,
+              password: password,
             );
             await credential.user?.delete();
           } catch (e) {
