@@ -111,7 +111,7 @@ class _SignUpPageState extends State<SignUpPage> {
             managerPhoneController.text = userProfile.phone;
             // ★変更: 名前を姓・名に分割
             final rawName =
-                (userProfile.name ?? '').replaceAll('\u3000', ' ').trim();
+                userProfile.name.replaceAll(RegExp(r'[\u3000\s]+'), ' ').trim();
             if (rawName.isEmpty) {
               managerLastNameController.text = '';
               managerFirstNameController.text = '';
@@ -835,25 +835,31 @@ class _SignUpPageState extends State<SignUpPage> {
         // ★変更: 姓・名を結合して送信
         final lastName = managerLastNameController.text.trim();
         final firstName = managerFirstNameController.text.trim();
-        final fullName = '$lastName\u3000$firstName'.trim();
+        final fullName = '$lastName $firstName'.trim();
+
+        // ★★★ 추가: 후리가나를 합칩니다. ★★★
+        final lastNameKana = managerLastNameKanaController.text.trim();
+        final firstNameKana = managerFirstNameKanaController.text.trim();
+        final fullNameFurigana = '$lastNameKana $firstNameKana'.trim();
 
         // ★追加: デバッグ出力
-        print('======== 管理者名前登録データ ========');
-        print('姓(漢字): $lastName');
-        print('名(漢字): $firstName');
-        print('結合後の名前(漢字): $fullName');
-        print('姓(フリガナ): ${managerLastNameKanaController.text.trim()}');
-        print('名(フリガナ): ${managerFirstNameKanaController.text.trim()}');
-        print(
-            '結合後の名前(フリガナ): ${managerLastNameKanaController.text.trim()}\u3000${managerFirstNameKanaController.text.trim()}');
-        print('※フリガナは現時点ではサーバに送信されません');
-        print('=====================================');
+        // print('======== 管理者名前登録データ ========');
+        // print('姓(漢字): $lastName');
+        // print('名(漢字): $firstName');
+        // print('結合後の名前(漢字): $fullName');
+        // print('姓(フリガナ): ${managerLastNameKanaController.text.trim()}');
+        // print('名(フリガナ): ${managerFirstNameKanaController.text.trim()}');
+        // print(
+        //     '結合後の名前(フリガナ): ${managerLastNameKanaController.text.trim()}\u3000${managerFirstNameKanaController.text.trim()}');
+        // print('※フリガナは現時点ではサーバに送信されません');
+        // print('=====================================');
 
         profile = ProviderProfile(
           firebaseUid: firebaseUid,
           email: managerEmailController.text.trim(),
           phoneNumber: internalManagerPhone,
           name: fullName,
+          nameFurigana: fullNameFurigana,
           role: 'manager',
           storeName: storeNameController.text,
           storeAddress: storeAddressController.text,
@@ -861,6 +867,7 @@ class _SignUpPageState extends State<SignUpPage> {
           storeEmail: managerEmailController.text.trim(),
         );
       } else {
+        // staff
         final storeExists =
             await profileService.checkStoreExists(staffStoreIdController.text);
         if (!storeExists) throw ApiException('指定された店番号は存在しません');
@@ -868,25 +875,30 @@ class _SignUpPageState extends State<SignUpPage> {
         // ★変更: 職員も姓・名を結合して送信
         final lastName = staffLastNameController.text.trim();
         final firstName = staffFirstNameController.text.trim();
-        final fullName = '$lastName\u3000$firstName'.trim();
+        final fullName = '$lastName $firstName'.trim();
+
+        final lastNameKana = staffLastNameKanaController.text.trim();
+        final firstNameKana = staffFirstNameKanaController.text.trim();
+        final fullNameFurigana = '$lastNameKana $firstNameKana'.trim();
 
         // ★追加: デバッグ出力
-        print('======== 職員名前登録データ ========');
-        print('姓(漢字): $lastName');
-        print('名(漢字): $firstName');
-        print('結合後の名前(漢字): $fullName');
-        print('姓(フリガナ): ${staffLastNameKanaController.text.trim()}');
-        print('名(フリガナ): ${staffFirstNameKanaController.text.trim()}');
-        print(
-            '結合後の名前(フリガナ): ${staffLastNameKanaController.text.trim()}\u3000${staffFirstNameKanaController.text.trim()}');
-        print('※フリガナは現時点ではサーバに送信されません');
-        print('==================================');
+        // print('======== 職員名前登録データ ========');
+        // print('姓(漢字): $lastName');
+        // print('名(漢字): $firstName');
+        // print('結合後の名前(漢字): $fullName');
+        // print('姓(フリガナ): ${staffLastNameKanaController.text.trim()}');
+        // print('名(フリガナ): ${staffFirstNameKanaController.text.trim()}');
+        // print(
+        //     '結合後の名前(フリガナ): ${staffLastNameKanaController.text.trim()}\u3000${staffFirstNameKanaController.text.trim()}');
+        // print('※フリガナは現時点ではサーバに送信されません');
+        // print('==================================');
 
         profile = ProviderProfile(
           firebaseUid: firebaseUid,
           email: staffEmailController.text.trim(),
           phoneNumber: internalStaffPhone,
           name: fullName,
+          nameFurigana: fullNameFurigana,
           role: 'staff',
           storeId: staffStoreIdController.text,
         );
