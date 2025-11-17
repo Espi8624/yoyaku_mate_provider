@@ -52,7 +52,16 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController managerConfirmPasswordController =
       TextEditingController();
   final TextEditingController managerPhoneController = TextEditingController();
-  final TextEditingController managerNameController = TextEditingController();
+  // ★変更: 名前を姓／名で分割
+  final TextEditingController managerLastNameController =
+      TextEditingController();
+  final TextEditingController managerFirstNameController =
+      TextEditingController();
+  // ★追加: 読み仮名コントローラー
+  final TextEditingController managerLastNameKanaController =
+      TextEditingController();
+  final TextEditingController managerFirstNameKanaController =
+      TextEditingController();
   final TextEditingController storeNameController = TextEditingController();
   final TextEditingController storeAddressController = TextEditingController();
   final TextEditingController storePhoneController = TextEditingController();
@@ -63,7 +72,15 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController staffConfirmPasswordController =
       TextEditingController();
   final TextEditingController staffPhoneController = TextEditingController();
-  final TextEditingController staffNameController = TextEditingController();
+  // ★変更: 職員名も姓／名で分割
+  final TextEditingController staffLastNameController = TextEditingController();
+  final TextEditingController staffFirstNameController =
+      TextEditingController();
+  // ★追加: 職員読み仮名コントローラー
+  final TextEditingController staffLastNameKanaController =
+      TextEditingController();
+  final TextEditingController staffFirstNameKanaController =
+      TextEditingController();
 
   // 認証コード入力用
   final TextEditingController verificationCodeController =
@@ -92,7 +109,22 @@ class _SignUpPageState extends State<SignUpPage> {
           if (userProfile != null) {
             managerEmailController.text = userProfile.email;
             managerPhoneController.text = userProfile.phone;
-            managerNameController.text = userProfile.name;
+            // ★変更: 名前を姓・名に分割
+            final rawName =
+                (userProfile.name ?? '').replaceAll('\u3000', ' ').trim();
+            if (rawName.isEmpty) {
+              managerLastNameController.text = '';
+              managerFirstNameController.text = '';
+            } else {
+              final parts = rawName.split(RegExp(r'\s+'));
+              if (parts.length == 1) {
+                managerLastNameController.text = parts[0];
+                managerFirstNameController.text = '';
+              } else {
+                managerLastNameController.text = parts.first;
+                managerFirstNameController.text = parts.sublist(1).join(' ');
+              }
+            }
           } else {
             final currentUser = FirebaseAuth.instance.currentUser;
             if (currentUser != null) {
@@ -122,7 +154,11 @@ class _SignUpPageState extends State<SignUpPage> {
     managerPasswordController.dispose();
     managerConfirmPasswordController.dispose();
     managerPhoneController.dispose();
-    managerNameController.dispose();
+    // ★変更: 分割したコントローラーをdispose
+    managerLastNameController.dispose();
+    managerFirstNameController.dispose();
+    managerLastNameKanaController.dispose();
+    managerFirstNameKanaController.dispose();
     storeNameController.dispose();
     storeAddressController.dispose();
     storePhoneController.dispose();
@@ -131,9 +167,119 @@ class _SignUpPageState extends State<SignUpPage> {
     staffPasswordController.dispose();
     staffConfirmPasswordController.dispose();
     staffPhoneController.dispose();
-    staffNameController.dispose();
+    // ★変更: 職員の分割コントローラーもdispose
+    staffLastNameController.dispose();
+    staffFirstNameController.dispose();
+    staffLastNameKanaController.dispose();
+    staffFirstNameKanaController.dispose();
     verificationCodeController.dispose();
     super.dispose();
+  }
+
+  // ヘルパーメソッド定義（マスターファイルと同じ位置に配置）
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    bool isPassword = false,
+    TextInputType? type,
+    String? Function(String?)? validator,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Focus(
+        onFocusChange: (hasFocus) {
+          if (!hasFocus && type == TextInputType.phone) {
+            final displayFormatted =
+                PhoneFormatter.formatPhoneNumberForDisplay(controller.text);
+
+            if (displayFormatted != controller.text) {
+              controller.value = TextEditingValue(
+                text: displayFormatted,
+                selection:
+                    TextSelection.collapsed(offset: displayFormatted.length),
+              );
+            }
+          }
+        },
+        child: TextFormField(
+          controller: controller,
+          obscureText: isPassword,
+          keyboardType: type,
+          decoration: InputDecoration(
+            labelText: label,
+            border: const UnderlineInputBorder(),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.accentPrimary, width: 2),
+            ),
+          ),
+          validator: validator,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    VoidCallback? onPressed,
+    bool isLoading = false,
+    String label = '次へ',
+    bool isLineButton = false,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor:
+              isLineButton ? const Color(0xFF00B900) : AppColors.textPrimary,
+          foregroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          padding: const EdgeInsets.symmetric(vertical: 18),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading)
+              const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 3, color: Colors.white))
+            else ...[
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
+              if (!isLineButton) const SizedBox(width: 8),
+              if (!isLineButton) const Icon(Icons.arrow_forward_ios, size: 16),
+            ]
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        icon: Icon(icon, size: 24),
+        label: Text(label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textPrimary,
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          side: const BorderSide(color: AppColors.border),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
   }
 
   // メール形式検証
@@ -686,11 +832,28 @@ class _SignUpPageState extends State<SignUpPage> {
 
       late final ProviderProfile profile;
       if (_role == 'manager') {
+        // ★変更: 姓・名を結合して送信
+        final lastName = managerLastNameController.text.trim();
+        final firstName = managerFirstNameController.text.trim();
+        final fullName = '$lastName\u3000$firstName'.trim();
+
+        // ★追加: デバッグ出力
+        print('======== 管理者名前登録データ ========');
+        print('姓(漢字): $lastName');
+        print('名(漢字): $firstName');
+        print('結合後の名前(漢字): $fullName');
+        print('姓(フリガナ): ${managerLastNameKanaController.text.trim()}');
+        print('名(フリガナ): ${managerFirstNameKanaController.text.trim()}');
+        print(
+            '結合後の名前(フリガナ): ${managerLastNameKanaController.text.trim()}\u3000${managerFirstNameKanaController.text.trim()}');
+        print('※フリガナは現時点ではサーバに送信されません');
+        print('=====================================');
+
         profile = ProviderProfile(
           firebaseUid: firebaseUid,
           email: managerEmailController.text.trim(),
           phoneNumber: internalManagerPhone,
-          name: managerNameController.text,
+          name: fullName,
           role: 'manager',
           storeName: storeNameController.text,
           storeAddress: storeAddressController.text,
@@ -701,11 +864,29 @@ class _SignUpPageState extends State<SignUpPage> {
         final storeExists =
             await profileService.checkStoreExists(staffStoreIdController.text);
         if (!storeExists) throw ApiException('指定された店番号は存在しません');
+
+        // ★変更: 職員も姓・名を結合して送信
+        final lastName = staffLastNameController.text.trim();
+        final firstName = staffFirstNameController.text.trim();
+        final fullName = '$lastName\u3000$firstName'.trim();
+
+        // ★追加: デバッグ出力
+        print('======== 職員名前登録データ ========');
+        print('姓(漢字): $lastName');
+        print('名(漢字): $firstName');
+        print('結合後の名前(漢字): $fullName');
+        print('姓(フリガナ): ${staffLastNameKanaController.text.trim()}');
+        print('名(フリガナ): ${staffFirstNameKanaController.text.trim()}');
+        print(
+            '結合後の名前(フリガナ): ${staffLastNameKanaController.text.trim()}\u3000${staffFirstNameKanaController.text.trim()}');
+        print('※フリガナは現時点ではサーバに送信されません');
+        print('==================================');
+
         profile = ProviderProfile(
           firebaseUid: firebaseUid,
           email: staffEmailController.text.trim(),
           phoneNumber: internalStaffPhone,
-          name: staffNameController.text,
+          name: fullName,
           role: 'staff',
           storeId: staffStoreIdController.text,
         );
@@ -832,7 +1013,11 @@ class _SignUpPageState extends State<SignUpPage> {
           managerPasswordController.clear();
           managerConfirmPasswordController.clear();
           managerPhoneController.clear();
-          managerNameController.clear();
+          // ★変更: 分割したコントローラーもクリア
+          managerLastNameController.clear();
+          managerFirstNameController.clear();
+          managerLastNameKanaController.clear();
+          managerFirstNameKanaController.clear();
           storeNameController.clear();
           storeAddressController.clear();
           storePhoneController.clear();
@@ -842,7 +1027,11 @@ class _SignUpPageState extends State<SignUpPage> {
           staffPasswordController.clear();
           staffConfirmPasswordController.clear();
           staffPhoneController.clear();
-          staffNameController.clear();
+          // ★変更: 職員の分割コントローラーもクリア
+          staffLastNameController.clear();
+          staffFirstNameController.clear();
+          staffLastNameKanaController.clear();
+          staffFirstNameKanaController.clear();
 
           verificationCodeController.clear();
         });
@@ -1033,23 +1222,20 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
           const SizedBox(height: 24),
           TextButton(
-            onPressed: _isLoading ? null : _resendEmailLink,
-            child: const Text('メールを再送信',
-                style: TextStyle(color: AppColors.accentPrimary)),
-          ),
+              onPressed: _isLoading ? null : _resendEmailLink,
+              child: const Text('メールを再送信',
+                  style: TextStyle(color: AppColors.accentPrimary))),
           if (_errorMessage != null)
             Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(_errorMessage!,
-                  style: const TextStyle(color: AppColors.error),
-                  textAlign: TextAlign.center),
-            ),
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(_errorMessage!,
+                    style: const TextStyle(color: AppColors.error),
+                    textAlign: TextAlign.center)),
           const SizedBox(height: 40),
           _buildActionButton(
-            label: '認証完了',
-            onPressed: _verifyEmailComplete,
-            isLoading: _isLoading,
-          ),
+              label: '認証完了',
+              onPressed: _verifyEmailComplete,
+              isLoading: _isLoading),
         ],
       ),
     );
@@ -1073,28 +1259,23 @@ class _SignUpPageState extends State<SignUpPage> {
                 style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
             const SizedBox(height: 32),
             _buildTextField(
-              controller: phoneController,
-              label: '電話番号',
-              type: TextInputType.phone,
-              validator: _validatePhoneNumber,
-            ),
+                controller: phoneController,
+                label: '電話番号',
+                type: TextInputType.phone,
+                validator: _validatePhoneNumber),
             const SizedBox(height: 16),
-            const Text(
-              '※ハイフンなしで入力してください\n※認証コードがSMSで送信されます',
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-            ),
+            const Text('※ハイフンなしで入力してください\n※認証コードがSMSで送信されます',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             if (_errorMessage != null)
               Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text(_errorMessage!,
-                    style: const TextStyle(color: AppColors.error)),
-              ),
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(_errorMessage!,
+                      style: const TextStyle(color: AppColors.error))),
             const SizedBox(height: 40),
             _buildActionButton(
-              label: '認証コードを送信',
-              onPressed: _sendPhoneCode,
-              isLoading: _isLoading,
-            ),
+                label: '認証コードを送信',
+                onPressed: _sendPhoneCode,
+                isLoading: _isLoading),
           ],
         ),
       ),
@@ -1120,36 +1301,30 @@ class _SignUpPageState extends State<SignUpPage> {
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 24, letterSpacing: 8),
             decoration: const InputDecoration(
-              labelText: '認証コード',
-              hintText: '',
-              border: UnderlineInputBorder(),
-              focusedBorder: UnderlineInputBorder(
-                  borderSide:
-                      BorderSide(color: AppColors.accentPrimary, width: 2)),
-              counterText: '',
-            ),
+                labelText: '認証コード',
+                hintText: '',
+                border: UnderlineInputBorder(),
+                focusedBorder: UnderlineInputBorder(
+                    borderSide:
+                        BorderSide(color: AppColors.accentPrimary, width: 2)),
+                counterText: ''),
           ),
           const SizedBox(height: 24),
           Center(
             child: TextButton(
-              onPressed: _isLoading ? null : _resendPhoneCode,
-              child: const Text('コードを再送信',
-                  style: TextStyle(color: AppColors.accentPrimary)),
-            ),
+                onPressed: _isLoading ? null : _resendPhoneCode,
+                child: const Text('コードを再送信',
+                    style: TextStyle(color: AppColors.accentPrimary))),
           ),
           if (_errorMessage != null)
             Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(_errorMessage!,
-                  style: const TextStyle(color: AppColors.error),
-                  textAlign: TextAlign.center),
-            ),
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(_errorMessage!,
+                    style: const TextStyle(color: AppColors.error),
+                    textAlign: TextAlign.center)),
           const SizedBox(height: 40),
           _buildActionButton(
-            label: '認証',
-            onPressed: _verifyPhoneCode,
-            isLoading: _isLoading,
-          ),
+              label: '認証', onPressed: _verifyPhoneCode, isLoading: _isLoading),
         ],
       ),
     );
@@ -1174,25 +1349,19 @@ class _SignUpPageState extends State<SignUpPage> {
             label: '店舗電話番号',
             type: TextInputType.phone,
             validator: (value) {
-              if (value == null || value.isEmpty) {
-                return '店舗電話を入力してください。';
-              }
+              if (value == null || value.isEmpty) return '店舗電話を入力してください。';
               return _validatePhoneNumber(value);
             },
           ),
           if (_errorMessage != null)
             Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(_errorMessage!,
-                  style: const TextStyle(color: AppColors.error),
-                  textAlign: TextAlign.center),
-            ),
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(_errorMessage!,
+                    style: const TextStyle(color: AppColors.error),
+                    textAlign: TextAlign.center)),
           const SizedBox(height: 60),
           _buildActionButton(
-            label: '登録',
-            onPressed: _handleSignUp,
-            isLoading: _isLoading,
-          ),
+              label: '登録', onPressed: _handleSignUp, isLoading: _isLoading),
         ],
       ),
     );
@@ -1218,6 +1387,7 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
+  // ★変更: 職員情報入力画面を姓名分割に対応
   Widget _buildStaffInfoStep2() {
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -1230,20 +1400,40 @@ class _SignUpPageState extends State<SignUpPage> {
           const Text('ログインに使用する情報を入力してください。',
               style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
           const SizedBox(height: 32),
-          _buildTextField(controller: staffNameController, label: '名前'),
+          Row(
+            children: [
+              Expanded(
+                  child: _buildTextField(
+                      controller: staffLastNameController, label: '姓')),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: _buildTextField(
+                      controller: staffFirstNameController, label: '名')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                  child: _buildTextField(
+                      controller: staffLastNameKanaController,
+                      label: 'フリガナ（姓）')),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: _buildTextField(
+                      controller: staffFirstNameKanaController,
+                      label: 'フリガナ（名）')),
+            ],
+          ),
           if (_errorMessage != null)
             Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(_errorMessage!,
-                  style: const TextStyle(color: AppColors.error),
-                  textAlign: TextAlign.center),
-            ),
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(_errorMessage!,
+                    style: const TextStyle(color: AppColors.error),
+                    textAlign: TextAlign.center)),
           const SizedBox(height: 40),
           _buildActionButton(
-            label: '登録',
-            onPressed: _handleSignUp,
-            isLoading: _isLoading,
-          ),
+              label: '登録', onPressed: _handleSignUp, isLoading: _isLoading),
         ],
       ),
     );
@@ -1277,50 +1467,38 @@ class _SignUpPageState extends State<SignUpPage> {
                 style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
             const SizedBox(height: 32),
             _buildTextField(
-              controller: passwordController,
-              label: 'パスワード',
-              isPassword: true,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'パスワードを入力してください。';
-                }
-                if (value.length < 6) {
-                  return '6文字以上で入力してください。';
-                }
-                return null;
-              },
-            ),
+                controller: passwordController,
+                label: 'パスワード',
+                isPassword: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'パスワードを入力してください。';
+                  if (value.length < 6) return '6文字以上で入力してください。';
+                  return null;
+                }),
             _buildTextField(
-              controller: confirmPasswordController,
-              label: 'パスワードの確認',
-              isPassword: true,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'パスワードをもう一度入力してください。';
-                }
-                if (value != passwordController.text) {
-                  return 'パスワードが一致しません。';
-                }
-                return null;
-              },
-            ),
+                controller: confirmPasswordController,
+                label: 'パスワードの確認',
+                isPassword: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'パスワードをもう一度入力してください。';
+                  if (value != passwordController.text) return 'パスワードが一致しません。';
+                  return null;
+                }),
             if (_errorMessage != null)
               Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text(_errorMessage!,
-                    style: const TextStyle(color: AppColors.error)),
-              ),
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(_errorMessage!,
+                      style: const TextStyle(color: AppColors.error))),
             const SizedBox(height: 40),
-            _buildActionButton(
-              onPressed: submit,
-              isLoading: _isLoading,
-            ),
+            _buildActionButton(onPressed: submit, isLoading: _isLoading),
           ],
         ),
       ),
     );
   }
 
+  // ★変更: 管理者情報入力画面を姓名分割に対応
   Widget _buildManagerInfoStep() {
     return SingleChildScrollView(
       child: Column(
@@ -1332,113 +1510,34 @@ class _SignUpPageState extends State<SignUpPage> {
           const Text('本人確認のために情報を入力してください。',
               style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
           const SizedBox(height: 32),
-          _buildTextField(controller: managerNameController, label: '名前'),
+          Row(
+            children: [
+              Expanded(
+                  child: _buildTextField(
+                      controller: managerLastNameController, label: '姓')),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: _buildTextField(
+                      controller: managerFirstNameController, label: '名')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                  child: _buildTextField(
+                      controller: managerLastNameKanaController,
+                      label: 'フリガナ（姓）')),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: _buildTextField(
+                      controller: managerFirstNameKanaController,
+                      label: 'フリガナ（名）')),
+            ],
+          ),
           const SizedBox(height: 40),
           _buildActionButton(onPressed: _nextPage),
         ],
-      ),
-    );
-  }
-
-  Widget _buildRoleButton(
-      {required String label,
-      required IconData icon,
-      required VoidCallback onPressed}) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        icon: Icon(icon, size: 24),
-        label: Text(label,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.textPrimary,
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          side: const BorderSide(color: AppColors.border),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    bool isPassword = false,
-    TextInputType? type,
-    String? Function(String?)? validator,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Focus(
-        onFocusChange: (hasFocus) {
-          if (!hasFocus && type == TextInputType.phone) {
-            final displayFormatted =
-                PhoneFormatter.formatPhoneNumberForDisplay(controller.text);
-
-            if (displayFormatted != controller.text) {
-              controller.value = TextEditingValue(
-                text: displayFormatted,
-                selection:
-                    TextSelection.collapsed(offset: displayFormatted.length),
-              );
-            }
-          }
-        },
-        child: TextFormField(
-          controller: controller,
-          obscureText: isPassword,
-          keyboardType: type,
-          decoration: InputDecoration(
-            labelText: label,
-            border: const UnderlineInputBorder(),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.accentPrimary, width: 2),
-            ),
-          ),
-          validator: validator,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton(
-      {VoidCallback? onPressed,
-      bool isLoading = false,
-      String label = '次へ',
-      bool isLineButton = false}) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              isLineButton ? const Color(0xFF00B900) : AppColors.textPrimary,
-          foregroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          padding: const EdgeInsets.symmetric(vertical: 18),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (isLoading)
-              const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 3, color: Colors.white))
-            else ...[
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold)),
-              if (!isLineButton) const SizedBox(width: 8),
-              if (!isLineButton) const Icon(Icons.arrow_forward_ios, size: 16),
-            ]
-          ],
-        ),
       ),
     );
   }
