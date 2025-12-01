@@ -5,6 +5,7 @@ import '../../widgets/common_widgets/custom_snack_bar.dart';
 import 'profile_screen_viewmodel.dart';
 import './widgets/views/personal_profile_view.dart';
 import './widgets/views/store_profile_view.dart';
+import './widgets/views/staff_management_view.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -61,7 +62,9 @@ class _ProfileViewState extends State<_ProfileView>
     // ViewModel へ userProfile データがない場合何もしない
     if (_viewModel.userProfile == null) return;
 
-    final newLength = _viewModel.userProfile!.role == "manager" ? 2 : 1;
+    final isManager = _viewModel.userProfile!.role == "manager";
+    // マネージャーなら3つ（個人、店舗、スタッフ）、それ以外は2つ
+    final newLength = isManager ? 3 : 2;
 
     // コントローラーが生成され、長さが同じ時、何もしない
     if (_tabController != null && _tabController!.length == newLength) return;
@@ -122,40 +125,42 @@ class _ProfileViewState extends State<_ProfileView>
       return const Center(child: Text("ユーザー情報が見つかりません。"));
     }
 
-    // Success
     return Column(
       children: [
-        // 管理者の場合、TabBar を表示
-        if (isManager) ...[
-          Center(child: _buildTabBar()),
-          const SizedBox(height: 24),
-        ],
+        // 役割に関係なく、TabBar を表示
+        Center(child: _buildTabBar(isManager)),
+        const SizedBox(height: 24),
 
-        // TabBarView または、個人 Profile View を表示
+        // TabBarView を表示
         Expanded(
-          child: isManager
-              ? TabBarView(
-                  controller: _tabController!,
-                  children: [
-                    PersonalProfileView(userProfile: vm.userProfile!),
+          child: TabBarView(
+            controller: _tabController!,
+            children: [
+              PersonalProfileView(userProfile: vm.userProfile!),
 
-                    // store profile が null の場合を備えた防御コード
-                    if (vm.storeProfile != null)
-                      StoreProfileView()
-                    else
-                      const Center(child: Text("店舗情報がありません。")),
-                  ],
-                )
-              : PersonalProfileView(userProfile: vm.userProfile!),
+              // store profile が null の場合を備えた防御コード
+              if (vm.storeProfile != null)
+                StoreProfileView(isReadOnly: !isManager)
+              else
+                const Center(child: Text("店舗情報がありません。")),
+
+              // マネージャーの場合のみスタッフ管理画面を表示
+              if (isManager && vm.storeProfile != null)
+                StaffManagementView(storeId: vm.storeProfile!.id),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar(bool isManager) {
+    // タブの数に応じて幅を調整
+    final width = isManager ? 285.0 : 190.0;
+
     return Container(
       height: 34,
-      width: 190,
+      width: width,
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: Colors.grey[50],
@@ -188,7 +193,11 @@ class _ProfileViewState extends State<_ProfileView>
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         unselectedLabelStyle:
             const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
-        tabs: const [Tab(text: '個人'), Tab(text: '店舗')],
+        tabs: [
+          const Tab(text: '個人'),
+          const Tab(text: '店舗'),
+          if (isManager) const Tab(text: 'スタッフ'),
+        ],
       ),
     );
   }
