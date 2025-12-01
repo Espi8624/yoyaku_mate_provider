@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import '../models/waiting_list.dart';
 
@@ -266,6 +267,19 @@ class WaitingService {
     return '$year$month$day-$hour$minute$second';
   }
 
+  // Firebase ID トークン取得
+  Future<String> _getIdToken() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    final token = await user.getIdToken();
+    if (token == null) {
+      throw Exception('Failed to get ID token');
+    }
+    return token;
+  }
+
   // 新規待機追加関数
   Future<WaitingList> createWaitingListItem({
     // required String customerName,
@@ -289,9 +303,19 @@ class WaitingService {
         'status': 'waiting',
       };
 
+      // スタッフ/マネージャーの場合、認証ヘッダーを追加
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      try {
+        final token = await _getIdToken();
+        headers['Authorization'] = 'Bearer $token';
+      } catch (e) {
+        // 認証されていない場合（顧客）はヘッダーなしで続行
+        // print('Not authenticated, proceeding without auth header');
+      }
+
       final response = await http.post(
         Uri.parse('$_baseUrl/api/waiting-list'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: json.encode(requestBody),
       );
 
@@ -318,9 +342,14 @@ class WaitingService {
     required String storeId,
   }) async {
     try {
+      final token = await _getIdToken();
+
       final response = await http.patch(
         Uri.parse('$_baseUrl/api/waiting-list?action=status'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: json.encode({
           'store_id': storeId,
           'waiting_id': waitingId,
@@ -349,9 +378,14 @@ class WaitingService {
   // 待機目録初期化関数
   Future<void> clearWaitingList(String storeId) async {
     try {
+      final token = await _getIdToken();
+
       final response = await http.post(
         Uri.parse('$_baseUrl/api/waiting-list?action=clear&store_id=$storeId'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: '{}',
       );
 

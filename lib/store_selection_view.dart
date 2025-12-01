@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/join_store_dialog.dart';
+import 'package:yoyaku_mate_provider/constants/staff_status.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 
 class StoreSelectionView extends StatelessWidget {
   const StoreSelectionView({super.key});
@@ -16,6 +20,29 @@ class StoreSelectionView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded,
+                color: AppColors.textSecondary),
+            onPressed: () async {
+              final confirmed = await showConfirmationDialog(
+                context: context,
+                title: 'ログアウト',
+                content: '本当にログアウトしますか？',
+                confirmText: 'はい。',
+              );
+              if (confirmed == true) {
+                await FirebaseAuth.instance.signOut();
+              }
+            },
+          ),
+          const SizedBox(width: 16),
+        ],
+      ),
       body: _buildStoreList(context, vm, stores, userName),
     );
   }
@@ -23,12 +50,17 @@ class StoreSelectionView extends StatelessWidget {
   Widget _buildStoreList(BuildContext context, ProfileScreenViewModel vm,
       List<StoreProfile> stores, String userName) {
     void navigateToSignUp() {
-      context.push('/signup?mode=add_store');
+      final role = vm.userProfile?.role ?? 'manager';
+      if (role == 'staff') {
+        _showJoinStoreDialog(context, vm);
+      } else {
+        context.push('/signup?mode=add_store&role=$role');
+      }
     }
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.fromLTRB(24.0, 8.0, 24.0, 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -59,9 +91,18 @@ class StoreSelectionView extends StatelessWidget {
                       itemCount: stores.length,
                       itemBuilder: (context, index) {
                         final store = stores[index];
+
                         return StoreCard(
                           store: store,
                           onTap: () async {
+                            if (store.staffStatus == StaffStatus.rejected) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('この店舗への参加は拒否されました。')),
+                              );
+                              return;
+                            }
+
                             print('Store Card \'${store.name}\' Tapped!');
 
                             // ViewModelのselectStoreメソッドを呼出
@@ -100,6 +141,32 @@ class StoreSelectionView extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _showJoinStoreDialog(
+      BuildContext context, ProfileScreenViewModel vm) async {
+    final storeId = await showJoinStoreDialog(context: context);
+
+    if (storeId == null || storeId.isEmpty) {
+      return;
+    }
+
+    if (!context.mounted) return;
+
+    try {
+      final success = await vm.joinStore(storeId);
+      if (success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('参加申請を送信しました。')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('エラー: ${vm.errorMessage ?? e.toString()}')),
+        );
+      }
+    }
+  }
 }
 
 class StoreCard extends StatelessWidget {
@@ -110,6 +177,10 @@ class StoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isRejected = store.staffStatus == StaffStatus.rejected;
+    final isPending = store.staffStatus == StaffStatus.pending;
+    final isApproved = store.staffStatus == StaffStatus.approved;
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       elevation: 2,
@@ -122,8 +193,9 @@ class StoreCard extends StatelessWidget {
           padding: const EdgeInsets.all(20.0),
           child: Row(
             children: [
-              const Icon(Icons.storefront,
-                  color: AppColors.accentPrimary, size: 32),
+              Icon(Icons.storefront,
+                  color: isRejected ? Colors.grey : AppColors.accentPrimary,
+                  size: 32),
               const SizedBox(width: 20),
               Expanded(
                 child: Column(
@@ -131,8 +203,11 @@ class StoreCard extends StatelessWidget {
                   children: [
                     Text(
                       store.name,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isRejected ? Colors.grey : Colors.black,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -140,11 +215,72 @@ class StoreCard extends StatelessWidget {
                       style: const TextStyle(color: AppColors.textSecondary),
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (isRejected) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red),
+                        ),
+                        child: const Text(
+                          '参加拒否',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (isPending) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange),
+                        ),
+                        child: const Text(
+                          '承認待ち',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (isApproved) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green),
+                        ),
+                        child: const Text(
+                          '承認済み',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios_rounded,
-                  color: AppColors.textSecondary, size: 18),
+              if (!isRejected)
+                const Icon(Icons.arrow_forward_ios_rounded,
+                    color: AppColors.textSecondary, size: 18),
             ],
           ),
         ),

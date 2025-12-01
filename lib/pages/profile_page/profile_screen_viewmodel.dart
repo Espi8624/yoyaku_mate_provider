@@ -8,6 +8,7 @@ import 'package:yoyaku_mate_provider/models/store_profile.dart';
 import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
+import 'package:yoyaku_mate_provider/constants/staff_status.dart';
 
 class ProfileScreenViewModel extends ChangeNotifier {
   final ProviderProfileService _profileService;
@@ -393,6 +394,79 @@ class ProfileScreenViewModel extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> joinStore(String storeId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _profileService.joinStore(storeId);
+      _successMessage = "参加リクエストを送信しました。承認をお待ちください。";
+      await loadProfiles();
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = "参加リクエスト送信失敗: ${e.message}";
+      return false;
+    } catch (e) {
+      _errorMessage = "予期しないエラーが発生しました: $e";
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // --- Staff Management Logic ---
+
+  List<dynamic> _staffList = [];
+  List<dynamic> get staffList => _staffList;
+
+  Future<void> fetchStoreStaff(String storeId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final staff = await _profileService.fetchStoreStaff(storeId);
+      _staffList = staff;
+    } on ApiException catch (e) {
+      _errorMessage = "スタッフリスト取得失敗: ${e.message}";
+    } catch (e) {
+      _errorMessage = "予期しないエラーが発生しました: $e";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateStoreStaffStatus(
+      String storeId, String staffId, String status) async {
+    // ローディング状態にすると画面が再描画されてリストが消える可能性があるため、
+    // ここではあえて _isLoading = true にせず、バックグラウンドで処理するか、
+    // あるいは個別のローディング状態を持つのが理想ですが、
+    // 簡易的に全体ローディングを使います（UX要件に応じて調整）。
+    // _isLoading = true;
+    // notifyListeners();
+
+    try {
+      await _profileService.updateStoreStaffStatus(storeId, staffId, status);
+      _successMessage =
+          status == StaffStatus.approved ? 'スタッフを承認しました' : 'スタッフを拒否しました';
+
+      // リストを再取得して最新状態にする
+      await fetchStoreStaff(storeId);
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = "ステータス更新失敗: ${e.message}";
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = "予期しないエラーが発生しました: $e";
+      notifyListeners();
+      return false;
     }
   }
 }
