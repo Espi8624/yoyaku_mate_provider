@@ -6,8 +6,8 @@ class ProfileHeader extends StatelessWidget {
   final String? subtitle;
   final String? imageUrl;
   final IconData? icon;
-  final VoidCallback onTapImage;
-  final VoidCallback onTapName;
+  final VoidCallback? onTapImage;
+  final VoidCallback? onTapName;
 
   const ProfileHeader({
     super.key,
@@ -15,8 +15,8 @@ class ProfileHeader extends StatelessWidget {
     this.subtitle,
     this.imageUrl,
     this.icon,
-    required this.onTapImage,
-    required this.onTapName,
+    this.onTapImage,
+    this.onTapName,
   });
 
   @override
@@ -49,8 +49,10 @@ class ProfileHeader extends StatelessWidget {
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary)),
-                  const SizedBox(width: 12),
-                  Icon(Icons.edit, color: Colors.grey[600], size: 20),
+                  if (onTapName != null) ...[
+                    const SizedBox(width: 12),
+                    Icon(Icons.edit, color: Colors.grey[600], size: 20),
+                  ],
                 ],
               ),
             ),
