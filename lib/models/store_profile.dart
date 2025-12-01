@@ -6,6 +6,7 @@ class StoreProfile {
   final String bizNumber;
   final String? storeImageUrl;
   final String? verificationStatus;
+  final String? staffStatus; // 職員の承認状態 (See [StaffStatus])
 
   StoreProfile({
     required this.id,
@@ -15,6 +16,7 @@ class StoreProfile {
     required this.bizNumber,
     this.storeImageUrl,
     this.verificationStatus,
+    this.staffStatus,
   });
 
   factory StoreProfile.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class StoreProfile {
       bizNumber: json['biz_number'] as String? ?? '',
       storeImageUrl: json['store_image_url'] as String?, // API 応答に合わせてフィールド名調整
       verificationStatus: json['verification_status'] as String?,
+      staffStatus: json['staff_status'] as String?, // 職員承認状態
     );
   }
 }

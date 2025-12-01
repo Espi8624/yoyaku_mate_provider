@@ -335,4 +335,60 @@ class ProviderProfileService {
           'Failed to add new store. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
+
+  Future<void> joinStore(String storeId) async {
+    final token = await _getIdToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/stores/join'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'store_id': storeId}),
+    );
+
+    if (response.statusCode != 201) {
+      throw ApiException(
+          'Failed to join store. Status: ${response.statusCode}, Body: ${response.body}');
+    }
+  }
+
+  // 店舗スタッフリスト取得
+  Future<List<dynamic>> fetchStoreStaff(String storeId) async {
+    final token = await _getIdToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/stores/$storeId/staff'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      return decoded['data'] as List<dynamic>;
+    } else {
+      throw ApiException(
+          'Failed to fetch store staff. Status: ${response.statusCode}, Body: ${response.body}');
+    }
+  }
+
+  // スタッフ状態更新
+  Future<void> updateStoreStaffStatus(
+      String storeId, String staffId, String status) async {
+    final token = await _getIdToken();
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/stores/$storeId/staff/$staffId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'status': status}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(
+          'Failed to update staff status. Status: ${response.statusCode}, Body: ${response.body}');
+    }
+  }
 }

@@ -86,14 +86,26 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController verificationCodeController =
       TextEditingController();
 
+  bool _isInitialized = false;
+
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInitialized) return;
+    _isInitialized = true;
+
+    final uri = GoRouterState.of(context).uri;
+    final roleParam = uri.queryParameters['role'];
 
     int initialPage = 0;
+
     if (widget.mode == 'add_store') {
-      _role = 'manager';
-      initialPage = 4; // 店舗情報入力index
+      _role = roleParam ?? 'manager';
+      if (_role == 'staff') {
+        initialPage = 6; // 職員情報入力(店舗番号入力) index
+      } else {
+        initialPage = 7; // 店舗情報入力 index (manager)
+      }
     }
 
     _pageController = PageController(initialPage: initialPage);
@@ -904,27 +916,37 @@ class _SignUpPageState extends State<SignUpPage> {
         );
       }
 
-      final Map<String, dynamic> createdProfileMap = isAddingStore
-          ? await profileService.addNewStore(profile, idToken)
-          : await profileService.signUp(profile, idToken);
+      final Map<String, dynamic> createdProfileMap;
+      if (isAddingStore) {
+        if (_role == 'staff') {
+          await profileService.joinStore(staffStoreIdController.text);
+          createdProfileMap = {}; // joinStore returns void on success
+        } else {
+          createdProfileMap =
+              await profileService.addNewStore(profile, idToken);
+        }
+      } else {
+        createdProfileMap = await profileService.signUp(profile, idToken);
+      }
 
       if (!mounted) {
         return;
       }
 
-      final responseData = createdProfileMap['data'] as Map<String, dynamic>;
-      final userJson = responseData['user'] as Map<String, dynamic>;
       final profileVM = context.read<ProfileScreenViewModel>();
 
       if (_role == 'manager') {
         if (isAddingStore) {
-          final storeJson = responseData['store'] as Map<String, dynamic>?;
+          final storeJson = createdProfileMap['store'] as Map<String, dynamic>?;
           if (storeJson != null) {
             final newStoreProfile = StoreProfile.fromJson(storeJson);
             profileVM.addStore(newStoreProfile);
           }
           context.go('/signup-prompt');
         } else {
+          final responseData =
+              createdProfileMap['data'] as Map<String, dynamic>;
+          final userJson = responseData['user'] as Map<String, dynamic>;
           final storeJson = responseData['store'] as Map<String, dynamic>?;
           final newUserProfile = UserProfile.fromJson(userJson);
           final List<StoreProfile> newStores = [];
@@ -936,11 +958,19 @@ class _SignUpPageState extends State<SignUpPage> {
           context.go('/signup-prompt');
         }
       } else if (_role == 'staff') {
-        // データを再ロード
-        await profileVM.loadProfiles();
+        if (isAddingStore) {
+          // 店舗参加申請成功
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('店舗への参加申請を送信しました。承認をお待ちください。')),
+          );
+          context.go('/store-selection'); // 店舗選択画面に戻る
+        } else {
+          // データを再ロード
+          await profileVM.loadProfiles();
 
-        if (mounted) {
-          context.go('/signup-prompt');
+          if (mounted) {
+            context.go('/signup-prompt');
+          }
         }
       }
     } catch (e) {
@@ -1093,6 +1123,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
   List<Widget> _buildPages() {
     if (widget.mode == 'add_store') {
+      if (_role == 'staff') {
+        return [_buildStaffInfoStep1()];
+      }
       return [_buildManagerInfoStep2()];
     }
 
