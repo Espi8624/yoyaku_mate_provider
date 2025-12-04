@@ -12,6 +12,7 @@ import '../profile_header.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
 import 'staff_approval_status_view.dart';
+import 'store_license_status_view.dart';
 
 class StoreProfileView extends StatelessWidget {
   final bool isReadOnly;
@@ -160,72 +161,83 @@ class StoreProfileView extends StatelessWidget {
                   title: '営業許可証',
                   children: [
                     const SizedBox(height: 8),
-                    if (hasLicenseImage)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12.0),
-                        child: Image.network(
-                          storeLicense.imageUrl!,
-                          fit: BoxFit.cover,
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: StoreLicenseStatusWidget(
+                          status: storeLicense.verificationStatus),
+                    ),
+                    if ((storeLicense.verificationStatus != 'APPROVED') &&
+                        (storeLicense.verificationStatus !=
+                            'PENDING_REVIEW')) ...[
+                      if (hasLicenseImage)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12.0),
+                          child: Image.network(
+                            storeLicense.imageUrl!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: 200,
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return const SizedBox(
+                                height: 200,
+                                child:
+                                    Center(child: CircularProgressIndicator()),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 200,
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: AppColors.border),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Center(
+                                    child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.error_outline,
+                                        color: Colors.red, size: 40),
+                                    SizedBox(height: 8),
+                                    Text("イメージの読み込みに失敗しました。"),
+                                  ],
+                                )),
+                              );
+                            },
+                          ),
+                        )
+                      else
+                        Container(
+                          height: 150,
                           width: double.infinity,
-                          height: 200,
-                          loadingBuilder: (context, child, progress) {
-                            if (progress == null) return child;
-                            return const SizedBox(
-                              height: 200,
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 200,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: AppColors.border),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Center(
-                                  child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.error_outline,
-                                      color: Colors.red, size: 40),
-                                  SizedBox(height: 8),
-                                  Text("イメージの読み込みに失敗しました。"),
-                                ],
-                              )),
-                            );
-                          },
-                        ),
-                      )
-                    else
-                      Container(
-                        height: 150,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppColors.border),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            "まだ登録されていません。",
-                            style: TextStyle(color: AppColors.textSecondary),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.cardBackground),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              "まだ登録されていません。",
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
                           ),
                         ),
-                      ),
-                    const SizedBox(height: 16),
-                    if (!isReadOnly)
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.upload_file),
-                          label: Text(hasLicenseImage ? "画像を再アップロード" : "画像を登録"),
-                          onPressed: () => _handleImageUpload(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accentPrimary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                      const SizedBox(height: 16),
+                      if (!isReadOnly)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.upload_file),
+                            label:
+                                Text(hasLicenseImage ? "画像を再アップロード" : "画像を登録"),
+                            onPressed: () => _handleImageUpload(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.accentPrimary,
+                              foregroundColor: AppColors.textPrimaryLight,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
                           ),
                         ),
-                      ),
+                    ],
                   ],
                 ),
               const SizedBox(height: 24),
