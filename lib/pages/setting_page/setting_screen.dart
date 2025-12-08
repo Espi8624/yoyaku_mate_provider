@@ -63,30 +63,44 @@ class _SettingScreenViewState extends State<_SettingScreenView>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+      body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("設定",
+            const Padding(
+              padding: EdgeInsets.fromLTRB(24, 12, 24, 36),
+              child: Text(
+                "設定",
                 style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary)),
-            const SizedBox(height: 24),
-            _buildTabBar(),
-            const SizedBox(height: 24),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
             Expanded(
-              child: viewModel.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : viewModel.storeSettings == null
-                      ? Center(
-                          child: Text(
-                            '設定情報を表示できません。',
-                            style: TextStyle(color: AppColors.textSecondary),
-                          ),
-                        )
-                      : _buildTabBarView(viewModel),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    _buildTabBar(),
+                    const SizedBox(height: 24),
+                    Expanded(
+                      child: viewModel.isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : viewModel.storeSettings == null
+                              ? Center(
+                                  child: Text(
+                                    '設定情報を表示できません。',
+                                    style: TextStyle(
+                                        color: AppColors.textSecondary),
+                                  ),
+                                )
+                              : _buildTabBarView(viewModel),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

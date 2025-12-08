@@ -288,7 +288,20 @@ class ProfileScreenViewModel extends ChangeNotifier {
       } else if (storeFieldKey != null && storeId.isNotEmpty) {
         await _profileService
             .updateStoreProfile(storeId, {storeFieldKey: value});
-        await selectStore(storeId);
+
+        // 更新された店舗情報を取得してローカルリストを更新
+        final response = await _profileService.fetchStoreProfile(storeId);
+        if (response.containsKey('data') && response['data'] is Map) {
+          final updatedStore =
+              StoreProfile.fromJson(response['data'] as Map<String, dynamic>);
+
+          final index = _myStores.indexWhere((s) => s.id == storeId);
+          if (index != -1) {
+            _myStores[index] = updatedStore;
+          }
+
+          await selectStore(storeId);
+        }
       }
       success = true;
     } on ApiException catch (e) {
