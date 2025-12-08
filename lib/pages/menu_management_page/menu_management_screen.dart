@@ -267,50 +267,64 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         // mobile layout
         if (isMobile) {
           return Scaffold(
-            // appBar: AppBar(
-            //   title: const Text('メニュー管理',
-            //       style: TextStyle(fontWeight: FontWeight.bold)),
-            //   backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            //   elevation: 0,
-            // ),
-            body: Stack(
-              children: [
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: _SaveStatusIndicator(status: vm.saveStatus),
-                ),
-
-                Positioned.fill(
-                  bottom: 150,
-                  child: MenuListPanel(
-                    tabController: _tabController,
-                    categories: vm.categories,
-                    categorizedMenu: vm.categorizedMenu,
-                    onEditCategory: _showEditCategoryDialog,
-                    onDeleteCategory: _showDeleteCategoryDialog,
-                    onEditMenu: _showEditMenuDialog,
-                    onDeleteMenu: _showDeleteMenuDialog,
+            body: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 36),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'メニュー管理',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        _SaveStatusIndicator(status: vm.saveStatus),
+                      ],
+                    ),
                   ),
-                ),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          bottom: 150,
+                          child: MenuListPanel(
+                            tabController: _tabController,
+                            categories: vm.categories,
+                            categorizedMenu: vm.categorizedMenu,
+                            onEditCategory: _showEditCategoryDialog,
+                            onDeleteCategory: _showDeleteCategoryDialog,
+                            onEditMenu: _showEditMenuDialog,
+                            onDeleteMenu: _showDeleteMenuDialog,
+                          ),
+                        ),
 
-                // 下段ボタンパネル
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: ActionButtonsPanelMobile(
-                    isCategoryEmpty: vm.categories.isEmpty,
-                    onAddCategory: _showAddCategoryDialog,
-                    onAddMenu: _showAddMenuDialog,
-                    // onSaveChanges: _saveChanges,
-                    onResetAll: _showDeleteAllMenusDialog,
+                        // 下段ボタンパネル
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: ActionButtonsPanelMobile(
+                            isCategoryEmpty: vm.categories.isEmpty,
+                            onAddCategory: _showAddCategoryDialog,
+                            onAddMenu: _showAddMenuDialog,
+                            // onSaveChanges: _saveChanges,
+                            onResetAll: _showDeleteAllMenusDialog,
+                          ),
+                        ),
+
+                        // ローディング表示
+                        if (vm.isLoading) const LoadingIndicator(),
+                      ],
+                    ),
                   ),
-                ),
-
-                // ローディング表示
-                if (vm.isLoading) const LoadingIndicator(),
-              ],
+                ],
+              ),
             ),
           );
         } else {

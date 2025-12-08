@@ -28,99 +28,98 @@ class MenuListPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(24, 32, 24, 16),
-          child: Text(
-            "メニュー管理",
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ),
+        // const Padding(
+        //   padding: EdgeInsets.fromLTRB(24, 32, 24, 16),
+        //   child: Text(
+        //     "メニュー管理",
+        //     style: TextStyle(
+        //       fontSize: 24,
+        //       fontWeight: FontWeight.bold,
+        //       color: AppColors.textPrimary,
+        //     ),
+        //   ),
+        // ),
 
         // カテゴリが存在する場合、TabBar, TabBarViewを表示
         if (categories.isNotEmpty) ...[
-          Padding(
-            padding: EdgeInsets.zero,
-            child: TabBar(
-              controller: tabController,
-              isScrollable: true,
-              dividerColor: Colors.transparent,
-              // indicatorサイズをTabに合わせる
-              indicatorSize: TabBarIndicatorSize.tab,
-              splashBorderRadius: BorderRadius.circular(30),
-              overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                (Set<WidgetState> states) {
-                  if (states.contains(WidgetState.pressed)) {
-                    return AppColors.accentPrimary.withOpacity(0.12);
-                  }
-                  if (states.contains(WidgetState.hovered)) {
-                    return AppColors.accentPrimary.withOpacity(0.08);
-                  }
-                  return null;
-                },
-              ),
-
-              // 選択されたTabのindicatorデザイン
-              indicator: const ShapeDecoration(
-                color: AppColors.accentPrimary,
-                shape: StadiumBorder(),
-              ),
-              labelColor: AppColors.textPrimaryLight,
-              unselectedLabelColor: AppColors.textPrimary,
-
-              labelStyle:
-                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-              unselectedLabelStyle:
-                  const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
-
-              // Tabの間の基本Padding
-              labelPadding: EdgeInsets.zero,
-
-              // Tab List生成
-              tabs: List.generate(categories.length, (index) {
-                final bool isSelected = tabController.index == index;
-                final Color editIconColor = isSelected
-                    ? AppColors.textPrimaryLight
-                    : AppColors.textSecondary;
-                final Color deleteIconColor = isSelected
-                    ? AppColors.error
-                    : AppColors.error.withOpacity(0.6);
-
-                return Tab(
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 0.0, 8.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(categories[index]),
-                        const SizedBox(width: 2),
-                        Transform.translate(
-                          offset: const Offset(8, 0),
-                          child: _buildTabIconButton(
-                            icon: Icons.edit,
-                            color: editIconColor,
-                            tooltip: 'カテゴリー編集',
-                            onPressed: () => onEditCategory(index),
-                          ),
-                        ),
-                        Transform.translate(
-                          offset: const Offset(-4, 0),
-                          child: _buildTabIconButton(
-                            icon: Icons.delete_outline,
-                            color: deleteIconColor,
-                            tooltip: 'カテゴリー削除',
-                            onPressed: () => onDeleteCategory(index),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
+          TabBar(
+            controller: tabController,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            dividerColor: Colors.transparent,
+            // indicatorサイズをTabに合わせる
+            indicatorSize: TabBarIndicatorSize.tab,
+            splashBorderRadius: BorderRadius.circular(30),
+            overlayColor: WidgetStateProperty.resolveWith<Color?>(
+              (Set<WidgetState> states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return AppColors.accentPrimary.withOpacity(0.12);
+                }
+                if (states.contains(WidgetState.hovered)) {
+                  return AppColors.accentPrimary.withOpacity(0.08);
+                }
+                return null;
+              },
             ),
+
+            // 選択されたTabのindicatorデザイン
+            indicator: const ShapeDecoration(
+              color: AppColors.accentPrimary,
+              shape: StadiumBorder(),
+            ),
+            labelColor: AppColors.textPrimaryLight,
+            unselectedLabelColor: AppColors.textPrimary,
+
+            labelStyle:
+                const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            unselectedLabelStyle:
+                const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
+
+            // Tabの間の基本Padding
+            labelPadding: EdgeInsets.zero,
+
+            // Tab List生成
+            tabs: List.generate(categories.length, (index) {
+              final bool isSelected = tabController.index == index;
+              final Color editIconColor = isSelected
+                  ? AppColors.textPrimaryLight
+                  : AppColors.textSecondary;
+              final Color deleteIconColor = isSelected
+                  ? AppColors.error
+                  : AppColors.error.withOpacity(0.6);
+
+              return Tab(
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16.0, 8.0, 0.0, 8.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(categories[index]),
+                      const SizedBox(width: 2),
+                      Transform.translate(
+                        offset: const Offset(8, 0),
+                        child: _buildTabIconButton(
+                          icon: Icons.edit,
+                          color: editIconColor,
+                          tooltip: 'カテゴリー編集',
+                          onPressed: () => onEditCategory(index),
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: const Offset(-4, 0),
+                        child: _buildTabIconButton(
+                          icon: Icons.delete_outline,
+                          color: deleteIconColor,
+                          tooltip: 'カテゴリー削除',
+                          onPressed: () => onDeleteCategory(index),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
           ),
 
           // TabBarView
