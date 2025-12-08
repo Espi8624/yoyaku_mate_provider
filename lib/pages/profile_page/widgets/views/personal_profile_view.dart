@@ -22,15 +22,6 @@ class PersonalProfileView extends StatelessWidget {
     required String initialValue,
     bool isPassword = false,
   }) async {
-    await showDialog(
-      context: context,
-      builder: (_) => EditProfileDialog(
-        title: title,
-        initialValue: initialValue,
-        isPassword: isPassword,
-      ),
-    );
-
     if (!isPassword) {
       final newValue = await showDialog<String>(
         context: context,
