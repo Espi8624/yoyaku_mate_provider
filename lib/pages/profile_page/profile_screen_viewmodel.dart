@@ -222,8 +222,6 @@ class ProfileScreenViewModel extends ChangeNotifier {
         throw ApiException('無効な店舗ライセンスデータ形式です。');
       }
 
-      _successMessage = "'${_storeProfile?.name}' 店舗が選択されました。";
-
       return true;
     } on ApiException catch (e) {
       _errorMessage = '店舗詳細情報の読み込みに失敗しました: ${e.message}';
