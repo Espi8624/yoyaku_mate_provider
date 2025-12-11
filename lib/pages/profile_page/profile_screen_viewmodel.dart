@@ -64,6 +64,8 @@ class ProfileScreenViewModel extends ChangeNotifier {
   //   // print("--- [ViewModel] prepareForSignUp: SignUp 플래그 설정 ---");
   //   _isInitializedBySignUp = true;
   // }
+  bool _isProfileIncomplete = false;
+  bool get isProfileIncomplete => _isProfileIncomplete;
 
   // プロフィール情報初期化
   void clearProfile() {
@@ -72,6 +74,7 @@ class ProfileScreenViewModel extends ChangeNotifier {
     _storeLicense = null;
     _myStores = [];
     _mongoUserId = '';
+    _isProfileIncomplete = false;
     // _isInitializedBySignUp = false;
     notifyListeners();
   }
@@ -87,6 +90,7 @@ class ProfileScreenViewModel extends ChangeNotifier {
     _myStores = stores;
     _isLoading = false;
     _errorMessage = null;
+    _isProfileIncomplete = false;
     // _isInitializedBySignUp = true; // SignUpに初期化されていることを表示
 
     // print("  - _isInitializedBySignUp 플래그 설정됨");
@@ -178,7 +182,14 @@ class ProfileScreenViewModel extends ChangeNotifier {
         throw ApiException('店舗リストデータ形式が異なります。(outer data)');
       }
     } on ApiException catch (e) {
-      _errorMessage = 'データローディング失敗: ${e.message}';
+      // ユーザーが見つからない場合は未完了フラグを立てる
+      if (e.message.contains('User not found') ||
+          e.message.contains('Status: 404')) {
+        _isProfileIncomplete = true;
+        // _errorMessageは設定しない (画面遷移するため)
+      } else {
+        _errorMessage = 'データローディング失敗: ${e.message}';
+      }
       // print("   ✗ API 에러: ${e.message}");
     } catch (e) {
       _errorMessage = '予期しないエラーが発生しました。: $e';
