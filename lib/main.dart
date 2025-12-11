@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/firebase_options.dart';
 import 'package:yoyaku_mate_provider/store_selection_view.dart';
@@ -15,8 +16,6 @@ import 'package:yoyaku_mate_provider/services/profile_service.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar_mobile.dart';
-
-//
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -116,6 +115,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     // final userProvider = Provider.of<UserProvider>(context, listen: false);
     final profileVM = context.watch<ProfileScreenViewModel>();
+
+    if (profileVM.isProfileIncomplete) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // 現在のパスが既にsignupならリダイレクトしない(ループ防止)
+        // context.goだと確認できないが、GoRouterStateを取得するのが少し手間なので
+        // 単純に遷移させる。routes.dart側で /signup にいる場合はリダイレクトしない制御があればベストだが
+        // ここでは単純に遷移。
+        try {
+          // print("Attempting redirect to /signup?mode=resume");
+          context.go('/signup?mode=resume');
+        } catch (e) {
+          // print("Redirect failed: $e");
+        }
+      });
+      // 明示的なreturnを削除し、下の共通ローディング処理に任せる
+      // return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     // print("--- [HomeScreen] build 메서드 호출됨! ---");
     // print("  - 현재 보고 있는 ViewModel 해시코드: ${profileVM.hashCode}");
@@ -221,9 +237,36 @@ class _HomeScreenState extends State<HomeScreen> {
     } else if (hasStores) {
       return const StoreSelectionView();
     } else {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: Text('所属された店舗がありません。管理者にお問い合わせください。'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('所属された店舗がありません。管理者にお問い合わせください。'),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  // 登録プロセスを再開
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    try {
+                      context.go('/signup?mode=resume');
+                    } catch (e) {
+                      // ignore
+                    }
+                  });
+                },
+                child: const Text('登録を再開する'),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                },
+                child:
+                    const Text('ログアウト', style: TextStyle(color: Colors.grey)),
+              ),
+            ],
+          ),
         ),
       );
     }
