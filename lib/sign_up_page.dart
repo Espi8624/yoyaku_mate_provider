@@ -352,11 +352,24 @@ class _SignUpPageState extends State<SignUpPage> {
       final signInMethods =
           await FirebaseAuth.instance.fetchSignInMethodsForEmail(email);
 
+      // Resumeモードの場合、自分自身のアドレスならOKとする
+      final currentUser = FirebaseAuth.instance.currentUser;
+      bool isOwnEmail = false;
+
+      if (currentUser != null && currentUser.email == email) {
+        isOwnEmail = true;
+      }
+
+      // 既にサインイン済みのメソッドがある場合
       if (signInMethods.isNotEmpty) {
-        throw FirebaseAuthException(
-          code: 'email-already-in-use',
-          message: 'このメールアドレスは既に使用されています。',
-        );
+        // 自分自身でなければエラー
+        if (!isOwnEmail) {
+          throw FirebaseAuthException(
+            code: 'email-already-in-use',
+            message: 'このメールアドレスは既に使用されています。',
+          );
+        }
+        // 自分自身なら何もしない（通過）
       }
 
       if (!mounted) return;
@@ -410,37 +423,70 @@ class _SignUpPageState extends State<SignUpPage> {
     try {
       setSignUpInProgress(true);
 
-      // Firebaseアカウント生成
-      final userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final isResume = widget.mode == 'resume' ||
+          (currentUser != null && currentUser.email == email);
 
-      _pendingUser = userCredential.user;
+      // Resumeモードの場合の処理を強化
+      if (isResume) {
+        User? user = _pendingUser ?? currentUser;
 
-      if (_pendingUser == null) {
-        throw Exception('アカウント作成に失敗しました。');
+        if (user != null) {
+          _pendingUser = user;
+          // 既にアカウントがあるので、認証メール送信だけ確認
+          if (!user.emailVerified) {
+            await user.sendEmailVerification();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('認証メールを送信しました。メールボックスをご確認ください。'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else {
+            // 既に認証済みなら何もしない
+          }
+          // ResumeFlowなのでsignOutしない
+        } else {
+          // Resumeモードなのにユーザーがいない場合、セッション切れとみなして
+          // "既に存在する"扱いでログインダイアログへ誘導するために例外を投げる
+          throw FirebaseAuthException(
+            code: 'email-already-in-use',
+            message: 'このメールアドレスは既に使用されています。',
+          );
+        }
+      } else {
+        // 通常フロー
+        // Firebaseアカウント生成
+        final userCredential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+        _pendingUser = userCredential.user;
+
+        if (_pendingUser == null) {
+          throw Exception('アカウント作成に失敗しました。');
+        }
+
+        // 認証メール送信
+        await _pendingUser!.sendEmailVerification();
+
+        await FirebaseAuth.instance.signOut();
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('認証メールを送信しました。メールボックスをご確認ください。'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
-
-      // 認証メール送信
-      await _pendingUser!.sendEmailVerification();
-
-      await FirebaseAuth.instance.signOut();
-
       if (!mounted) return;
 
       setState(() {
         _isLoading = false;
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('認証メールを送信しました。メールボックスをご確認ください。'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
       _nextPage();
     } on FirebaseAuthException catch (e) {
       // アカウント生成失敗時
@@ -448,7 +494,28 @@ class _SignUpPageState extends State<SignUpPage> {
       setState(() {
         _isLoading = false;
         if (e.code == 'email-already-in-use') {
-          _errorMessage = 'このメールアドレスは既に使用されています。';
+          // _errorMessage = 'このメールアドレスは既に使用されています。';
+          // 既に存在する場合、ログインを誘導するダイアログを表示
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('既に登録済みのアドレスです'),
+              content: const Text('このメールアドレスは既に登録されています。\nログインして登録を再開しますか？'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('キャンセル'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Close dialog
+                    context.go('/login'); // Navigate to login
+                  },
+                  child: const Text('ログインする'),
+                ),
+              ],
+            ),
+          );
         } else if (e.code == 'weak-password') {
           _errorMessage = 'パスワードが弱すぎます。';
         } else {
@@ -505,7 +572,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
       // メール認証状態確認
       if (user.emailVerified) {
-        await FirebaseAuth.instance.signOut();
+        if (widget.mode != 'resume') {
+          await FirebaseAuth.instance.signOut();
+        }
 
         if (!mounted) return;
 
@@ -516,7 +585,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
         _nextPage();
       } else {
-        await FirebaseAuth.instance.signOut();
+        if (widget.mode != 'resume') {
+          await FirebaseAuth.instance.signOut();
+        }
 
         if (!mounted) return;
 
@@ -565,22 +636,33 @@ class _SignUpPageState extends State<SignUpPage> {
     try {
       setSignUpInProgress(true);
 
-      final emailController =
-          _role == 'manager' ? managerEmailController : staffEmailController;
-      final passwordController = _role == 'manager'
-          ? managerPasswordController
-          : staffPasswordController;
+      User? user;
+      // Resumeモードで既にログイン中なら、再ログインせずにuser取得
+      if (widget.mode == 'resume' &&
+          FirebaseAuth.instance.currentUser != null) {
+        user = FirebaseAuth.instance.currentUser;
+      } else {
+        final emailController =
+            _role == 'manager' ? managerEmailController : staffEmailController;
+        final passwordController = _role == 'manager'
+            ? managerPasswordController
+            : staffPasswordController;
 
-      // 再ログイン
-      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text,
-      );
+        // 再ログイン
+        final credential =
+            await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: emailController.text.trim(),
+          password: passwordController.text,
+        );
+        user = credential.user;
+      }
 
       // 認証メール再送信
-      await credential.user?.sendEmailVerification();
+      await user?.sendEmailVerification();
 
-      await FirebaseAuth.instance.signOut();
+      if (widget.mode != 'resume') {
+        await FirebaseAuth.instance.signOut();
+      }
 
       if (!mounted) return;
 
@@ -1173,7 +1255,7 @@ class _SignUpPageState extends State<SignUpPage> {
           icon: Icons.storefront,
           onPressed: () {
             setState(() => _role = 'manager');
-            WidgetsBinding.instance.addPostFrameCallback((_) => _nextPage());
+            _handleRoleSelection();
           },
         ),
         const SizedBox(height: 16),
@@ -1182,7 +1264,7 @@ class _SignUpPageState extends State<SignUpPage> {
           icon: Icons.person_outline,
           onPressed: () {
             setState(() => _role = 'staff');
-            WidgetsBinding.instance.addPostFrameCallback((_) => _nextPage());
+            _handleRoleSelection();
           },
         ),
         const Spacer(),
@@ -1325,6 +1407,33 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
       ),
     );
+  }
+
+  void _handleRoleSelection() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      // 既にログイン済みで、メール未認証の場合は、入力ステップをスキップして認証待機画面へ
+      if (currentUser != null && !currentUser.emailVerified) {
+        // コントローラーに値をセット（後続の処理で必要なため）
+        if (_role == 'manager') {
+          managerEmailController.text = currentUser.email ?? '';
+        } else {
+          staffEmailController.text = currentUser.email ?? '';
+        }
+
+        setState(() {
+          _pendingUser = currentUser;
+        });
+
+        // ページ3（メール認証待機）へジャンプ
+        // 0:Role, 1:Email, 2:Pass, 3:Verify
+        _pageController.jumpToPage(3);
+      } else {
+        // 通常フロー
+        _nextPage();
+      }
+    });
   }
 
   // 認証コード入力画面
