@@ -330,47 +330,61 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         } else {
           // desktop layout
           return Scaffold(
-            appBar: AppBar(
-              title: const Text('メニュー管理'),
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              elevation: 0,
-              actions: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: _SaveStatusIndicator(status: vm.saveStatus),
-                ),
-              ],
-            ),
-            body: Stack(
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: MenuListPanel(
-                        tabController: _tabController,
-                        categories: vm.categories,
-                        categorizedMenu: vm.categorizedMenu,
-                        onEditCategory: _showEditCategoryDialog,
-                        onDeleteCategory: _showDeleteCategoryDialog,
-                        onEditMenu: _showEditMenuDialog,
-                        onDeleteMenu: _showDeleteMenuDialog,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'メニュー管理',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
-                    ),
-                    const VerticalDivider(width: 0.5, color: AppColors.border),
-                    Expanded(
-                      flex: 1,
-                      child: ActionButtonsPanel(
-                        isCategoryEmpty: vm.categories.isEmpty,
-                        onAddCategory: _showAddCategoryDialog,
-                        onAddMenu: _showAddMenuDialog,
-                        // onSaveChanges: _saveChanges,
-                        onResetAll: _showDeleteAllMenusDialog,
-                      ),
-                    ),
-                  ],
+                      _SaveStatusIndicator(status: vm.saveStatus),
+                    ],
+                  ),
                 ),
-                if (vm.isLoading) const LoadingIndicator(),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: MenuListPanel(
+                              tabController: _tabController,
+                              categories: vm.categories,
+                              categorizedMenu: vm.categorizedMenu,
+                              onEditCategory: _showEditCategoryDialog,
+                              onDeleteCategory: _showDeleteCategoryDialog,
+                              onEditMenu: _showEditMenuDialog,
+                              onDeleteMenu: _showDeleteMenuDialog,
+                            ),
+                          ),
+                          const VerticalDivider(
+                              width: 0.5, color: AppColors.border),
+                          Expanded(
+                            flex: 1,
+                            child: ActionButtonsPanel(
+                              isCategoryEmpty: vm.categories.isEmpty,
+                              onAddCategory: _showAddCategoryDialog,
+                              onAddMenu: _showAddMenuDialog,
+                              // onSaveChanges: _saveChanges,
+                              onResetAll: _showDeleteAllMenusDialog,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (vm.isLoading) const LoadingIndicator(),
+                    ],
+                  ),
+                ),
               ],
             ),
           );
