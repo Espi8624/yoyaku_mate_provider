@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/waiting_list.dart';
 import 'waiting_item_card.dart';
 
@@ -19,33 +18,19 @@ class WaitingListPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // mobileか確認
-    final isMobile = MediaQuery.of(context).size.width < 700;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ヘッダー部分 (desktopではタイトル非表示、mobileも非表示)
+        // Empty container or nothing?
+        // Since children is empty list now.
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Row(
-            children: [
-              const Text("待機中のお客様リスト",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-
-              // desktopレイアウト時のみ更新ボタンを表示
-              if (!isMobile) ...[
-                const SizedBox(width: 16),
-                IconButton(
-                  onPressed: onRefresh,
-                  tooltip: 'リスト更新',
-                  icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                  style: IconButton.styleFrom(
-                      backgroundColor: AppColors.textPrimary),
-                ),
-              ]
-            ],
+            children: [],
           ),
         ),
+
         const SizedBox(height: 16),
         // 待機がない場合
         Expanded(

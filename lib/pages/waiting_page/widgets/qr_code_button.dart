@@ -69,20 +69,18 @@ class QRCodeButton extends StatelessWidget {
     }
     // desktop UI
     else {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          ElevatedButton.icon(
-            icon: const Icon(Icons.qr_code_rounded, color: Colors.white),
-            label: const Text('QRコード', style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.textPrimary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-            onPressed: () => _showQrDialog(context),
+      return Tooltip(
+        message: 'QRコード',
+        child: ElevatedButton(
+          onPressed: () => _showQrDialog(context),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.textPrimary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.all(16),
+            minimumSize: Size.zero,
           ),
-        ],
+          child: const Icon(Icons.qr_code_rounded, color: Colors.white),
+        ),
       );
     }
   }

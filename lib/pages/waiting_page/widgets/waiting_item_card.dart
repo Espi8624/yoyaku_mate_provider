@@ -6,11 +6,13 @@ import '../../../models/waiting_list.dart';
 class WaitingItemCard extends StatefulWidget {
   final WaitingList item;
   final VoidCallback onAction;
+  final VoidCallback? onCancel;
 
   const WaitingItemCard({
     super.key,
     required this.item,
     required this.onAction,
+    this.onCancel,
   });
 
   @override
@@ -101,22 +103,35 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    if (item.status == 'completed' && item.entryTime != null)
-                      _buildInfoRow("入場時間",
-                          '${item.entryTime!.hour.toString().padLeft(2, '0')}:${item.entryTime!.minute.toString().padLeft(2, '0')}')
-                    else
+                    if (item.status == 'completed')
+                      const Text(
+                        "入店済み",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      )
+                    else if (item.status == 'cancelled')
+                      const Text(
+                        "待機取消",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      )
+                    else ...[
                       _buildInfoRow("待機時間", _waitingTime),
-                    const SizedBox(height: 4),
-                    _buildInfoRow("備考", notesText),
+                      const SizedBox(height: 4),
+                      _buildInfoRow("備考", notesText),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(width: 16),
               ElevatedButton(
-                onPressed:
-                    (item.status == 'completed' || item.status == 'cancelled')
-                        ? null
-                        : widget.onAction,
+                onPressed: widget.onAction,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.textPrimary,
                   foregroundColor: Colors.white,

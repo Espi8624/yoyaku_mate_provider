@@ -81,6 +81,9 @@ class WaitingScreenViewModel extends ChangeNotifier {
 
     try {
       final initialData = await _waitingService.fetchWaitingCustomers(storeId);
+      // 最新の登録が上に来るように降順ソート
+      initialData
+          .sort((a, b) => b.registrationTime.compareTo(a.registrationTime));
       _waitingList = initialData;
 
       _waitingService.startPolling(storeId);
@@ -88,6 +91,9 @@ class WaitingScreenViewModel extends ChangeNotifier {
         (updatedList) {
           // 汎用フラグを確認し、ポーリングデータ上書き防止
           if (!_isPerformingOptimisticUpdate) {
+            // 最新の登録が上に来るように降順ソート
+            updatedList.sort(
+                (a, b) => b.registrationTime.compareTo(a.registrationTime));
             _waitingList = updatedList;
             _error = null;
             notifyListeners();

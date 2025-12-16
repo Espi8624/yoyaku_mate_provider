@@ -65,59 +65,81 @@ class _WaitingView extends StatelessWidget {
         if (isMobile) {
           // mobile layout
           return Scaffold(
-            appBar: AppBar(
-              title:
-                  const Text('', style: TextStyle(fontWeight: FontWeight.bold)),
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              elevation: 0,
-              actions: [
-                QRCodeButton(data: qrCodeData),
-                IconButton(
-                    icon: const Icon(Icons.delete_sweep_rounded),
-                    onPressed: () => _showClearConfirmationDialog(context)),
-              ],
-            ),
             body: SafeArea(
-              top: false,
-              child: Stack(
+              child: Column(
                 children: [
-                  // 待機目録リスト
-                  Positioned.fill(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: WaitingListPanel(
-                        waitingList: vm.waitingList,
-                        onRefresh: vm.loadWaitingList,
-                        onItemAction: (item) =>
-                            _showStatusBasedDialog(context, item),
-                        bottomPadding: 85,
-                      ),
-                    ),
-                  ),
-
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Padding(
-                          padding:
-                              const EdgeInsets.only(right: 16.0, bottom: 16.0),
-                          child: FloatingActionButton(
-                            onPressed: () => _showAddWaitingDialog(context),
-                            backgroundColor: AppColors.accentPrimary,
-                            child: const Icon(Icons.add, color: Colors.white),
+                        const Text(
+                          '待機中のお客様リスト',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
                           ),
                         ),
-                        const ClipRRect(
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(20),
-                            topRight: Radius.circular(20),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                                icon: const Icon(Icons.delete_sweep_rounded),
+                                onPressed: () =>
+                                    _showClearConfirmationDialog(context)),
+                            QRCodeButton(data: qrCodeData),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        // 待機目録リスト
+                        Positioned.fill(
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: WaitingListPanel(
+                              waitingList: vm.waitingList,
+                              onRefresh: vm.loadWaitingList,
+                              onItemAction: (item) =>
+                                  _showStatusBasedDialog(context, item),
+                              bottomPadding: 85,
+                            ),
                           ),
-                          child: WaitingStatusArea(),
+                        ),
+
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    right: 16.0, bottom: 16.0),
+                                child: FloatingActionButton(
+                                  onPressed: () =>
+                                      _showAddWaitingDialog(context),
+                                  backgroundColor: AppColors.accentPrimary,
+                                  child: const Icon(Icons.add,
+                                      color: Colors.white),
+                                ),
+                              ),
+                              const ClipRRect(
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(20),
+                                  topRight: Radius.circular(20),
+                                ),
+                                child: WaitingStatusArea(),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -129,22 +151,71 @@ class _WaitingView extends StatelessWidget {
         } else {
           // desktop layout
           return Scaffold(
-            body: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      children: [
-                        WaitingActionButtons(
-                          onAddWaiting: () => _showAddWaitingDialog(context),
-                          onClearAll: () =>
-                              _showClearConfirmationDialog(context),
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Row(
+                          children: [
+                            const Text(
+                              '待機中のお客様リスト',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const Spacer(),
+                            Tooltip(
+                              message: "更新",
+                              child: ElevatedButton(
+                                onPressed: vm.loadWaitingList,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.textPrimary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.all(16),
+                                  minimumSize: Size.zero,
+                                ),
+                                child: const Icon(Icons.refresh,
+                                    color: Colors.white),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            WaitingActionButtons(
+                              onAddWaiting: () =>
+                                  _showAddWaitingDialog(context),
+                              onClearAll: () =>
+                                  _showClearConfirmationDialog(context),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        flex: 1,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            QRCodeButton(data: qrCodeData),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Expanded(
+                          flex: 2,
                           child: WaitingListPanel(
                             waitingList: vm.waitingList,
                             onRefresh: vm.loadWaitingList,
@@ -152,24 +223,16 @@ class _WaitingView extends StatelessWidget {
                                 _showStatusBasedDialog(context, item),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 1,
-                    child: Column(
-                      children: [
-                        QRCodeButton(data: qrCodeData),
-                        SizedBox(height: 10),
+                        const SizedBox(width: 16),
                         const Expanded(
+                          flex: 1,
                           child: WaitingStatusArea(isInitiallyExpanded: true),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         }
@@ -196,6 +259,20 @@ class _WaitingView extends StatelessWidget {
     );
     if (confirmed == true && context.mounted) {
       await context.read<WaitingScreenViewModel>().clearWaitingList(context);
+    }
+  }
+
+  Future<void> _showCancelConfirmationDialog(
+      BuildContext context, WaitingList item) async {
+    final confirmed = await showConfirmationDialog(
+      context: context,
+      title: '待機取消',
+      content: 'このお客様の待機を取消しますか？\nこの操作は取り消しできません。',
+    );
+    if (confirmed == true && context.mounted) {
+      await context
+          .read<WaitingScreenViewModel>()
+          .updateWaitingStatus(context, item.waitingId, 'cancelled');
     }
   }
 
@@ -254,16 +331,44 @@ class _WaitingView extends StatelessWidget {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  vm.updateWaitingStatus(ctx, item.waitingId, 'notified');
-                  Navigator.of(ctx).pop();
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentPrimary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: const Text('呼出'),
+              child: Row(
+                children: [
+                  // Cancel Button
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(ctx)
+                            .pop(); // Close notification dialog first? Or keep?
+                        // If I close it, context might be lost if using ctx.
+                        // I should probably use `context` from outer scope or check mounted.
+                        // The user probably wants to cancel from this dialog.
+                        // Let's call cancel confirmation.
+                        _showCancelConfirmationDialog(context, item);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: AppColors.error),
+                        foregroundColor: AppColors.error,
+                      ),
+                      child: const Text('待機取消'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Call Button
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        vm.updateWaitingStatus(ctx, item.waitingId, 'notified');
+                        Navigator.of(ctx).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentPrimary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16)),
+                      child: const Text('呼出'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
