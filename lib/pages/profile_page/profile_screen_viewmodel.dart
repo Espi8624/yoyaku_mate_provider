@@ -5,13 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:yoyaku_mate_provider/models/store_license.dart';
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
+import 'package:yoyaku_mate_provider/models/store_settings.dart';
 import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
-import 'package:yoyaku_mate_provider/constants/staff_status.dart';
+import 'package:yoyaku_mate_provider/services/store_settings_service.dart';
 
 class ProfileScreenViewModel extends ChangeNotifier {
   final ProviderProfileService _profileService;
+  final StoreSettingsService _settingsService;
   String firebaseUid;
 
   String _mongoUserId = '';
@@ -20,9 +22,11 @@ class ProfileScreenViewModel extends ChangeNotifier {
 
   ProfileScreenViewModel({
     required ProviderProfileService profileService,
+    required StoreSettingsService settingsService,
     required String userId,
     bool autoLoad = false,
   })  : _profileService = profileService,
+        _settingsService = settingsService,
         firebaseUid = userId;
 
   // --- State ---
@@ -37,6 +41,9 @@ class ProfileScreenViewModel extends ChangeNotifier {
 
   StoreProfile? _storeProfile;
   StoreProfile? get storeProfile => _storeProfile;
+
+  StoreSettings? _storeSettings;
+  StoreSettings? get storeSettings => _storeSettings;
 
   StoreLicense? _storeLicense;
   StoreLicense? get storeLicense => _storeLicense;
@@ -231,6 +238,15 @@ class ProfileScreenViewModel extends ChangeNotifier {
         // print("  → 가게 인증서 정보 로딩 완료");
       } else {
         throw ApiException('無効な店舗ライセンスデータ形式です。');
+      }
+
+      // Store Settings Fetch
+      try {
+        _storeSettings = await _settingsService.fetchStoreSettings(storeId);
+      } catch (e) {
+        // Settings fetch fail shouldn't block the whole profile view, but log it.
+        // print("Settings fetch failed: $e");
+        _storeSettings = null; // default or null
       }
 
       return true;
@@ -441,54 +457,18 @@ class ProfileScreenViewModel extends ChangeNotifier {
     }
   }
 
-  // --- Staff Management Logic ---
-
-  List<dynamic> _staffList = [];
-  List<dynamic> get staffList => _staffList;
-
-  Future<void> fetchStoreStaff(String storeId) async {
+  Future<void> updateStoreSettings(StoreSettings newSettings) async {
     _isLoading = true;
-    _errorMessage = null;
     notifyListeners();
-
     try {
-      final staff = await _profileService.fetchStoreStaff(storeId);
-      _staffList = staff;
-    } on ApiException catch (e) {
-      _errorMessage = "スタッフリスト取得失敗: ${e.message}";
+      await _settingsService.updateStoreSettings(newSettings);
+      _storeSettings = newSettings;
+      _successMessage = '設定が保存されました';
     } catch (e) {
-      _errorMessage = "予期しないエラーが発生しました: $e";
+      _errorMessage = '設定の保存に失敗しました: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
-    }
-  }
-
-  Future<bool> updateStoreStaffStatus(
-      String storeId, String staffId, String status) async {
-    // ローディング状態にすると画面が再描画されてリストが消える可能性があるため、
-    // ここではあえて _isLoading = true にせず、バックグラウンドで処理するか、
-    // あるいは個別のローディング状態を持つのが理想ですが、
-    // 簡易的に全体ローディングを使います（UX要件に応じて調整）。
-    // _isLoading = true;
-    // notifyListeners();
-
-    try {
-      await _profileService.updateStoreStaffStatus(storeId, staffId, status);
-      _successMessage =
-          status == StaffStatus.approved ? 'スタッフを承認しました' : 'スタッフを拒否しました';
-
-      // リストを再取得して最新状態にする
-      await fetchStoreStaff(storeId);
-      return true;
-    } on ApiException catch (e) {
-      _errorMessage = "ステータス更新失敗: ${e.message}";
-      notifyListeners();
-      return false;
-    } catch (e) {
-      _errorMessage = "予期しないエラーが発生しました: $e";
-      notifyListeners();
-      return false;
     }
   }
 }

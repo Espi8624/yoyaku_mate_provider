@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
+import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_management_viewmodel.dart';
 import 'package:yoyaku_mate_provider/constants/staff_status.dart';
 
 class StaffManagementView extends StatefulWidget {
@@ -19,13 +19,13 @@ class _StaffManagementViewState extends State<StaffManagementView> {
     super.initState();
     // 画面表示時にデータをロード
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProfileScreenViewModel>().fetchStoreStaff(widget.storeId);
+      context.read<StaffManagementViewModel>().fetchStoreStaff(widget.storeId);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<ProfileScreenViewModel>();
+    final vm = context.watch<StaffManagementViewModel>();
 
     if (vm.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -53,7 +53,7 @@ class _StaffManagementViewState extends State<StaffManagementView> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       itemCount: vm.staffList.length,
       itemBuilder: (context, index) {
         final staff = vm.staffList[index];

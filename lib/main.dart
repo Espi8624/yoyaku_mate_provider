@@ -10,9 +10,10 @@ import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar.dart'
 import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
-import 'package:yoyaku_mate_provider/pages/setting_page/setting_screen.dart';
+import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
+import 'package:yoyaku_mate_provider/services/store_settings_service.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar_mobile.dart';
@@ -36,6 +37,10 @@ class MyApp extends StatelessWidget {
           create: (_) =>
               ProviderProfileService(baseUrl: 'https://saboten-server.fly.dev'),
         ),
+        Provider<StoreSettingsService>(
+          create: (_) =>
+              StoreSettingsService(baseUrl: 'https://saboten-server.fly.dev'),
+        ),
         StreamProvider<User?>(
           create: (_) => FirebaseAuth.instance.authStateChanges(),
           initialData: null,
@@ -43,6 +48,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProxyProvider<User?, ProfileScreenViewModel>(
           create: (context) => ProfileScreenViewModel(
             profileService: context.read<ProviderProfileService>(),
+            settingsService: context.read<StoreSettingsService>(),
             userId: '',
             autoLoad: false,
           ),
@@ -50,6 +56,7 @@ class MyApp extends StatelessWidget {
             if (previousViewModel == null) {
               return ProfileScreenViewModel(
                   profileService: context.read<ProviderProfileService>(),
+                  settingsService: context.read<StoreSettingsService>(),
                   userId: '',
                   autoLoad: false);
             }
@@ -176,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final List<Widget> pages = [
         WaitingScreen(storeId: storeId),
         MenuManagementScreen(storeId: storeId),
-        SettingScreen(storeId: storeId),
+        StaffManagementScreen(storeId: storeId),
         const ProfileScreen(),
       ];
       return LayoutBuilder(
