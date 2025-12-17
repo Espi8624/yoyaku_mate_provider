@@ -13,6 +13,8 @@ import '../profile_section.dart';
 import '../profile_setting_item.dart';
 import 'staff_approval_status_view.dart';
 import 'store_license_status_view.dart';
+import '../sections/operation_settings_section.dart';
+import '../sections/waiting_settings_section.dart';
 
 class StoreProfileView extends StatelessWidget {
   final bool isReadOnly;
@@ -116,47 +118,9 @@ class StoreProfileView extends StatelessWidget {
                         initialValue: storeProfile.name),
               ),
               const SizedBox(height: 32),
-              ProfileSection(
-                title: '基本情報',
-                children: [
-                  ProfileSettingItem(
-                    title: '住所',
-                    subtitle: storeProfile.address,
-                    showTrailingIcon: !isReadOnly,
-                    onTap: isReadOnly
-                        ? null
-                        : () => _showEditDialog(context,
-                            title: '住所',
-                            fieldKey: 'address',
-                            initialValue: storeProfile.address),
-                  ),
-                  ProfileSettingItem(
-                    title: '電話番号',
-                    subtitle: storeProfile.phone,
-                    showTrailingIcon: !isReadOnly,
-                    onTap: isReadOnly
-                        ? null
-                        : () => _showEditDialog(context,
-                            title: '電話番号',
-                            fieldKey: 'phone',
-                            initialValue: storeProfile.phone),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              // 職員の場合、承認状態を表示
-              if (isReadOnly && storeProfile.staffStatus != null)
-                ProfileSection(
-                  title: 'スタッフ承認状態',
-                  children: [
-                    StaffApprovalStatusWidget(
-                        status: storeProfile.staffStatus!),
-                  ],
-                ),
-              if (isReadOnly && storeProfile.staffStatus != null)
-                const SizedBox(height: 24),
-              const SizedBox(height: 24),
-              if (!isReadOnly)
+
+              // 1. 営業許可証 (License)
+              if (!isReadOnly) ...[
                 ProfileSection(
                   title: '営業許可証',
                   children: [
@@ -240,7 +204,58 @@ class StoreProfileView extends StatelessWidget {
                     ],
                   ],
                 ),
+                const SizedBox(height: 24),
+              ],
+
+              // 2. 基本情報 (Basic Info)
+              ProfileSection(
+                title: '基本情報',
+                children: [
+                  ProfileSettingItem(
+                    title: '住所',
+                    subtitle: storeProfile.address,
+                    showTrailingIcon: !isReadOnly,
+                    onTap: isReadOnly
+                        ? null
+                        : () => _showEditDialog(context,
+                            title: '住所',
+                            fieldKey: 'address',
+                            initialValue: storeProfile.address),
+                  ),
+                  ProfileSettingItem(
+                    title: '電話番号',
+                    subtitle: storeProfile.phone,
+                    showTrailingIcon: !isReadOnly,
+                    onTap: isReadOnly
+                        ? null
+                        : () => _showEditDialog(context,
+                            title: '電話番号',
+                            fieldKey: 'phone',
+                            initialValue: storeProfile.phone),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
+
+              // 3. 運営設定 (Operation Settings)
+              OperationSettingsSection(isReadOnly: isReadOnly),
+              const SizedBox(height: 24),
+
+              // 4. 待機リスト政策 (Waiting List Policy)
+              WaitingSettingsSection(isReadOnly: isReadOnly),
+              const SizedBox(height: 24),
+
+              // 職員の場合、承認状態を表示
+              if (isReadOnly && storeProfile.staffStatus != null)
+                ProfileSection(
+                  title: 'スタッフ承認状態',
+                  children: [
+                    StaffApprovalStatusWidget(
+                        status: storeProfile.staffStatus!),
+                  ],
+                ),
+              if (isReadOnly && storeProfile.staffStatus != null)
+                const SizedBox(height: 24),
             ],
           ),
         ),

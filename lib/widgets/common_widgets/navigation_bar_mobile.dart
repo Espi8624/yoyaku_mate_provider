@@ -46,22 +46,22 @@ class NavigationBarMobile extends StatelessWidget {
         ),
         BottomNavigationBarItem(
           icon: Icon(
-            Icons.settings_outlined,
+            Icons.people_alt_outlined,
             color: AppColors.textTertiary,
           ),
           activeIcon: Icon(
-            Icons.settings_rounded,
+            Icons.people_alt_rounded,
             color: AppColors.accentPrimary,
           ),
           label: '',
         ),
         BottomNavigationBarItem(
           icon: Icon(
-            Icons.person_outline_rounded,
+            Icons.settings,
             color: AppColors.textTertiary,
           ),
           activeIcon: Icon(
-            Icons.person,
+            Icons.settings,
             color: AppColors.accentPrimary,
           ),
           label: '',

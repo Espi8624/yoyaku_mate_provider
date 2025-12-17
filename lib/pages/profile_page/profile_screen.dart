@@ -5,7 +5,6 @@ import '../../widgets/common_widgets/custom_snack_bar.dart';
 import 'profile_screen_viewmodel.dart';
 import './widgets/views/personal_profile_view.dart';
 import './widgets/views/store_profile_view.dart';
-import './widgets/views/staff_management_view.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -62,9 +61,8 @@ class _ProfileViewState extends State<_ProfileView>
     // ViewModel へ userProfile データがない場合何もしない
     if (_viewModel.userProfile == null) return;
 
-    final isManager = _viewModel.userProfile!.role == "manager";
-    // マネージャーなら3つ（個人、店舗、スタッフ）、それ以外は2つ
-    final newLength = isManager ? 3 : 2;
+    // 常に2つ（個人、店舗）
+    const newLength = 2;
 
     // コントローラーが生成され、長さが同じ時、何もしない
     if (_tabController != null && _tabController!.length == newLength) return;
@@ -92,30 +90,46 @@ class _ProfileViewState extends State<_ProfileView>
     final bool isManager = vm.userProfile?.role == 'manager';
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 12, 24, 36),
-              child: Text("プロフィール設定",
-                  style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary)),
-            ),
-            // Contents
-            Expanded(
-              // _tabController が生成されるまではローディングインディケーターを表示
-              // 競争状態防止
-              child: _tabController == null
-                  ? const Center(child: CircularProgressIndicator())
-                  : _buildContent(vm, isManager),
-            ),
-          ],
-        ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          const double mobileBreakpoint = 700;
+          final bool isMobile = constraints.maxWidth < mobileBreakpoint;
+
+          if (isMobile) {
+            return SafeArea(
+              child: _buildColumn(vm: vm, isManager: isManager),
+            );
+          } else {
+            return _buildColumn(vm: vm, isManager: isManager);
+          }
+        },
       ),
+    );
+  }
+
+  Widget _buildColumn(
+      {required ProfileScreenViewModel vm, required bool isManager}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        const Padding(
+          padding: EdgeInsets.fromLTRB(24, 12, 24, 24),
+          child: Text("プロフィール設定",
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary)),
+        ),
+        // Contents
+        Expanded(
+          // _tabController が生成されるまではローディングインディケーターを表示
+          // 競争状態防止
+          child: _tabController == null
+              ? const Center(child: CircularProgressIndicator())
+              : _buildContent(vm, isManager),
+        ),
+      ],
     );
   }
 
@@ -128,7 +142,7 @@ class _ProfileViewState extends State<_ProfileView>
     return Column(
       children: [
         // 役割に関係なく、TabBar を表示
-        Center(child: _buildTabBar(isManager)),
+        Center(child: _buildTabBar()),
         const SizedBox(height: 24),
 
         // TabBarView を表示
@@ -143,10 +157,6 @@ class _ProfileViewState extends State<_ProfileView>
                 StoreProfileView(isReadOnly: !isManager)
               else
                 const Center(child: Text("店舗情報がありません。")),
-
-              // マネージャーの場合のみスタッフ管理画面を表示
-              if (isManager && vm.storeProfile != null)
-                StaffManagementView(storeId: vm.storeProfile!.id),
             ],
           ),
         ),
@@ -154,9 +164,9 @@ class _ProfileViewState extends State<_ProfileView>
     );
   }
 
-  Widget _buildTabBar(bool isManager) {
+  Widget _buildTabBar() {
     // タブの数に応じて幅を調整
-    final width = isManager ? 285.0 : 190.0;
+    const width = 190.0;
 
     return Container(
       height: 34,
@@ -193,10 +203,9 @@ class _ProfileViewState extends State<_ProfileView>
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         unselectedLabelStyle:
             const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
-        tabs: [
-          const Tab(text: '個人'),
-          const Tab(text: '店舗'),
-          if (isManager) const Tab(text: 'スタッフ'),
+        tabs: const [
+          Tab(text: '個人'),
+          Tab(text: '店舗'),
         ],
       ),
     );
