@@ -261,22 +261,20 @@ class SideNavigationBar extends StatelessWidget {
                         ),
                   const SizedBox(height: 12),
 
-                  const Spacer(),
-
                   isExpanded
                       ? _NavItem(
-                          icon: Icons.settings_rounded,
-                          label: '設定',
+                          icon: Icons.people_alt_rounded,
+                          label: 'スタッフ',
                           selected: selectedIndex == 2,
                           onTap: () {
-                            onItemTapped(3);
+                            onItemTapped(2);
                             onToggle();
                           },
                         )
                       : _NavIcon(
-                          icon: Icons.settings_rounded,
+                          icon: Icons.people_alt_rounded,
                           selected: selectedIndex == 2,
-                          label: '設定',
+                          label: 'スタッフ',
                           onTap: () => onItemTapped(2),
                           isExpanded: isExpanded,
                         ),
