@@ -21,17 +21,6 @@ class WaitingListPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ヘッダー部分 (desktopではタイトル非表示、mobileも非表示)
-        // Empty container or nothing?
-        // Since children is empty list now.
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            children: [],
-          ),
-        ),
-
-        const SizedBox(height: 16),
         // 待機がない場合
         Expanded(
           child: waitingList.isEmpty
@@ -52,7 +41,7 @@ class WaitingListPanel extends StatelessWidget {
                   // 下にスライドして更新
                   onRefresh: onRefresh,
                   child: ListView.builder(
-                    padding: EdgeInsets.only(bottom: bottomPadding),
+                    padding: EdgeInsets.only(top: 0, bottom: bottomPadding),
                     itemCount: waitingList.length,
                     itemBuilder: (context, index) {
                       final item = waitingList[index];
