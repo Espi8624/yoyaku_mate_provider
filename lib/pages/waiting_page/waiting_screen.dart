@@ -102,12 +102,20 @@ class _WaitingView extends StatelessWidget {
                           child: Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: WaitingListPanel(
-                              waitingList: vm.waitingList,
-                              onRefresh: vm.loadWaitingList,
-                              onItemAction: (item) =>
-                                  _showStatusBasedDialog(context, item),
-                              bottomPadding: 85,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildFilterBar(context, vm),
+                                Expanded(
+                                  child: WaitingListPanel(
+                                    waitingList: vm.filteredWaitingList,
+                                    onRefresh: vm.loadWaitingList,
+                                    onItemAction: (item) =>
+                                        _showStatusBasedDialog(context, item),
+                                    bottomPadding: 85,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -216,11 +224,19 @@ class _WaitingView extends StatelessWidget {
                       children: [
                         Expanded(
                           flex: 2,
-                          child: WaitingListPanel(
-                            waitingList: vm.waitingList,
-                            onRefresh: vm.loadWaitingList,
-                            onItemAction: (item) =>
-                                _showStatusBasedDialog(context, item),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildFilterBar(context, vm),
+                              Expanded(
+                                child: WaitingListPanel(
+                                  waitingList: vm.filteredWaitingList,
+                                  onRefresh: vm.loadWaitingList,
+                                  onItemAction: (item) =>
+                                      _showStatusBasedDialog(context, item),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -274,6 +290,48 @@ class _WaitingView extends StatelessWidget {
           .read<WaitingScreenViewModel>()
           .updateWaitingStatus(context, item.waitingId, 'cancelled');
     }
+  }
+
+  Widget _buildFilterBar(BuildContext context, WaitingScreenViewModel vm) {
+    final filters = [
+      {'label': 'すべて', 'value': 'all'},
+      {'label': '待機中', 'value': 'waiting'},
+      {'label': '入店済', 'value': 'completed'},
+      {'label': '取消済', 'value': 'cancelled'},
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.only(left: 8.0),
+      child: Row(
+        children: filters.map((f) {
+          final isSelected = vm.selectedFilter == f['value'];
+          return Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ChoiceChip(
+              label: Text(f['label']!),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) {
+                  vm.setFilter(f['value']!);
+                }
+              },
+              selectedColor: AppColors.accentPrimary,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : AppColors.textPrimary,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              backgroundColor: Colors.grey[100],
+              showCheckmark: false,
+              side: BorderSide.none,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 
   void _showStatusBasedDialog(BuildContext context, WaitingList item) {
