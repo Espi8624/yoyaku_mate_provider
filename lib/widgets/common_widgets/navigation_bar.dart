@@ -76,25 +76,28 @@ class SideNavigationBar extends StatelessWidget {
                   if (isExpanded) ...[
                     InkWell(
                       onTap: () {
-                        onItemTapped(3);
+                        onItemTapped(userRole == 'manager' ? 3 : 2);
                         onToggle();
                       },
+                      splashColor: AppColors.accentPrimary.withOpacity(0.05),
+                      highlightColor: AppColors.accentPrimary.withOpacity(0.02),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 4.0),
                         padding: const EdgeInsets.all(12.0),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: selectedIndex == 2
-                              ? [
-                                  BoxShadow(
-                                    color: AppColors.accentPrimary
-                                        .withOpacity(0.2),
-                                    blurRadius: 8,
-                                    spreadRadius: 1,
-                                  ),
-                                ]
-                              : null,
+                          boxShadow:
+                              selectedIndex == (userRole == 'manager' ? 3 : 2)
+                                  ? [
+                                      BoxShadow(
+                                        color: AppColors.accentPrimary
+                                            .withOpacity(0.2),
+                                        blurRadius: 8,
+                                        spreadRadius: 1,
+                                      ),
+                                    ]
+                                  : null,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.start,
@@ -167,23 +170,26 @@ class SideNavigationBar extends StatelessWidget {
                     ),
                   ] else ...[
                     InkWell(
-                      onTap: () => onItemTapped(3),
+                      onTap: () => onItemTapped(userRole == 'manager' ? 3 : 2),
+                      splashColor: AppColors.accentPrimary.withOpacity(0.05),
+                      highlightColor: AppColors.accentPrimary.withOpacity(0.02),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 4.0),
                         padding: const EdgeInsets.all(4.0),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: selectedIndex == 3
-                              ? [
-                                  BoxShadow(
-                                    color: AppColors.accentPrimary
-                                        .withOpacity(0.2),
-                                    blurRadius: 30,
-                                    spreadRadius: 1,
-                                  ),
-                                ]
-                              : null,
+                          boxShadow:
+                              selectedIndex == (userRole == 'manager' ? 3 : 2)
+                                  ? [
+                                      BoxShadow(
+                                        color: AppColors.accentPrimary
+                                            .withOpacity(0.2),
+                                        blurRadius: 30,
+                                        spreadRadius: 1,
+                                      ),
+                                    ]
+                                  : null,
                         ),
                         child: Center(
                           child: Container(
@@ -261,24 +267,26 @@ class SideNavigationBar extends StatelessWidget {
                         ),
                   const SizedBox(height: 12),
 
-                  isExpanded
-                      ? _NavItem(
-                          icon: Icons.people_alt_rounded,
-                          label: 'スタッフ',
-                          selected: selectedIndex == 2,
-                          onTap: () {
-                            onItemTapped(2);
-                            onToggle();
-                          },
-                        )
-                      : _NavIcon(
-                          icon: Icons.people_alt_rounded,
-                          selected: selectedIndex == 2,
-                          label: 'スタッフ',
-                          onTap: () => onItemTapped(2),
-                          isExpanded: isExpanded,
-                        ),
-                  const SizedBox(height: 12),
+                  if (userRole == 'manager') ...[
+                    isExpanded
+                        ? _NavItem(
+                            icon: Icons.people_alt_rounded,
+                            label: 'スタッフ',
+                            selected: selectedIndex == 2,
+                            onTap: () {
+                              onItemTapped(2);
+                              onToggle();
+                            },
+                          )
+                        : _NavIcon(
+                            icon: Icons.people_alt_rounded,
+                            selected: selectedIndex == 2,
+                            label: 'スタッフ',
+                            onTap: () => onItemTapped(2),
+                            isExpanded: isExpanded,
+                          ),
+                    const SizedBox(height: 12),
+                  ],
 
                   // const Divider(
                   //   height: 1,
@@ -351,6 +359,8 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
+      splashColor: AppColors.accentPrimary.withOpacity(0.05),
+      highlightColor: AppColors.accentPrimary.withOpacity(0.02),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -414,6 +424,8 @@ class _NavIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
+      splashColor: AppColors.accentPrimary.withOpacity(0.05),
+      highlightColor: AppColors.accentPrimary.withOpacity(0.02),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4.0),
