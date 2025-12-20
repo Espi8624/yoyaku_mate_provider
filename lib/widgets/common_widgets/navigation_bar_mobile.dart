@@ -4,73 +4,67 @@ import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 class NavigationBarMobile extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
+  final bool isManager;
 
   const NavigationBarMobile({
     super.key,
     required this.selectedIndex,
     required this.onItemTapped,
+    this.isManager = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: selectedIndex,
-      onTap: onItemTapped,
-      selectedLabelStyle: const TextStyle(fontSize: 0),
-      unselectedLabelStyle: const TextStyle(fontSize: 0),
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: AppColors.cardBackground,
-      // 各タブの定義
-      items: const <BottomNavigationBarItem>[
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.list_alt_rounded,
-            color: AppColors.textTertiary,
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final totalHeight = 60.0 + bottomPadding;
+
+    return Container(
+      height: totalHeight,
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
-          activeIcon: Icon(
-            Icons.list_alt_rounded,
-            color: AppColors.accentPrimary,
-          ),
-          label: '',
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            _buildNavItem(0, Icons.list_alt_rounded, Icons.list_alt_rounded),
+            _buildNavItem(
+                1, Icons.table_view_rounded, Icons.table_view_rounded),
+            if (isManager)
+              _buildNavItem(
+                  2, Icons.people_alt_outlined, Icons.people_alt_rounded),
+            _buildNavItem(isManager ? 3 : 2, Icons.settings, Icons.settings),
+          ],
         ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.table_view_rounded,
-            color: AppColors.textTertiary,
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, IconData activeIcon) {
+    final isSelected = selectedIndex == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => onItemTapped(index),
+        splashColor: AppColors.accentPrimary.withOpacity(0.05),
+        highlightColor: AppColors.accentPrimary.withOpacity(0.02),
+        child: Container(
+          height: double.infinity,
+          alignment: Alignment.center,
+          child: Icon(
+            isSelected ? activeIcon : icon,
+            color:
+                isSelected ? AppColors.accentPrimary : AppColors.textTertiary,
+            size: 28,
           ),
-          activeIcon: Icon(
-            Icons.table_view_rounded,
-            color: AppColors.accentPrimary,
-          ),
-          label: '',
         ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.people_alt_outlined,
-            color: AppColors.textTertiary,
-          ),
-          activeIcon: Icon(
-            Icons.people_alt_rounded,
-            color: AppColors.accentPrimary,
-          ),
-          label: '',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.settings,
-            color: AppColors.textTertiary,
-          ),
-          activeIcon: Icon(
-            Icons.settings,
-            color: AppColors.accentPrimary,
-          ),
-          label: '',
-        ),
-        // BottomNavigationBarItem(
-        //   icon: Icon(Icons.logout_rounded),
-        //   label: 'ログアウト',
-        // ),
-      ],
+      ),
     );
   }
 }

@@ -85,6 +85,32 @@ class MyApp extends StatelessWidget {
           ),
           useMaterial3: true,
         ),
+        builder: (context, child) {
+          return Stack(
+            children: [
+              if (child != null) child,
+              // ステータスバーの視認性向上のためのグラデーション
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.08),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -179,11 +205,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // 選択された店舗がある場合、従来のメインダッシュボードUIを表示
     if (isStoreSelected) {
+      final bool isManager = profileVM.userProfile?.role == 'manager';
       final storeId = profileVM.storeId;
       final List<Widget> pages = [
         WaitingScreen(storeId: storeId),
         MenuManagementScreen(storeId: storeId),
-        StaffManagementScreen(storeId: storeId),
+        if (isManager) StaffManagementScreen(storeId: storeId),
         const ProfileScreen(),
       ];
       return LayoutBuilder(
@@ -199,6 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
               bottomNavigationBar: NavigationBarMobile(
                 selectedIndex: _selectedIndex,
                 onItemTapped: _onItemTapped,
+                isManager: isManager,
               ),
             );
           } else {
