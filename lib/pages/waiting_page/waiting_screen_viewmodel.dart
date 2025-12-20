@@ -34,6 +34,38 @@ class WaitingScreenViewModel extends ChangeNotifier {
   List<WaitingList> _waitingList = [];
   List<WaitingList> get waitingList => _waitingList;
 
+  String _selectedFilter = 'all';
+  String get selectedFilter => _selectedFilter;
+
+  void setFilter(String filter) {
+    if (_selectedFilter != filter) {
+      _selectedFilter = filter;
+      notifyListeners();
+    }
+  }
+
+  List<WaitingList> get filteredWaitingList {
+    if (_selectedFilter == 'all') {
+      return _waitingList;
+    }
+    if (_selectedFilter == 'waiting') {
+      return _waitingList
+          .where(
+              (item) => item.status == 'waiting' || item.status == 'notified')
+          .toList();
+    }
+    if (_selectedFilter == 'completed') {
+      return _waitingList.where((item) => item.status == 'completed').toList();
+    }
+    if (_selectedFilter == 'cancelled') {
+      return _waitingList
+          .where(
+              (item) => item.status == 'cancelled' || item.status == 'no_show')
+          .toList();
+    }
+    return _waitingList;
+  }
+
   int get waitingCount => _waitingList
       .where((item) => item.status == 'waiting' || item.status == 'notified')
       .length;
