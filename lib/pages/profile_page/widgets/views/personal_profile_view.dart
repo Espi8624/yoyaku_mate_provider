@@ -97,10 +97,8 @@ class PersonalProfileView extends StatelessWidget {
                   ProfileSettingItem(
                     title: '電話番号',
                     subtitle: userProfile.phone,
-                    onTap: () => _showEditDialog(context,
-                        title: '電話番号',
-                        fieldKey: 'phone',
-                        initialValue: userProfile.phone),
+                    onTap: null,
+                    showTrailingIcon: false,
                   ),
                 ],
               ),
