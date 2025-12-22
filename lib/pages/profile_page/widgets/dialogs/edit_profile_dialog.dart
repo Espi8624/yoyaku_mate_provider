@@ -8,12 +8,14 @@ class EditProfileDialog extends StatefulWidget {
   final String title;
   final String initialValue;
   final bool isPassword;
+  final bool isName;
 
   const EditProfileDialog({
     super.key,
     required this.title,
     required this.initialValue,
     this.isPassword = false,
+    this.isName = false,
   });
 
   @override
@@ -27,6 +29,11 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   late final TextEditingController _currentPasswordController;
   late final TextEditingController _newPasswordController;
   late final TextEditingController _confirmPasswordController;
+
+  // 名前分割編集用
+  late final TextEditingController _lastNameController;
+  late final TextEditingController _firstNameController;
+
   bool _isLoading = false;
 
   @override
@@ -37,6 +44,29 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     _currentPasswordController = TextEditingController();
     _newPasswordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
+
+    // 名前分割初期化
+    if (widget.isName) {
+      final rawName =
+          widget.initialValue.replaceAll(RegExp(r'[\u3000\s]+'), ' ').trim();
+      if (rawName.isEmpty) {
+        _lastNameController = TextEditingController();
+        _firstNameController = TextEditingController();
+      } else {
+        final parts = rawName.split(RegExp(r'\s+'));
+        if (parts.length == 1) {
+          _lastNameController = TextEditingController(text: parts[0]);
+          _firstNameController = TextEditingController();
+        } else {
+          _lastNameController = TextEditingController(text: parts.first);
+          _firstNameController =
+              TextEditingController(text: parts.sublist(1).join(' '));
+        }
+      }
+    } else {
+      _lastNameController = TextEditingController();
+      _firstNameController = TextEditingController();
+    }
   }
 
   @override
@@ -45,11 +75,23 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
+    _lastNameController.dispose();
+    _firstNameController.dispose();
     super.dispose();
   }
 
   void _submit() {
-    Navigator.of(context).pop(_controller.text);
+    if (widget.isName) {
+      final lastName = _lastNameController.text.trim();
+      final firstName = _firstNameController.text.trim();
+      if (lastName.isEmpty && firstName.isEmpty) {
+        Navigator.of(context).pop();
+        return;
+      }
+      Navigator.of(context).pop('$lastName $firstName'.trim());
+    } else {
+      Navigator.of(context).pop(_controller.text);
+    }
   }
 
   Future<void> _changePassword() async {
@@ -109,9 +151,71 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   Widget build(BuildContext context) {
     if (widget.isPassword) {
       return _buildPasswordChangeDialog();
+    } else if (widget.isName) {
+      return _buildNameEditDialog();
     } else {
       return _buildDefaultDialog();
     }
+  }
+
+  Widget _buildNameEditDialog() {
+    return BaseDialog(
+      title: widget.title,
+      width: 400,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _lastNameController,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: '姓',
+                    hintText: '山田',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                  ),
+                  onSubmitted: (_) => _submit(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _firstNameController,
+                  decoration: InputDecoration(
+                    labelText: '名',
+                    hintText: '太郎',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                  ),
+                  onSubmitted: (_) => _submit(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _submit,
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12))),
+              child: const Text('確認'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildDefaultDialog() {
@@ -172,7 +276,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                 label: '新しいパスワードの確認',
                 validator: (value) {
                   if (value != _newPasswordController.text) {
-                    return 'パスワードが一致しません。';
+                    return 'パスワード가一致しません。';
                   }
                   return null;
                 }),
