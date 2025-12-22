@@ -21,6 +21,7 @@ class PersonalProfileView extends StatelessWidget {
     String? fieldKey,
     required String initialValue,
     bool isPassword = false,
+    bool isName = false,
   }) async {
     if (!isPassword) {
       final newValue = await showDialog<String>(
@@ -29,6 +30,7 @@ class PersonalProfileView extends StatelessWidget {
           title: title,
           initialValue: initialValue,
           isPassword: false,
+          isName: isName,
         ),
       );
 
@@ -63,7 +65,8 @@ class PersonalProfileView extends StatelessWidget {
                 onTapName: () => _showEditDialog(context,
                     title: 'お名前',
                     fieldKey: 'user_name',
-                    initialValue: userProfile.name),
+                    initialValue: userProfile.name,
+                    isName: true),
                 subtitle: userProfile.role == 'manager' ? '管理者' : '職員',
               ),
               const SizedBox(height: 32),
