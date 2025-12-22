@@ -58,12 +58,10 @@ class WaitingScreenViewModel extends ChangeNotifier {
       return _waitingList.where((item) => item.status == 'completed').toList();
     }
     if (_selectedFilter == 'cancelled') {
-      return _waitingList
-          .where(
-              (item) => item.status == 'cancelled' || item.status == 'no_show')
-          .toList();
+      return _waitingList.where((item) => item.status == 'cancelled').toList();
     }
-    return _waitingList;
+    // no_show データは完全に除外
+    return _waitingList.where((item) => item.status != 'no_show').toList();
   }
 
   int get waitingCount => _waitingList
