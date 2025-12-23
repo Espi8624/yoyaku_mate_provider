@@ -115,7 +115,7 @@ class _ProfileViewState extends State<_ProfileView>
         // Header
         const Padding(
           padding: EdgeInsets.fromLTRB(24, 12, 24, 24),
-          child: Text("プロフィール設定",
+          child: Text("設定",
               style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -204,7 +204,7 @@ class _ProfileViewState extends State<_ProfileView>
         unselectedLabelStyle:
             const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
         tabs: const [
-          Tab(text: '個人'),
+          Tab(text: '一般'),
           Tab(text: '店舗'),
         ],
       ),
