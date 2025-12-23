@@ -103,6 +103,18 @@ class PersonalProfileView extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
+              ProfileSection(
+                title: 'アプリ情報',
+                children: [
+                  ProfileSettingItem(
+                    title: 'バージョン',
+                    subtitle: vm.appVersion,
+                    onTap: null,
+                    showTrailingIcon: false,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),

@@ -12,6 +12,10 @@ class ProviderProfile {
   final String? storeEmail;
   final String? bizNumber;
   final String? description;
+  final bool termsAgreed;
+  final DateTime? termsAgreedAt;
+  final bool privacyAgreed;
+  final DateTime? privacyAgreedAt;
 
   ProviderProfile({
     required this.firebaseUid,
@@ -27,6 +31,10 @@ class ProviderProfile {
     this.storeEmail,
     this.bizNumber,
     this.description,
+    this.termsAgreed = false,
+    this.termsAgreedAt,
+    this.privacyAgreed = false,
+    this.privacyAgreedAt,
   });
 
   Map<String, dynamic> toJson() => {
@@ -43,6 +51,12 @@ class ProviderProfile {
         if (storeEmail != null) 'store_email': storeEmail,
         if (bizNumber != null) 'biz_number': bizNumber,
         if (description != null) 'description': description,
+        'terms_agreed': termsAgreed,
+        if (termsAgreedAt != null)
+          'terms_agreed_at': termsAgreedAt!.toIso8601String(),
+        'privacy_agreed': privacyAgreed,
+        if (privacyAgreedAt != null)
+          'privacy_agreed_at': privacyAgreedAt!.toIso8601String(),
       };
 
   factory ProviderProfile.fromJson(Map<String, dynamic> json) =>
@@ -60,5 +74,13 @@ class ProviderProfile {
         storeEmail: json['store_email'],
         bizNumber: json['biz_number'],
         description: json['description'],
+        termsAgreed: json['terms_agreed'] ?? false,
+        termsAgreedAt: json['terms_agreed_at'] != null
+            ? DateTime.parse(json['terms_agreed_at'])
+            : null,
+        privacyAgreed: json['privacy_agreed'] ?? false,
+        privacyAgreedAt: json['privacy_agreed_at'] != null
+            ? DateTime.parse(json['privacy_agreed_at'])
+            : null,
       );
 }
