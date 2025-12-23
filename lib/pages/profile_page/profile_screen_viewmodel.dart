@@ -10,6 +10,7 @@ import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/services/store_settings_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class ProfileScreenViewModel extends ChangeNotifier {
   final ProviderProfileService _profileService;
@@ -27,7 +28,27 @@ class ProfileScreenViewModel extends ChangeNotifier {
     bool autoLoad = false,
   })  : _profileService = profileService,
         _settingsService = settingsService,
-        firebaseUid = userId;
+        firebaseUid = userId {
+    _loadAppInfo();
+  }
+
+  // --- App Info ---
+  String _appVersion = '';
+  String get appVersion => _appVersion;
+
+  String _buildNumber = '';
+  String get buildNumber => _buildNumber;
+
+  Future<void> _loadAppInfo() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      _appVersion = packageInfo.version;
+      _buildNumber = packageInfo.buildNumber;
+      notifyListeners();
+    } catch (e) {
+      // print("Error loading app info: $e");
+    }
+  }
 
   // --- State ---
   bool _isLoading = false;

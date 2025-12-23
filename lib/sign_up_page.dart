@@ -14,6 +14,8 @@ import 'package:yoyaku_mate_provider/utils/phone_formatter.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart' show setSignUpInProgress;
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
+import 'package:yoyaku_mate_provider/constants/terms_of_service.dart';
+import 'package:yoyaku_mate_provider/constants/privacy_policy.dart';
 
 class SignUpPage extends StatefulWidget {
   final String? mode; // 'add_store' or null
@@ -87,6 +89,10 @@ class _SignUpPageState extends State<SignUpPage> {
       TextEditingController();
 
   bool _isInitialized = false;
+  bool _isTermsAgreed = false; // terms state
+  DateTime? _termsAgreedAt;
+  bool _isPrivacyAgreed = false; // privacy policy state
+  DateTime? _privacyAgreedAt;
 
   @override
   void didChangeDependencies() {
@@ -160,6 +166,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   void dispose() {
+    // 画面破棄時に必ずフラグを解除してRouterのリダイレクトを有効化
+    setSignUpInProgress(false);
+
     _pageController.removeListener(_pageControllerListener);
     _pageController.dispose();
     managerEmailController.dispose();
@@ -721,11 +730,15 @@ class _SignUpPageState extends State<SignUpPage> {
     }
 
     try {
+      // 認証プロセス開始時にフラグを立てる（Routerのリダイレクト防止）
+      setSignUpInProgress(true);
+
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: phoneNumberForFirebase,
         timeout: const Duration(seconds: 60),
         verificationCompleted: (PhoneAuthCredential credential) async {
           if (!mounted) return;
+          // 自動完了時もフラグは維持（次のステップへ）
           setState(() {
             _isPhoneVerified = true;
           });
@@ -733,6 +746,8 @@ class _SignUpPageState extends State<SignUpPage> {
         },
         verificationFailed: (FirebaseAuthException e) {
           if (!mounted) return;
+          // 失敗時はフラグを解除
+          setSignUpInProgress(false);
           setState(() {
             _isLoading = false;
             if (e.code == 'invalid-phone-number') {
@@ -746,6 +761,7 @@ class _SignUpPageState extends State<SignUpPage> {
         },
         codeSent: (String verificationId, int? resendToken) {
           if (!mounted) return;
+          // コード送信成功時もフラグは維持（次のステップへ）
           setState(() {
             _verificationId = verificationId;
             _resendToken = resendToken;
@@ -762,6 +778,8 @@ class _SignUpPageState extends State<SignUpPage> {
         forceResendingToken: _resendToken,
       );
     } catch (e) {
+      // エラー時はフラグ不整合を防ぐため解除
+      setSignUpInProgress(false);
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -959,6 +977,10 @@ class _SignUpPageState extends State<SignUpPage> {
           storeAddress: storeAddressController.text,
           storeTelNumber: storePhoneController.text,
           storeEmail: managerEmailController.text.trim(),
+          termsAgreed: _isTermsAgreed,
+          termsAgreedAt: _termsAgreedAt,
+          privacyAgreed: _isPrivacyAgreed,
+          privacyAgreedAt: _privacyAgreedAt,
         );
       } else {
         // staff
@@ -995,6 +1017,10 @@ class _SignUpPageState extends State<SignUpPage> {
           nameFurigana: fullNameFurigana,
           role: 'staff',
           storeId: staffStoreIdController.text,
+          termsAgreed: _isTermsAgreed,
+          termsAgreedAt: _termsAgreedAt,
+          privacyAgreed: _isPrivacyAgreed,
+          privacyAgreedAt: _privacyAgreedAt,
         );
       }
 
@@ -1158,6 +1184,8 @@ class _SignUpPageState extends State<SignUpPage> {
           staffFirstNameKanaController.clear();
 
           verificationCodeController.clear();
+
+          _isTermsAgreed = false; // Reset terms agreement
         });
 
         // 初ページへ移動
@@ -1214,27 +1242,268 @@ class _SignUpPageState extends State<SignUpPage> {
     if (_role == 'manager') {
       return [
         _buildRoleStep(), // 0: role
-        _buildEmailStep(), // 1: email input + 重複確認
-        _buildPasswordStep(), // 2: password (アカウント生成 + メール送信)
-        _buildEmailVerificationStep(), // 3: email verification waiting
-        _buildPhoneNumberStep(), // 4: phone number input
-        _buildVerificationCodeStep(), // 5: phone verification code
-        _buildManagerInfoStep(), // 6: user info
-        _buildManagerInfoStep2(), // 7: store info
+        _buildTermsOfServiceStep(), // 1: terms agreement
+        _buildPrivacyPolicyStep(), // 2: privacy policy agreement
+        _buildEmailStep(), // 3: email input + 重複確認
+        _buildPasswordStep(), // 4: password
+        _buildEmailVerificationStep(), // 5: verification waiting
+        _buildPhoneNumberStep(), // 6: phone input
+        _buildVerificationCodeStep(), // 7: verification code
+        _buildManagerInfoStep(), // 8: user info
+        _buildManagerInfoStep2(), // 9: store info
       ];
     } else if (_role == 'staff') {
       return [
         _buildRoleStep(), // 0: role
-        _buildEmailStep(), // 1: email input + 重複確認
-        _buildPasswordStep(), // 2: password password (アカウント生成 + メール送信)
-        _buildEmailVerificationStep(), // 3: email verification waiting
-        _buildPhoneNumberStep(), // 4: phone number input
-        _buildVerificationCodeStep(), // 5: phone verification code
-        _buildStaffInfoStep1(), // 6: store number
-        _buildStaffInfoStep2(), // 7: user info
+        _buildTermsOfServiceStep(), // 1: terms agreement
+        _buildPrivacyPolicyStep(), // 2: privacy policy agreement
+        _buildEmailStep(), // 3: email input + 重複確認
+        _buildPasswordStep(), // 4: password
+        _buildEmailVerificationStep(), // 5: verification waiting
+        _buildPhoneNumberStep(), // 6: phone input
+        _buildVerificationCodeStep(), // 7: verification code
+        _buildStaffInfoStep1(), // 8: store number
+        _buildStaffInfoStep2(), // 9: user info
       ];
     }
     return [_buildRoleStep()];
+  }
+
+  // --- Terms of Service Step ---
+  Widget _buildTermsOfServiceStep() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('利用規約同意',
+              style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary)),
+          const SizedBox(height: 8),
+          const Text('サービス利用の為、利用規約に同意して下さい。',
+              style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  TermsOfService.content,
+                  style:
+                      TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _showTermsDialog,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('全文表示',
+                        style: TextStyle(
+                            color: AppColors.accentPrimary, fontSize: 13)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isTermsAgreed = !_isTermsAgreed;
+              });
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: _isTermsAgreed,
+                      activeColor: AppColors.accentPrimary,
+                      onChanged: (val) {
+                        setState(() {
+                          _isTermsAgreed = val ?? false;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('利用規約に同意します。',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 48),
+          _buildActionButton(
+            label: '次へ',
+            onPressed: _isTermsAgreed
+                ? () {
+                    _termsAgreedAt = DateTime.now().toUtc();
+                    _nextPage();
+                  }
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Privacy Policy Step ---
+  Widget _buildPrivacyPolicyStep() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('プライバシーポリシー同意',
+              style: TextStyle(
+                  fontSize: 28, // Slightly adjusted size
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary)),
+          const SizedBox(height: 8),
+          const Text('個人情報の取り扱いについて同意して下さい。',
+              style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+          const SizedBox(height: 32),
+          // Privacy Content Box
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  PrivacyPolicy.content,
+                  style:
+                      TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _showPrivacyDialog,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('全文表示',
+                        style: TextStyle(
+                            color: AppColors.accentPrimary, fontSize: 13)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Privacy Checkbox
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isPrivacyAgreed = !_isPrivacyAgreed;
+              });
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: _isPrivacyAgreed,
+                      activeColor: AppColors.accentPrimary,
+                      onChanged: (val) {
+                        setState(() {
+                          _isPrivacyAgreed = val ?? false;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('プライバシーポリシーに同意します。',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 48),
+          _buildActionButton(
+            label: '次へ',
+            onPressed: _isPrivacyAgreed
+                ? () {
+                    _privacyAgreedAt = DateTime.now().toUtc();
+                    _nextPage();
+                  }
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('利用規約'),
+        content: const SingleChildScrollView(
+          child: Text(TermsOfService.content),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('閉じる'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('プライバシーポリシー'),
+        content: const SingleChildScrollView(
+          child: Text(PrivacyPolicy.content),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('閉じる'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildRoleStep() {
@@ -1652,7 +1921,7 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  // ★変更: 管理者情報入力画面を姓名分割に対応
+  // 管理者情報入力画面を姓名分割に対応
   Widget _buildManagerInfoStep() {
     return SingleChildScrollView(
       child: Column(
