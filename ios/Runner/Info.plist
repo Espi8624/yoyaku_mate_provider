@@ -58,6 +58,8 @@
 				<array>
 					<!-- 앱을 호출할 고유한 주소 형식(URL Scheme)을 여기에 정의합니다. -->
 					<string>yoyaku-mate</string>
+                    <!-- Firebase Phone Auth for Simulator -->
+                    <string>app-1-545178034865-ios-31afc90c9e1663b13df890</string>
 				</array>
 			</dict>
 		</array>

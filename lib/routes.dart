@@ -16,6 +16,9 @@ void setSignUpInProgress(bool value) {
   _isSignUpInProgress = value;
 }
 
+// 最後に有効だったパスを保持（Deep Link復帰用）
+String? _lastValidLocation;
+
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription<User?> _authSubscription;
 
@@ -88,6 +91,21 @@ final GoRouter router = GoRouter(
   redirect: (BuildContext context, GoRouterState state) {
     final loggedIn = FirebaseAuth.instance.currentUser != null;
     final location = state.matchedLocation;
+    final uri = state.uri;
+
+    // Firebase Auth Deep Link (reCAPTCHA/Phone Auth) 対策
+    // app-1-... というスキームやURLが渡された場合、直前の有効なパスに戻す
+    if (uri.scheme.startsWith('app-1-') ||
+        uri.toString().startsWith('app-1-')) {
+      // 直前のパスがあればそこへ、なければログイン画面へ
+      // (通常は _isSignUpInProgress でガードされるが、念のため)
+      return _lastValidLocation ?? '/login';
+    }
+
+    // 有効な通常パスであれば記録しておく
+    if (!location.startsWith('app-1-')) {
+      _lastValidLocation = state.uri.toString();
+    }
 
     if (_isSignUpInProgress) {
       return null;
