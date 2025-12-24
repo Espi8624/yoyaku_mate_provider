@@ -2,6 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
+import 'package:yoyaku_mate_provider/constants/privacy_policy.dart';
+import 'package:yoyaku_mate_provider/constants/terms_of_service.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 import '../../../../models/user_profile.dart';
 import '../../../../widgets/common_widgets/custom_snack_bar.dart';
@@ -44,6 +47,19 @@ class PersonalProfileView extends StatelessWidget {
         }
       }
     }
+  }
+
+  void _showPolicyDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (context) => BaseDialog(
+        title: title,
+        content: Text(
+          content,
+          style: const TextStyle(fontSize: 14, height: 1.5),
+        ),
+      ),
+    );
   }
 
   @override
@@ -99,6 +115,32 @@ class PersonalProfileView extends StatelessWidget {
                     subtitle: userProfile.phone,
                     onTap: null,
                     showTrailingIcon: false,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ProfileSection(
+                title: 'ポリシー情報',
+                children: [
+                  ProfileSettingItem(
+                    title: '利用規約',
+                    subtitle: '',
+                    onTap: () => _showPolicyDialog(
+                      context,
+                      TermsOfService.title,
+                      TermsOfService.content,
+                    ),
+                    showTrailingIcon: true,
+                  ),
+                  ProfileSettingItem(
+                    title: 'プライバシーポリシー',
+                    subtitle: '',
+                    onTap: () => _showPolicyDialog(
+                      context,
+                      PrivacyPolicy.title,
+                      PrivacyPolicy.content,
+                    ),
+                    showTrailingIcon: true,
                   ),
                 ],
               ),

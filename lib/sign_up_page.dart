@@ -14,6 +14,7 @@ import 'package:yoyaku_mate_provider/utils/phone_formatter.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart' show setSignUpInProgress;
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 import 'package:yoyaku_mate_provider/constants/terms_of_service.dart';
 import 'package:yoyaku_mate_provider/constants/privacy_policy.dart';
 
@@ -1471,18 +1472,9 @@ class _SignUpPageState extends State<SignUpPage> {
   void _showTermsDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardBackground,
-        title: const Text('利用規約'),
-        content: const SingleChildScrollView(
-          child: Text(TermsOfService.content),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('閉じる'),
-          ),
-        ],
+      builder: (context) => const BaseDialog(
+        title: '利用規約',
+        content: Text(TermsOfService.content),
       ),
     );
   }
@@ -1490,18 +1482,9 @@ class _SignUpPageState extends State<SignUpPage> {
   void _showPrivacyDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardBackground,
-        title: const Text('プライバシーポリシー'),
-        content: const SingleChildScrollView(
-          child: Text(PrivacyPolicy.content),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('閉じる'),
-          ),
-        ],
+      builder: (context) => const BaseDialog(
+        title: 'プライバシーポリシー',
+        content: Text(PrivacyPolicy.content),
       ),
     );
   }
