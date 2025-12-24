@@ -20,8 +20,10 @@ class ProfileSettingItem extends StatelessWidget {
     return ListTile(
       title: Text(title,
           style: const TextStyle(fontSize: 16, color: AppColors.textPrimary)),
-      subtitle: Text(subtitle,
-          style: const TextStyle(fontSize: 13, color: Colors.grey)),
+      subtitle: subtitle.isNotEmpty
+          ? Text(subtitle,
+              style: const TextStyle(fontSize: 13, color: Colors.grey))
+          : null,
       trailing: showTrailingIcon ? const Icon(Icons.chevron_right) : null,
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
