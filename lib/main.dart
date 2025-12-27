@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/firebase_options.dart';
-import 'package:yoyaku_mate_provider/store_selection_view.dart';
+import 'package:yoyaku_mate_provider/pages/store_selection/store_selection_page.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen.dart';
@@ -166,10 +166,6 @@ class _HomeScreenState extends State<HomeScreen> {
       // return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // print("--- [HomeScreen] build 메서드 호출됨! ---");
-    // print("  - 현재 보고 있는 ViewModel 해시코드: ${profileVM.hashCode}");
-    // print("  - myStores 개수: ${profileVM.myStores.length}");
-
     // ローディング・エラー画面処理
     if (profileVM.isLoading && profileVM.userProfile == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -273,34 +269,97 @@ class _HomeScreenState extends State<HomeScreen> {
       return const StoreSelectionView();
     } else {
       return Scaffold(
+        backgroundColor: AppColors.background,
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('所属された店舗がありません。管理者にお問い合わせください。'),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  // 登録プロセスを再開
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    try {
-                      context.go('/signup?mode=resume');
-                    } catch (e) {
-                      // ignore
-                    }
-                  });
-                },
-                child: const Text('登録を再開する'),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                },
-                child:
-                    const Text('ログアウト', style: TextStyle(color: Colors.grey)),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.assignment_ind_outlined,
+                    size: 64,
+                    color: AppColors.accentPrimary,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  '会員登録が完了していません',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'まだ会員登録が完了していません。\n下のボタンを押して会員登録を完了してください。',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: AppColors.textSecondary,
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 48),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () {
+                        // 登録プロセスを再開
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          try {
+                            context.go('/signup?mode=resume');
+                          } catch (e) {
+                            // ignore
+                          }
+                        });
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.accentPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '登録を完了する',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                TextButton(
+                  onPressed: () async {
+                    await FirebaseAuth.instance.signOut();
+                  },
+                  child: const Text(
+                    'ログアウト',
+                    style: TextStyle(color: AppColors.textTertiary),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );

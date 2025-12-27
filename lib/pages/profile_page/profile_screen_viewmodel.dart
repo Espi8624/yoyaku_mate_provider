@@ -95,6 +95,16 @@ class ProfileScreenViewModel extends ChangeNotifier {
   bool _isProfileIncomplete = false;
   bool get isProfileIncomplete => _isProfileIncomplete;
 
+  int _profileTabIndex = 0;
+  int get profileTabIndex => _profileTabIndex;
+
+  void setProfileTabIndex(int index) {
+    if (_profileTabIndex != index) {
+      _profileTabIndex = index;
+      notifyListeners();
+    }
+  }
+
   // プロフィール情報初期化
   void clearProfile() {
     _userProfile = null;
@@ -103,7 +113,7 @@ class ProfileScreenViewModel extends ChangeNotifier {
     _myStores = [];
     _mongoUserId = '';
     _isProfileIncomplete = false;
-    // _isInitializedBySignUp = false;
+    _profileTabIndex = 0; // Reset tab index on clear
     notifyListeners();
   }
 
@@ -143,29 +153,27 @@ class ProfileScreenViewModel extends ChangeNotifier {
   }
 
   void addStore(StoreProfile newStore) {
-    // print("--- [ViewModel] addStore 호출됨 ---");
-    // print("  - 추가할 가게: ${newStore.storeName}");
-
     if (!_myStores.any((store) => store.id == newStore.id)) {
       _myStores.add(newStore);
-      // print("  → 가게가 추가되었습니다. 총 ${_myStores.length}개");
 
       // 現在選択された店舗初期化
       _storeProfile = null;
       _storeLicense = null;
 
       notifyListeners();
-    } else {
-      // print("  → 이미 존재하는 가게입니다.");
     }
   }
 
-  Future<void> loadProfiles({bool forceRefresh = false}) async {
-    // print("--- [ViewModel] loadProfiles 시작 ---");
-    // print("  - firebaseUid: '$firebaseUid'");
+  // 店舗選択のみを解除するメソッド
+  void clearStoreSelection() {
+    _storeProfile = null;
+    _storeLicense = null;
+    _storeSettings = null;
+    notifyListeners();
+  }
 
+  Future<void> loadProfiles({bool forceRefresh = false}) async {
     if (firebaseUid.isEmpty) {
-      // print("   → firebaseUid가 비어있어 즉시 종료.");
       _isLoading = false;
       notifyListeners();
       return;
@@ -176,9 +184,7 @@ class ProfileScreenViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // print("   → (1) 가게 목록(fetchAllStores) API 호출 시작...");
       final myStoresResponse = await _profileService.fetchAllStores();
-      // print("   → (2) 가게 목록 API 응답 받음.");
 
       if (myStoresResponse.containsKey('data') &&
           myStoresResponse['data'] is Map) {
@@ -187,19 +193,11 @@ class ProfileScreenViewModel extends ChangeNotifier {
           final storesData = outerData['data'] as List;
           _myStores =
               storesData.map((data) => StoreProfile.fromJson(data)).toList();
-          // print("   → (3) 가게 목록 파싱 완료: ${_myStores.length}개");
 
           // 店舗リストローディング後、ユーザープロフィールロード
-          // print("   → (4) 사용자 프로필(_fetchInitialUserProfile) 호출 시작...");
           await _fetchInitialUserProfile();
-          // print("   → (5) 사용자 프로필 호출 완료.");
 
-          if (_userProfile != null) {
-            // print(
-            //     "   → (6) 성공: _userProfile이 정상적으로 설정되었습니다. (이름: ${_userProfile!.name})");
-          } else {
-            // print(
-            //     "   → (6) 실패: _fetchInitialUserProfile 후에도 _userProfile이 여전히 null입니다!");
+          if (_userProfile == null) {
             throw ApiException(
                 'User profile could not be loaded or parsed correctly.');
           }
@@ -218,21 +216,15 @@ class ProfileScreenViewModel extends ChangeNotifier {
       } else {
         _errorMessage = 'データローディング失敗: ${e.message}';
       }
-      // print("   ✗ API 에러: ${e.message}");
     } catch (e) {
       _errorMessage = '予期しないエラーが発生しました。: $e';
-      // print("   ✗ 예상치 못한 에러: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
-      // print("--- [ViewModel] loadProfiles 종료 (isLoading: $_isLoading) ---");
     }
   }
 
   Future<bool> selectStore(String storeId) async {
-    // print("--- [ViewModel] selectStore 호출됨 (개선된 방식) ---");
-    // print("  - 선택된 storeId: '$storeId'");
-
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -244,72 +236,66 @@ class ProfileScreenViewModel extends ChangeNotifier {
         orElse: () => throw ApiException("選択された店舗をローカルリストから検索できませんでした。"),
       );
 
-      // 探した店情報を_storeProfileに直接割当（API呼出なし）
+      // 探した店情報を_storeProfileに直接割当（API呼出なし)
       _storeProfile = selectedStore;
-      // print("  → 로컬에서 가게 찾음: ${_storeProfile?.name}");
 
-      // print("  → 가게 인증서 정보 로딩 시작...");
-      final storeLicenseResponse =
-          await _profileService.fetchStoreLicense(storeId);
+      try {
+        final storeLicenseResponse =
+            await _profileService.fetchStoreLicense(storeId);
 
-      if (storeLicenseResponse.containsKey('data') &&
-          storeLicenseResponse['data'] is Map) {
-        _storeLicense = StoreLicense.fromJson(
-            storeLicenseResponse['data'] as Map<String, dynamic>);
-        // print("  → 가게 인증서 정보 로딩 완료");
-      } else {
-        throw ApiException('無効な店舗ライセンスデータ形式です。');
+        if (storeLicenseResponse.containsKey('data') &&
+            storeLicenseResponse['data'] is Map) {
+          _storeLicense = StoreLicense.fromJson(
+              storeLicenseResponse['data'] as Map<String, dynamic>);
+        }
+      } catch (e) {
+        // ライセンス取得失敗（404またはネットワークエラー）
+        // 店舗に入るのを妨げない。ライセンスをnullに設定するだけ
+        _storeLicense = null;
       }
 
       // Store Settings Fetch
       try {
         _storeSettings = await _settingsService.fetchStoreSettings(storeId);
       } catch (e) {
-        // Settings fetch fail shouldn't block the whole profile view, but log it.
-        // print("Settings fetch failed: $e");
-        _storeSettings = null; // default or null
+        // Settings取得失敗（404またはネットワークエラー）
+        // 店舗に入るのを妨げない。Settingsをnullに設定するだけ
+        _storeSettings = null;
       }
 
       return true;
     } on ApiException catch (e) {
       _errorMessage = '店舗詳細情報の読み込みに失敗しました: ${e.message}';
       _storeProfile = null; // 失敗時選択されたプロフィールも初期化
-      // print("  ✗ API 에러: ${e.message}");
 
       return false;
     } catch (e) {
       _errorMessage = '予期せぬエラーが発生しました: $e';
       _storeProfile = null; // 失敗時選択されたプロフィールも初期化
-      // print("  ✗ 예상치 못한 에러: $e");
 
       return false;
     } finally {
       _isLoading = false;
       notifyListeners();
-      // print("--- [ViewModel] selectStore 완료 ---");
     }
   }
 
   Future<void> _fetchInitialUserProfile() async {
     if (firebaseUid.isEmpty) return;
-    // print("     L-- [_fetchInitialUserProfile] 시작 (uid: $firebaseUid)");
     try {
       final userProfileResponse =
           await _profileService.fetchUserProfile(firebaseUid);
-      // print("     L-- API 응답 받음.");
 
       if (userProfileResponse.containsKey('data') &&
           userProfileResponse['data'] is Map) {
         _userProfile = UserProfile.fromJson(
             userProfileResponse['data'] as Map<String, dynamic>);
         _mongoUserId = _userProfile?.id ?? '';
-        // print("     L-- UserProfile 파싱 성공! (이름: ${_userProfile?.name})");
       } else {
         throw ApiException('無効なユーザーデータ形式です。');
       }
     } catch (e) {
-      // print("     L-- ✗ 에러 발생: ${e.toString()}");
-      rethrow; // 에러를 상위 함수(loadProfiles)로 다시 던짐
+      rethrow;
     }
   }
 
@@ -328,6 +314,19 @@ class ProfileScreenViewModel extends ChangeNotifier {
         if (_mongoUserId.isEmpty) {
           throw ApiException('ユーザーIDが見つかりません。');
         }
+
+        // Optimistic Update: UIを即時反映させる
+        if (_userProfile != null) {
+          if (userFieldKey == 'user_name' || userFieldKey == 'name') {
+            _userProfile = _userProfile!.copyWith(name: value);
+          } else if (userFieldKey == 'email') {
+            _userProfile = _userProfile!.copyWith(email: value);
+          } else if (userFieldKey == 'phone_number') {
+            _userProfile = _userProfile!.copyWith(phone_number: value);
+          }
+          notifyListeners();
+        }
+
         await _profileService
             .updateUserProfile(_mongoUserId, {userFieldKey: value});
         await _fetchInitialUserProfile();
@@ -343,7 +342,19 @@ class ProfileScreenViewModel extends ChangeNotifier {
 
           final index = _myStores.indexWhere((s) => s.id == storeId);
           if (index != -1) {
-            _myStores[index] = updatedStore;
+            final oldStore = _myStores[index];
+            final newStore = StoreProfile(
+              id: updatedStore.id,
+              name: updatedStore.name,
+              address: updatedStore.address,
+              phone_number: updatedStore.phone_number,
+              bizNumber: updatedStore.bizNumber,
+              storeImageUrl: updatedStore.storeImageUrl,
+              verificationStatus: updatedStore.verificationStatus ??
+                  oldStore.verificationStatus,
+              staffStatus: updatedStore.staffStatus ?? oldStore.staffStatus,
+            );
+            _myStores[index] = newStore;
           }
 
           await selectStore(storeId);
@@ -419,7 +430,23 @@ class ProfileScreenViewModel extends ChangeNotifier {
       final updatedStoreProfile = await _profileService.uploadStoreImage(
           imageFile, _storeProfile!.id, idToken);
 
-      _storeProfile = updatedStoreProfile;
+      // レスポンスにverificationStatusとstaffStatusが欠けている場合は、保持する
+      if (_storeProfile != null) {
+        _storeProfile = StoreProfile(
+          id: updatedStoreProfile.id,
+          name: updatedStoreProfile.name,
+          address: updatedStoreProfile.address,
+          phone_number: updatedStoreProfile.phone_number,
+          bizNumber: updatedStoreProfile.bizNumber,
+          storeImageUrl: updatedStoreProfile.storeImageUrl,
+          verificationStatus: updatedStoreProfile.verificationStatus ??
+              _storeProfile!.verificationStatus,
+          staffStatus:
+              updatedStoreProfile.staffStatus ?? _storeProfile!.staffStatus,
+        );
+      } else {
+        _storeProfile = updatedStoreProfile;
+      }
     } on ApiException catch (e) {
       _errorMessage = e.message;
     } catch (e) {
@@ -442,6 +469,33 @@ class ProfileScreenViewModel extends ChangeNotifier {
 
     try {
       await _profileService.uploadLicenseImage(storeId, imageFile);
+
+      // アップロード成功後、最新の店舗情報を取得してローカルリスト(myStores)を更新
+      final response = await _profileService.fetchStoreProfile(storeId);
+
+      if (response.containsKey('data') && response['data'] is Map) {
+        // アップロード成功後、最新の店舗情報を取得してローカルリスト(myStores)を更新
+        final updatedStore =
+            StoreProfile.fromJson(response['data'] as Map<String, dynamic>);
+
+        final index = _myStores.indexWhere((s) => s.id == storeId);
+        if (index != -1) {
+          final oldStore = _myStores[index];
+          final newStore = StoreProfile(
+            id: updatedStore.id,
+            name: updatedStore.name,
+            address: updatedStore.address,
+            phone_number: updatedStore.phone_number,
+            bizNumber: updatedStore.bizNumber,
+            storeImageUrl: updatedStore.storeImageUrl,
+            verificationStatus:
+                updatedStore.verificationStatus ?? oldStore.verificationStatus,
+            staffStatus: updatedStore.staffStatus ?? oldStore.staffStatus,
+          );
+          _myStores[index] = newStore;
+        }
+      }
+
       await selectStore(storeId);
       return true;
     } on ApiException catch (e) {

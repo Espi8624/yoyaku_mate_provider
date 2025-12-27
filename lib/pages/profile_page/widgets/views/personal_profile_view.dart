@@ -80,7 +80,7 @@ class PersonalProfileView extends StatelessWidget {
                 },
                 onTapName: () => _showEditDialog(context,
                     title: 'お名前',
-                    fieldKey: 'user_name',
+                    fieldKey: 'name',
                     initialValue: userProfile.name,
                     isName: true),
                 subtitle: userProfile.role == 'manager' ? '管理者' : '職員',
@@ -112,7 +112,7 @@ class PersonalProfileView extends StatelessWidget {
                   ),
                   ProfileSettingItem(
                     title: '電話番号',
-                    subtitle: userProfile.phone,
+                    subtitle: userProfile.phone_number,
                     onTap: null,
                     showTrailingIcon: false,
                   ),
