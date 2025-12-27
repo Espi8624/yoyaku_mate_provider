@@ -293,8 +293,12 @@ class ProviderProfileService {
     );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['available'];
+      final jsonResponse = jsonDecode(response.body);
+      final data = jsonResponse['data'];
+      if (data == null || data['available'] == null) {
+        throw ApiException('Invalid response from server');
+      }
+      return data['available'] as bool;
     } else {
       throw ApiException('Failed to check email availability');
     }
