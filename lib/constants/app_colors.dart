@@ -8,6 +8,8 @@ class AppColors {
 
   /// 基本ブラック
   static const Color primaryBlack = Color(0xFF161616);
+  static const Color primary = primaryBlack; // Alias
+  static const Color shadow = Color(0xFF000000);
 
   // --- アクセント & インタラクティブパレット ---
 

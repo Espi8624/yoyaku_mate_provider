@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:yoyaku_mate_provider/store_selection_view.dart';
+
 import '../../../../constants/app_colors.dart';
 import '../../../../widgets/common_widgets/custom_snack_bar.dart';
 import '../../profile_screen_viewmodel.dart';
@@ -224,14 +224,14 @@ class StoreProfileView extends StatelessWidget {
                   ),
                   ProfileSettingItem(
                     title: '電話番号',
-                    subtitle: storeProfile.phone,
+                    subtitle: storeProfile.phone_number,
                     showTrailingIcon: !isReadOnly,
                     onTap: isReadOnly
                         ? null
                         : () => _showEditDialog(context,
                             title: '電話番号',
-                            fieldKey: 'phone',
-                            initialValue: storeProfile.phone),
+                            fieldKey: 'phone_number',
+                            initialValue: storeProfile.phone_number),
                   ),
                 ],
               ),
@@ -275,11 +275,10 @@ class StoreProfileView extends StatelessWidget {
                       fontWeight: FontWeight.bold),
                 ),
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const StoreSelectionView(),
-                    ),
-                  );
+                  // 現在の店舗選択を解除
+                  final profileVM = Provider.of<ProfileScreenViewModel>(context,
+                      listen: false);
+                  profileVM.clearStoreSelection();
                 },
                 style: OutlinedButton.styleFrom(
                   backgroundColor: AppColors.accentPrimary,

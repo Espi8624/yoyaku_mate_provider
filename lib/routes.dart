@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yoyaku_mate_provider/login_page.dart';
 import 'package:yoyaku_mate_provider/main.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up_prompt_page.dart';
-// import 'package:yoyaku_mate_provider/sign_up_complete_page.dart';
-import 'package:yoyaku_mate_provider/sign_up_page.dart';
+import 'package:provider/provider.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_page.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_viewmodel.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_prompt_page.dart';
+import 'package:yoyaku_mate_provider/pages/store_selection/add_store_page.dart';
 import 'package:yoyaku_mate_provider/verify_email_page.dart';
 
 bool _isSignUpInProgress = false;
@@ -62,10 +64,10 @@ final GoRouter router = GoRouter(
       path: '/signup',
       builder: (context, state) {
         // UrlからQuery Parametersを抽出
-        final mode = state.uri.queryParameters['mode'];
-
-        // 抽出したmode値をSignUpPageのコンストラクタに渡す
-        return SignUpPage(mode: mode);
+        return ChangeNotifierProvider(
+          create: (_) => SignUpViewModel(),
+          child: const SignUpPage(),
+        );
       },
     ),
     // 会員加入完了ページ
@@ -77,6 +79,10 @@ final GoRouter router = GoRouter(
     //   path: '/complete',
     //   builder: (context, state) => const SignUpCompletePage(),
     // ),
+    GoRoute(
+      path: '/add-store',
+      builder: (context, state) => const AddStorePage(),
+    ),
     GoRoute(
       path: '/signup-prompt',
       builder: (context, state) => const SignUpPromptPage(),
