@@ -9,14 +9,35 @@ import 'package:yoyaku_mate_provider/constants/staff_status.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 
+import 'package:yoyaku_mate_provider/pages/store_selection/store_selection_viewmodel.dart';
+import 'package:yoyaku_mate_provider/services/profile_service.dart';
+
 class StoreSelectionView extends StatelessWidget {
   const StoreSelectionView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<ProfileScreenViewModel>();
-    final stores = vm.myStores;
-    final userName = vm.userProfile?.name ?? 'ユーザー';
+    return ChangeNotifierProvider(
+      create: (context) => StoreSelectionViewModel(
+        profileService: context.read<ProviderProfileService>(),
+        profileVM: context.read<ProfileScreenViewModel>(),
+      ),
+      child: const _StoreSelectionContent(),
+    );
+  }
+}
+
+class _StoreSelectionContent extends StatelessWidget {
+  const _StoreSelectionContent();
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<StoreSelectionViewModel>();
+    final stores = vm.stores;
+    // userNameを取得する
+    final userProfile = context.select<ProfileScreenViewModel, String?>(
+        (pVm) => pVm.userProfile?.name);
+    final userName = userProfile ?? 'ユーザー';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -43,18 +64,31 @@ class StoreSelectionView extends StatelessWidget {
           const SizedBox(width: 16),
         ],
       ),
-      body: _buildStoreList(context, vm, stores, userName),
+      body: Stack(
+        children: [
+          _buildStoreList(context, vm, stores, userName),
+          if (vm.isLoading)
+            const Center(
+              child: CircularProgressIndicator(),
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _buildStoreList(BuildContext context, ProfileScreenViewModel vm,
+  Widget _buildStoreList(BuildContext context, StoreSelectionViewModel vm,
       List<StoreProfile> stores, String userName) {
-    void navigateToSignUp() {
-      final role = vm.userProfile?.role ?? 'manager';
+    Future<void> navigateToSignUp() async {
+      final role =
+          context.read<ProfileScreenViewModel>().userProfile?.role ?? 'manager';
       if (role == 'staff') {
         _showJoinStoreDialog(context, vm);
       } else {
-        context.push('/signup?mode=add_store&role=$role');
+        await context.push('/add-store');
+        // Return from AddStorePage -> Refresh List
+        if (context.mounted) {
+          await vm.refreshStores();
+        }
       }
     }
 
@@ -103,15 +137,10 @@ class StoreSelectionView extends StatelessWidget {
                               return;
                             }
 
-                            print('Store Card \'${store.name}\' Tapped!');
-
-                            // ViewModelのselectStoreメソッドを呼出
                             final success = await vm.selectStore(store.id);
 
-                            // 問題なく成功し、Widgetがまだ画面に存在する場合、
-                            // 現在の画面（StoreSelectionView）を閉る
                             if (success && context.mounted) {
-                              Navigator.of(context).pop();
+                              // selectStoreが返すstoreをそのままStoreProfileに変換してローカルリスト(myStores)に追加する
                             }
                           },
                         );
@@ -143,7 +172,7 @@ class StoreSelectionView extends StatelessWidget {
   }
 
   Future<void> _showJoinStoreDialog(
-      BuildContext context, ProfileScreenViewModel vm) async {
+      BuildContext context, StoreSelectionViewModel vm) async {
     final storeId = await showJoinStoreDialog(context: context);
 
     if (storeId == null || storeId.isEmpty) {
@@ -152,19 +181,18 @@ class StoreSelectionView extends StatelessWidget {
 
     if (!context.mounted) return;
 
-    try {
-      final success = await vm.joinStore(storeId);
-      if (success && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('参加申請を送信しました。')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エラー: ${vm.errorMessage ?? e.toString()}')),
-        );
-      }
+    final success = await vm.joinStore(storeId);
+
+    if (!context.mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(vm.successMessage ?? '参加申請を送信しました。')),
+      );
+    } else if (vm.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('エラー: ${vm.errorMessage}')),
+      );
     }
   }
 }

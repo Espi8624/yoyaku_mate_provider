@@ -20,10 +20,12 @@ class WaitingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => WaitingScreenViewModel(
-        storeId: storeId,
-        waitingService: WaitingService(),
-      ),
+      create: (_) {
+        return WaitingScreenViewModel(
+          storeId: storeId,
+          waitingService: WaitingService(),
+        );
+      },
       child: const _WaitingView(),
     );
   }

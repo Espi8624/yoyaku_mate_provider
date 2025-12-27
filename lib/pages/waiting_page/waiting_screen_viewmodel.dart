@@ -19,7 +19,8 @@ class WaitingScreenViewModel extends ChangeNotifier {
   WaitingScreenViewModel(
       {required this.storeId, required WaitingService waitingService})
       : _waitingService = waitingService {
-    loadWaitingList();
+    // コンストラクタ内での notifyListeners() 呼び出しを防ぐため、遅延実行
+    Future.microtask(() => loadWaitingList());
   }
 
   bool _isLoading = true;

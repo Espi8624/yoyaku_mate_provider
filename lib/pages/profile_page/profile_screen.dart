@@ -71,7 +71,19 @@ class _ProfileViewState extends State<_ProfileView>
     setState(() {
       // 以前コントローラーが存在していた場合、dispose
       _tabController?.dispose();
-      _tabController = TabController(length: newLength, vsync: this);
+      // ViewModelに保存されたインデックスで初期化
+      _tabController = TabController(
+        length: newLength,
+        vsync: this,
+        initialIndex: _viewModel.profileTabIndex,
+      );
+
+      // タブ変更時にViewModelを更新
+      _tabController?.addListener(() {
+        if (_tabController != null && !_tabController!.indexIsChanging) {
+          _viewModel.setProfileTabIndex(_tabController!.index);
+        }
+      });
     });
   }
 
