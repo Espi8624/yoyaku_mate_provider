@@ -125,7 +125,7 @@ class WaitingScreenViewModel extends ChangeNotifier {
       final tokenData = results[1] as Map<String, String>;
 
       _qrToken = tokenData['v_token'];
-      print('DEBUG: Fetched QR Token: $_qrToken'); // Debug log
+      // print('DEBUG: Fetched QR Token: $_qrToken'); // Debug log
 
       // 最新の登録が上に来るように降順ソート
       initialData
