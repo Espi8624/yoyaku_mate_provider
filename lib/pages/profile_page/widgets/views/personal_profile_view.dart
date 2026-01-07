@@ -178,7 +178,7 @@ class PersonalProfileView extends StatelessWidget {
                     title: '問い合わせ',
                     subtitle: 'support@yoyakumate.jp',
                     onTap: () => _launchInquiryEmail(context),
-                    showTrailingIcon: false,
+                    showTrailingIcon: true,
                   ),
                 ],
               ),
