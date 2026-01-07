@@ -42,8 +42,11 @@ class _WaitingView extends StatelessWidget {
       builder: (context, constraints) {
         const double mobileBreakpoint = 700;
         final bool isMobile = constraints.maxWidth < mobileBreakpoint;
-        final String qrCodeData =
+        String qrCodeData =
             "https://yoyaku-mate.vercel.app/waiting-screen-flow?store_id=${vm.storeId}";
+        if (vm.qrToken != null) {
+          qrCodeData += "&v_token=${vm.qrToken}";
+        }
 
         if (vm.isLoading) {
           return const Center(child: LoadingIndicator());

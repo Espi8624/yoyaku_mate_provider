@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -37,6 +38,9 @@ class WaitingScreenViewModel extends ChangeNotifier {
 
   String _selectedFilter = 'all';
   String get selectedFilter => _selectedFilter;
+
+  String? _qrToken;
+  String? get qrToken => _qrToken;
 
   void setFilter(String filter) {
     if (_selectedFilter != filter) {
@@ -111,7 +115,18 @@ class WaitingScreenViewModel extends ChangeNotifier {
     _waitingListSubscription?.cancel();
 
     try {
-      final initialData = await _waitingService.fetchWaitingCustomers(storeId);
+      // 待機リスト取得の際、QRトークンも一緒に取得
+      final results = await Future.wait([
+        _waitingService.fetchWaitingCustomers(storeId),
+        _waitingService.fetchQRToken(storeId),
+      ]);
+
+      final initialData = results[0] as List<WaitingList>;
+      final tokenData = results[1] as Map<String, String>;
+
+      _qrToken = tokenData['v_token'];
+      print('DEBUG: Fetched QR Token: $_qrToken'); // Debug log
+
       // 最新の登録が上に来るように降順ソート
       initialData
           .sort((a, b) => b.registrationTime.compareTo(a.registrationTime));
@@ -265,22 +280,43 @@ class WaitingScreenViewModel extends ChangeNotifier {
 
   Future<void> generateAndSaveQrPdf(BuildContext context, String data) async {
     try {
-      final qrImage = await QrPainter(
+      // QRコードのイメージデータを生成 (共通)
+      final qrPainter = QrPainter(
         data: data,
         version: QrVersions.auto,
         gapless: false,
         errorCorrectionLevel: QrErrorCorrectLevel.M,
-      ).toImageData(400.0);
+      );
 
+      final qrImage = await qrPainter.toImageData(800.0); // 高解像度で生成
       if (qrImage == null) throw Exception('QRコードイメージ生成失敗');
+      final pngBytes = qrImage.buffer.asUint8List();
 
+      // モバイル (Android/iOS) の場合: ギャラリーに保存して開く
+      if (Platform.isAndroid || Platform.isIOS) {
+        // 権限は gal が内部でハンドリングまたは要請するが、事前に許可が必要な場合もある
+        // gal は putImageBytes で保存可能
+        await Gal.putImageBytes(pngBytes, name: "yoyaku_mate_qr");
+
+        if (context.mounted) {
+          CustomSnackBar.show(context,
+              message: 'QRコードがギャラリーに保存されました', status: SnackBarStatus.success);
+        }
+
+        // ギャラリーアプリを開く
+        await Gal.open();
+        return;
+      }
+
+      // デスクトップの場合: PDFまたは画像としてダウンロードフォルダに保存
+      // 既存のPDFロジックを維持 (印刷用にはPDFが便利)
       final pdf = pw.Document();
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
           build: (pw.Context context) {
             return pw.Center(
-              child: pw.Image(pw.MemoryImage(qrImage.buffer.asUint8List())),
+              child: pw.Image(pw.MemoryImage(pngBytes)),
             );
           },
         ),
@@ -301,12 +337,13 @@ class WaitingScreenViewModel extends ChangeNotifier {
           }
         }
       } else {
+        // Webなどのフォールバック (基本ここには来ないはずだが)
         await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
       }
     } catch (e) {
       if (context.mounted) {
         CustomSnackBar.show(context,
-            message: 'PDF 生成中エラー発生: $e', status: SnackBarStatus.error);
+            message: '保存処理中にエラーが発生しました: $e', status: SnackBarStatus.error);
       }
     }
   }

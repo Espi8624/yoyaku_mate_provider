@@ -410,4 +410,33 @@ class WaitingService {
       rethrow;
     }
   }
+
+  // 今日のQRトークンを取得
+  Future<Map<String, String>> fetchQRToken(String storeId) async {
+    try {
+      final token = await _getIdToken();
+      final response = await http.get(
+        Uri.parse(
+            '$_baseUrl/api/waiting-list?action=qr_token&store_id=$storeId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        // Backend wraps response in "data" field
+        final data = jsonResponse['data'] as Map<String, dynamic>;
+
+        return {
+          'v_token': data['v_token'] as String,
+          'date': data['date'] as String,
+        };
+      }
+      throw Exception('Failed to fetch QR token: ${response.body}');
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
