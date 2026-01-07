@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/constants/privacy_policy.dart';
 import 'package:yoyaku_mate_provider/constants/terms_of_service.dart';
@@ -60,6 +61,31 @@ class PersonalProfileView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _launchInquiryEmail(BuildContext context) async {
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: 'support@yoyakumate.jp',
+      query: 'subject=【Yoyaku Mate】 お問い合わせ',
+    );
+
+    try {
+      if (await canLaunchUrl(emailLaunchUri)) {
+        await launchUrl(emailLaunchUri);
+      } else {
+        // フォールバック: クリップボードにコピーするなど、あるいはエラー表示
+        if (context.mounted) {
+          CustomSnackBar.show(context,
+              message: 'メールアプリを開けませんでした。', status: SnackBarStatus.error);
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        CustomSnackBar.show(context,
+            message: 'メールアプリの起動に失敗しました。', status: SnackBarStatus.error);
+      }
+    }
   }
 
   @override
@@ -141,6 +167,18 @@ class PersonalProfileView extends StatelessWidget {
                       PrivacyPolicy.content,
                     ),
                     showTrailingIcon: true,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ProfileSection(
+                title: 'ヘルプ',
+                children: [
+                  ProfileSettingItem(
+                    title: '問い合わせ',
+                    subtitle: 'support@yoyakumate.jp',
+                    onTap: () => _launchInquiryEmail(context),
+                    showTrailingIcon: false,
                   ),
                 ],
               ),
