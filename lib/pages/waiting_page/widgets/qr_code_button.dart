@@ -31,6 +31,16 @@ class QRCodeButton extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+            const Text(
+              '※ QRコードは毎日変更されます。\n毎日新しく印刷して掲示してください。',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
             ElevatedButton.icon(
               icon: const Icon(Icons.print_outlined, color: Colors.white),
               label: const Text('出力', style: TextStyle(color: Colors.white)),
@@ -39,6 +49,7 @@ class QRCodeButton extends StatelessWidget {
                 foregroundColor: Colors.white,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                minimumSize: const Size(double.infinity, 48),
               ),
               onPressed: () {
                 context
