@@ -45,6 +45,10 @@
 		<true />
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true />
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>mailto</string>
+		</array>
 		<!-- Permission for saving to gallery -->
 		<key>NSPhotoLibraryAddUsageDescription</key>
 		<string>QRコードを保存するためにフォトライブラリへのアクセスが必要です。</string>
