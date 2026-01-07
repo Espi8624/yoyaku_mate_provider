@@ -45,24 +45,23 @@
 		<true />
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true />
-		<!-- ▼▼▼ iOS 딥 링크를 위한 URL Types 추가 ▼▼▼ -->
+		<!-- Permission for saving to gallery -->
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>QRコードを保存するためにフォトライブラリへのアクセスが必要です。</string>
 		<key>CFBundleURLTypes</key>
 		<array>
 			<dict>
 				<key>CFBundleTypeRole</key>
 				<string>Editor</string>
 				<key>CFBundleURLName</key>
-				<!-- iOS 앱의 Bundle Identifier를 입력하세요. (Xcode에서 확인) -->
 				<string>com.example.yoyakuMateProvider</string>
 				<key>CFBundleURLSchemes</key>
 				<array>
-					<!-- 앱을 호출할 고유한 주소 형식(URL Scheme)을 여기에 정의합니다. -->
 					<string>yoyaku-mate</string>
                     <!-- Firebase Phone Auth for Simulator -->
                     <string>app-1-545178034865-ios-31afc90c9e1663b13df890</string>
 				</array>
 			</dict>
 		</array>
-		<!-- ▲▲▲ 여기까지 추가 ▲▲▲ -->
 	</dict>
 </plist>
