@@ -147,8 +147,12 @@ class WaitingScreenViewModel extends ChangeNotifier {
         },
         onError: (e) => _handleStreamError(e),
       );
-    } on ApiException catch (e) {
-      _handleStreamError(e);
+    } catch (e) {
+      if (e is ApiException) {
+        _handleStreamError(e);
+      } else {
+        _setError('データの読み込みに失敗しました: $e');
+      }
     } finally {
       _setLoading(false);
     }
@@ -175,9 +179,13 @@ class WaitingScreenViewModel extends ChangeNotifier {
         nationality: data['nationality'],
         contact: data['contact'],
         notes: data['notes'],
+        vToken: _qrToken,
       );
 
       _waitingList.add(newWaitingItem);
+      // 最新の登録が上に来るように降順ソート
+      _waitingList
+          .sort((a, b) => b.registrationTime.compareTo(a.registrationTime));
       notifyListeners();
 
       if (context.mounted) {
