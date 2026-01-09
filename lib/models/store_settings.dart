@@ -115,27 +115,26 @@ class ClosedDays {
 
 class WaitingPolicy {
   final int maxWaitingCount;
-  final int? estimatedWaitingCount;
+  final int? estimatedWaitTime;
 
-  WaitingPolicy({required this.maxWaitingCount, this.estimatedWaitingCount});
+  WaitingPolicy({required this.maxWaitingCount, this.estimatedWaitTime});
 
   factory WaitingPolicy.fromJson(Map<String, dynamic> json) {
     return WaitingPolicy(
       maxWaitingCount: json['max_waiting_count'] ?? 0,
-      estimatedWaitingCount: json['estimated_waiting_count'] ?? 0,
+      estimatedWaitTime: json['estimated_wait_time'] ?? 0,
     );
   }
 
   Map<String, dynamic> toJson() => {
         'max_waiting_count': maxWaitingCount,
-        'estimated_waiting_count': estimatedWaitingCount,
+        'estimated_wait_time': estimatedWaitTime,
       };
 
-  WaitingPolicy copyWith({int? maxWaitingCount, int? estimatedWaitingCount}) {
+  WaitingPolicy copyWith({int? maxWaitingCount, int? estimatedWaitTime}) {
     return WaitingPolicy(
       maxWaitingCount: maxWaitingCount ?? this.maxWaitingCount,
-      estimatedWaitingCount:
-          estimatedWaitingCount ?? this.estimatedWaitingCount,
+      estimatedWaitTime: estimatedWaitTime ?? this.estimatedWaitTime,
     );
   }
 }

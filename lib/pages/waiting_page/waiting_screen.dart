@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/waiting_list.dart';
 import 'package:yoyaku_mate_provider/services/waiting_service.dart';
+import 'package:yoyaku_mate_provider/services/store_settings_service.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/loading_indicator.dart';
@@ -24,6 +25,7 @@ class WaitingScreen extends StatelessWidget {
         return WaitingScreenViewModel(
           storeId: storeId,
           waitingService: WaitingService(),
+          settingsService: context.read<StoreSettingsService>(),
         );
       },
       child: const _WaitingView(),
@@ -101,6 +103,7 @@ class _WaitingView extends StatelessWidget {
                   ),
                   Expanded(
                     child: Stack(
+                      clipBehavior: Clip.none, // 影が切れないようにする
                       children: [
                         // 待機目録リスト
                         Positioned.fill(
@@ -144,13 +147,7 @@ class _WaitingView extends StatelessWidget {
                                       color: Colors.white),
                                 ),
                               ),
-                              const ClipRRect(
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(20),
-                                  topRight: Radius.circular(20),
-                                ),
-                                child: WaitingStatusArea(),
-                              ),
+                              const WaitingStatusArea(),
                             ],
                           ),
                         ),
