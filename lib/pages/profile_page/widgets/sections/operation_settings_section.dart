@@ -4,6 +4,7 @@ import '../../../../models/store_settings.dart';
 import '../../../../widgets/common_widgets/custom_snack_bar.dart';
 import '../../dialogs/business_hours_dialog.dart';
 import '../../dialogs/holiday_dialog.dart';
+import '../../dialogs/number_input_dialog.dart';
 import '../../profile_screen_viewmodel.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
@@ -32,6 +33,13 @@ class OperationSettingsSection extends StatelessWidget {
       title: '運営設定',
       children: [
         ProfileSettingItem(
+          title: 'チームあたりの予想待機時間',
+          subtitle: '${storeSettings.waitingPolicy.estimatedWaitTime ?? 10}分',
+          showTrailingIcon: !isReadOnly,
+          onTap: isReadOnly ? null : () => _showEditWaitTimeDialog(context, vm),
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        ProfileSettingItem(
           title: '営業時間',
           subtitle: _buildBusinessHoursSummary(storeSettings.operatingHours),
           showTrailingIcon: !isReadOnly,
@@ -53,6 +61,40 @@ class OperationSettingsSection extends StatelessWidget {
     final weekdayHours =
         '${hours['monday']?['start'] ?? ''}-${hours['monday']?['end'] ?? ''}';
     return '平日: $weekdayHours';
+  }
+
+  Future<void> _showEditWaitTimeDialog(
+      BuildContext context, ProfileScreenViewModel vm) async {
+    final storeSettings = vm.storeSettings;
+    if (storeSettings == null) return;
+
+    final result = await showDialog<int>(
+      context: context,
+      builder: (_) => NumberInputDialog(
+          title: '予想待機時間設定',
+          labelText: '分 (1チームあたり)',
+          initialValue: storeSettings.waitingPolicy.estimatedWaitTime ?? 10),
+    );
+
+    if (result != null) {
+      final updatedPolicy =
+          storeSettings.waitingPolicy.copyWith(estimatedWaitTime: result);
+      final updatedSettings =
+          storeSettings.copyWith(waitingPolicy: updatedPolicy);
+      await vm.updateStoreSettings(updatedSettings);
+
+      if (context.mounted) {
+        if (vm.errorMessage != null) {
+          CustomSnackBar.show(context,
+              message: vm.errorMessage!, status: SnackBarStatus.error);
+        } else if (vm.successMessage != null) {
+          CustomSnackBar.show(context,
+              message: '予想待機時間が${result}分に設定されました。',
+              status: SnackBarStatus.success);
+          vm.clearSuccessMessage();
+        }
+      }
+    }
   }
 
   Future<void> _showBusinessHoursDialog(

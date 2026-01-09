@@ -54,45 +54,48 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
 
   // mobile縮小UI
   Widget _buildCollapsedContent(WaitingScreenViewModel vm) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: const BoxDecoration(
-          color: AppColors.textPrimary,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))
-          ]),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text("現状ウェイティング状況",
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white)),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(vm.waitingCount.toString(),
-                  style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.roleManager)),
-              const SizedBox(width: 8),
-              const Text("チーム",
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white)),
-            ],
-          ),
-          const Icon(Icons.keyboard_arrow_up_rounded, color: Colors.white),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(top: 30),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        decoration: const BoxDecoration(
+            color: AppColors.textPrimary,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))
+            ]),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("現状ウェイティング状況",
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(vm.waitingCount.toString(),
+                    style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.roleManager)),
+                const SizedBox(width: 8),
+                const Text("チーム",
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
+              ],
+            ),
+            const Icon(Icons.keyboard_arrow_up_rounded, color: Colors.white),
+          ],
+        ),
       ),
     );
   }
@@ -124,7 +127,8 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
             const SizedBox(height: 16),
             _StatusInfo(label: "直前入場時間", value: vm.lastEntryTimeFormatted),
             const SizedBox(height: 8),
-            const _StatusInfo(label: "予想待機時間", value: "10分"),
+            _StatusInfo(
+                label: "予想待機時間", value: vm.totalEstimatedWaitTimeFormatted),
             const SizedBox(height: 16),
             _buildBottomInfo(vm),
           ],
@@ -135,41 +139,45 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
 
   // mobile拡張UI
   Widget _buildMobileExpandedContent(WaitingScreenViewModel vm) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.primaryBlack,
-              blurRadius: 12,
-              offset: Offset(0, -4))
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("現状ウェイティング状況",
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary)),
-              Icon(Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.textSecondary),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _StatusInfo(label: "直前入場時間", value: vm.lastEntryTimeFormatted),
-          const SizedBox(height: 8),
-          const _StatusInfo(label: "予想待機時間", value: "10分"),
-          const SizedBox(height: 24),
-          _buildBottomInfo(vm),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(top: 30), // 影が切れないように余白を確保
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.25), // くっきり見えるように調整
+                blurRadius: 24,
+                offset: const Offset(0, -8))
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("現状ウェイティング状況",
+                    style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary)),
+                Icon(Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.textSecondary),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _StatusInfo(label: "直前入場時間", value: vm.lastEntryTimeFormatted),
+            const SizedBox(height: 8),
+            _StatusInfo(
+                label: "予想待機時間", value: vm.totalEstimatedWaitTimeFormatted),
+            const SizedBox(height: 24),
+            _buildBottomInfo(vm),
+          ],
+        ),
       ),
     );
   }

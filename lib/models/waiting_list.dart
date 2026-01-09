@@ -12,6 +12,7 @@ class WaitingList {
   final DateTime? calledTime;
   final DateTime? entryTime;
   final DateTime? updatedAt;
+  final int? estimatedWaitTime;
 
   WaitingList({
     this.id,
@@ -27,6 +28,7 @@ class WaitingList {
     this.calledTime,
     this.entryTime,
     this.updatedAt,
+    this.estimatedWaitTime,
   });
 
   factory WaitingList.fromJson(Map<String, dynamic> json) {
@@ -53,6 +55,7 @@ class WaitingList {
         updatedAt: json['updated_at'] != null
             ? DateTime.parse(json['updated_at'])
             : null,
+        estimatedWaitTime: json['estimated_wait_time'],
       );
     } catch (e) {
       print('Error parsing JSON: $e');
@@ -76,6 +79,7 @@ class WaitingList {
     DateTime? calledTime,
     DateTime? entryTime,
     DateTime? updatedAt,
+    int? estimatedWaitTime,
   }) {
     return WaitingList(
       id: id ?? this.id,
@@ -91,6 +95,7 @@ class WaitingList {
       calledTime: calledTime ?? this.calledTime,
       entryTime: entryTime ?? this.entryTime,
       updatedAt: updatedAt ?? this.updatedAt,
+      estimatedWaitTime: estimatedWaitTime ?? this.estimatedWaitTime,
     );
   }
 
