@@ -11,17 +11,41 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../models/waiting_list.dart';
 import '../../services/api_exception.dart';
 import '../../services/waiting_service.dart';
+import '../../services/store_settings_service.dart';
 import '../../widgets/common_widgets/custom_snack_bar.dart';
 
 class WaitingScreenViewModel extends ChangeNotifier {
   final WaitingService _waitingService;
+  final StoreSettingsService _settingsService;
   final String storeId;
 
-  WaitingScreenViewModel(
-      {required this.storeId, required WaitingService waitingService})
-      : _waitingService = waitingService {
+  int _estimatedWaitTimePerTeam = 10; // Default 10 min
+
+  WaitingScreenViewModel({
+    required this.storeId,
+    required WaitingService waitingService,
+    required StoreSettingsService settingsService,
+  })  : _waitingService = waitingService,
+        _settingsService = settingsService {
     // コンストラクタ内での notifyListeners() 呼び出しを防ぐため、遅延実行
-    Future.microtask(() => loadWaitingList());
+    Future.microtask(() {
+      _loadStoreSettings();
+      loadWaitingList();
+    });
+  }
+
+  Future<void> _loadStoreSettings() async {
+    try {
+      final settings = await _settingsService.fetchStoreSettings(storeId);
+      if (settings.waitingPolicy.estimatedWaitTime != null &&
+          settings.waitingPolicy.estimatedWaitTime! > 0) {
+        _estimatedWaitTimePerTeam = settings.waitingPolicy.estimatedWaitTime!;
+        notifyListeners();
+      }
+    } catch (e) {
+      // print('Failed to load store settings: $e');
+      // Default remains 10
+    }
   }
 
   bool _isLoading = true;
@@ -69,32 +93,41 @@ class WaitingScreenViewModel extends ChangeNotifier {
     return _waitingList.where((item) => item.status != 'no_show').toList();
   }
 
-  int get waitingCount => _waitingList
-      .where((item) => item.status == 'waiting' || item.status == 'notified')
-      .length;
+  int get waitingCount =>
+      _waitingList.where((item) => item.status == 'waiting').length;
 
   // 最後入場時間計算ロジック
   String get lastEntryTimeFormatted {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
+    // Backendが既に「現在の営業日(2:00切り替え)」のリストを返しているため、
+    // ここで日付フィルタリングをする必要はない。リスト内で最も新しい entryTime を探すだけで良い。
     DateTime? lastEntryTime;
     for (var item in _waitingList) {
       if (item.entryTime != null) {
-        final entryDate = DateTime(
-            item.entryTime!.year, item.entryTime!.month, item.entryTime!.day);
-        if (entryDate.isAtSameMomentAs(today)) {
-          if (lastEntryTime == null || item.entryTime!.isAfter(lastEntryTime)) {
-            lastEntryTime = item.entryTime;
-          }
+        if (lastEntryTime == null || item.entryTime!.isAfter(lastEntryTime)) {
+          lastEntryTime = item.entryTime;
         }
       }
     }
 
     if (lastEntryTime == null) return "--:--";
 
+    // JST表示 (サーバーがUTCで返す場合も考慮して変換、ただしアプリがJST圏内ならtoLocalで十分かもしれないが明確に+9する)
+    // entryTimeはDateTime.parseされているので、isUtc=trueなら+9h、localならそのまま...
+    // 安全のため toUtc().add(9h) 方式を維持するか、toLocal()を使う。
+    // ここでは既存ロジックに合わせて toUtc().add(...) を維持。
     final jst = lastEntryTime.toUtc().add(const Duration(hours: 9));
     return "${jst.hour.toString().padLeft(2, '0')}:${jst.minute.toString().padLeft(2, '0')}";
+  }
+
+  // 全体の予想待機時間 (新規顧客が入った場合の時間概算)
+  // 実務での一般的なアプローチ: リスト内の「最後の待機時間」または「最大時間」を参照する (Derived State)
+  // これにより、バックエンドのロジック(10分か15分かAIか)を意識せずに済む
+  String get totalEstimatedWaitTimeFormatted {
+    if (_waitingList.isEmpty) return "0分";
+
+    // 待機人数 * 設定された1組あたりの時間
+    // waitingCount はローカルで即時更新されるため、これを使うのが確実。
+    return "${waitingCount * _estimatedWaitTimePerTeam}分";
   }
 
   StreamSubscription? _waitingListSubscription;
@@ -225,8 +258,12 @@ class WaitingScreenViewModel extends ChangeNotifier {
 
     try {
       // ローカルデータを先に修正し、UI 即アップデート (Optimistic Update)
-      final updatedItem =
-          originalItem.copyWith(status: newStatus, updatedAt: DateTime.now());
+      final updatedItem = originalItem.copyWith(
+        status: newStatus,
+        updatedAt: DateTime.now(),
+        // completed(入店)の場合は entryTime も更新しないと「直前入場時間」が即時反映されない
+        entryTime: newStatus == 'completed' ? DateTime.now() : null,
+      );
       _waitingList[itemIndex] = updatedItem;
       notifyListeners();
 

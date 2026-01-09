@@ -44,27 +44,6 @@ class WaitingSettingsSection extends StatelessWidget {
                             waitingPolicy: updatedPolicy));
                       },
                     )),
-        const Divider(height: 1, indent: 16, endIndent: 16),
-        ProfileSettingItem(
-            title: '想定待機人数',
-            subtitle: '${storeSettings.waitingPolicy.estimatedWaitingCount}人',
-            showTrailingIcon: !isReadOnly,
-            onTap: isReadOnly
-                ? null
-                : () => _showNumberInputDialog(
-                      context,
-                      vm,
-                      title: '想定待機人数設定',
-                      initialValue:
-                          storeSettings.waitingPolicy.estimatedWaitingCount ??
-                              0,
-                      onConfirm: (value) async {
-                        final updatedPolicy = storeSettings.waitingPolicy
-                            .copyWith(estimatedWaitingCount: value);
-                        await vm.updateStoreSettings(storeSettings.copyWith(
-                            waitingPolicy: updatedPolicy));
-                      },
-                    )),
       ],
     );
   }
