@@ -1,9 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import '../../../models/waiting_list.dart';
 
-class WaitingItemCard extends StatefulWidget {
+class WaitingItemCard extends StatelessWidget {
   final WaitingList item;
   final VoidCallback onAction;
   final VoidCallback? onCancel;
@@ -14,46 +13,6 @@ class WaitingItemCard extends StatefulWidget {
     required this.onAction,
     this.onCancel,
   });
-
-  @override
-  State<WaitingItemCard> createState() => _WaitingItemCardState();
-}
-
-class _WaitingItemCardState extends State<WaitingItemCard> {
-  Timer? _timer;
-  String _waitingTime = "--分 --秒";
-
-  @override
-  void initState() {
-    super.initState();
-    _updateWaitingTime();
-    _timer =
-        Timer.periodic(const Duration(seconds: 1), (_) => _updateWaitingTime());
-  }
-
-  @override
-  void didUpdateWidget(covariant WaitingItemCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.item.registrationTime != oldWidget.item.registrationTime) {
-      _updateWaitingTime();
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _updateWaitingTime() {
-    if (!mounted) return;
-    final duration = DateTime.now().difference(widget.item.registrationTime);
-    final minutes = duration.inMinutes > 0 ? duration.inMinutes : 0;
-    final seconds = duration.inSeconds > 0 ? duration.inSeconds % 60 : 0;
-    setState(() {
-      _waitingTime = '${minutes}分 ${seconds}秒';
-    });
-  }
 
   IconData _getStatusIcon(String status) {
     switch (status) {
@@ -68,9 +27,11 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    final item = widget.item;
     final notesText =
         (item.notes != null && item.notes!.isNotEmpty) ? item.notes! : 'なし';
+
+    final waitTimeStr =
+        item.estimatedWaitTime != null ? '${item.estimatedWaitTime}分' : '--分';
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -122,7 +83,7 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
                         ),
                       )
                     else ...[
-                      _buildInfoRow("待機時間", _waitingTime),
+                      _buildInfoRow("予想待機", waitTimeStr),
                       const SizedBox(height: 4),
                       _buildInfoRow("備考", notesText),
                     ],
@@ -131,7 +92,7 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
               ),
               const SizedBox(width: 16),
               ElevatedButton(
-                onPressed: widget.onAction,
+                onPressed: onAction,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.textPrimary,
                   foregroundColor: Colors.white,
