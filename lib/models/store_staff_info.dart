@@ -4,6 +4,7 @@ class StoreStaffInfo {
   final String storeId;
   final String role;
   final String status; // See [StaffStatus]
+  final List<String> permissions;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -13,6 +14,7 @@ class StoreStaffInfo {
     required this.storeId,
     required this.role,
     required this.status,
+    required this.permissions,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -24,6 +26,10 @@ class StoreStaffInfo {
       storeId: json['store_id'] ?? '',
       role: json['role'] ?? '',
       status: json['status'] ?? '',
+      permissions: (json['permissions'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
@@ -40,6 +46,7 @@ class StoreStaffInfo {
       'store_id': storeId,
       'role': role,
       'status': status,
+      'permissions': permissions,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

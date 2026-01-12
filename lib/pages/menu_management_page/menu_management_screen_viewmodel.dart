@@ -35,6 +35,11 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  void clearErrorMessage() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   Timer? _autoSaveTimer;
 
   @override
