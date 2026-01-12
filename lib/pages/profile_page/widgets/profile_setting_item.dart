@@ -6,6 +6,7 @@ class ProfileSettingItem extends StatelessWidget {
   final String subtitle;
   final VoidCallback? onTap;
   final bool showTrailingIcon;
+  final Widget? trailing;
 
   const ProfileSettingItem({
     super.key,
@@ -13,6 +14,7 @@ class ProfileSettingItem extends StatelessWidget {
     required this.subtitle,
     this.onTap,
     this.showTrailingIcon = true,
+    this.trailing,
   });
 
   @override
@@ -24,7 +26,8 @@ class ProfileSettingItem extends StatelessWidget {
           ? Text(subtitle,
               style: const TextStyle(fontSize: 13, color: Colors.grey))
           : null,
-      trailing: showTrailingIcon ? const Icon(Icons.chevron_right) : null,
+      trailing: trailing ??
+          (showTrailingIcon ? const Icon(Icons.chevron_right) : null),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );

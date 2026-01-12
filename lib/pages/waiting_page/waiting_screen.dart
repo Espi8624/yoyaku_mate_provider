@@ -262,7 +262,10 @@ class _WaitingView extends StatelessWidget {
     final vm = context.read<WaitingScreenViewModel>();
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => const AddWaitingDialog(),
+      builder: (_) => AddWaitingDialog(
+        storeId: vm.storeId,
+        enableMenuSelection: vm.enableMenuSelection,
+      ),
     );
     if (result != null && context.mounted) {
       await vm.addWaitingItem(context, result);
@@ -355,6 +358,27 @@ class _WaitingView extends StatelessWidget {
     return "${jstTime.hour.toString().padLeft(2, '0')}:${jstTime.minute.toString().padLeft(2, '0')}";
   }
 
+  Widget _buildMenuItemsDisplay(WaitingList item) {
+    if (item.menuItems.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const Text('事前注文:',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        ...item.menuItems.map((menu) => Padding(
+              padding: const EdgeInsets.only(left: 8.0, bottom: 4.0),
+              child: Text(
+                '• ${menu.name} x${menu.quantity}',
+                style: const TextStyle(fontSize: 16),
+              ),
+            )),
+      ],
+    );
+  }
+
   Future<void> _showNotificationDialog(
       BuildContext context, WaitingList item) async {
     final vm = context.read<WaitingScreenViewModel>();
@@ -388,6 +412,7 @@ class _WaitingView extends StatelessWidget {
               Text(notesText,
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold)),
+            _buildMenuItemsDisplay(item),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -472,6 +497,7 @@ class _WaitingView extends StatelessWidget {
               Text('連絡先: $contactText', style: const TextStyle(fontSize: 16)),
             if (notesText != null)
               Text('メモ: $notesText', style: const TextStyle(fontSize: 16)),
+            _buildMenuItemsDisplay(item),
             const SizedBox(height: 16),
             const Text('入店処理を行いますか？',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -534,6 +560,7 @@ class _WaitingView extends StatelessWidget {
               Text('連絡先: $contactText', style: const TextStyle(fontSize: 16)),
             if (notesText != null)
               Text('メモ: $notesText', style: const TextStyle(fontSize: 16)),
+            _buildMenuItemsDisplay(item),
             const SizedBox(height: 8),
             Text('登録時間: $formattedRegistrationTime',
                 style: const TextStyle(fontSize: 16)),

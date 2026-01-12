@@ -8,11 +8,11 @@ class WaitingList {
   final DateTime registrationTime;
   final String? contact;
   final String status;
-  final String? notes;
   final DateTime? calledTime;
   final DateTime? entryTime;
-  final DateTime? updatedAt;
-  final int? estimatedWaitTime;
+  final String? notes;
+  final int estimatedWaitTime;
+  final List<MenuItem> menuItems;
 
   WaitingList({
     this.id,
@@ -24,62 +24,28 @@ class WaitingList {
     required this.registrationTime,
     this.contact,
     required this.status,
-    this.notes,
     this.calledTime,
     this.entryTime,
-    this.updatedAt,
-    this.estimatedWaitTime,
+    this.notes,
+    required this.estimatedWaitTime,
+    this.menuItems = const [],
   });
-
-  factory WaitingList.fromJson(Map<String, dynamic> json) {
-    try {
-      return WaitingList(
-        id: json['id'],
-        storeId: json['store_id'] ?? '',
-        waitingId: json['waiting_id'] ?? '',
-        queueNumber: json['queue_number'] ?? 0,
-        partySize: json['party_size'] ?? 1,
-        nationality: json['nationality'] ?? '',
-        registrationTime: json['registration_time'] != null
-            ? DateTime.parse(json['registration_time'])
-            : DateTime.now(),
-        contact: json['contact'],
-        status: json['status'] ?? 'waiting',
-        notes: json['notes'],
-        calledTime: json['called_time'] != null
-            ? DateTime.parse(json['called_time'])
-            : null,
-        entryTime: json['entry_time'] != null
-            ? DateTime.parse(json['entry_time'])
-            : null,
-        updatedAt: json['updated_at'] != null
-            ? DateTime.parse(json['updated_at'])
-            : null,
-        estimatedWaitTime: json['estimated_wait_time'],
-      );
-    } catch (e) {
-      print('Error parsing JSON: $e');
-      print('Received JSON: $json');
-      rethrow;
-    }
-  }
 
   WaitingList copyWith({
     String? id,
     String? storeId,
     String? waitingId,
     int? queueNumber,
-    String? customerName,
     int? partySize,
     String? nationality,
     DateTime? registrationTime,
     String? contact,
     String? status,
-    String? notes,
     DateTime? calledTime,
     DateTime? entryTime,
-    DateTime? updatedAt,
+    String? notes,
     int? estimatedWaitTime,
+    List<MenuItem>? menuItems,
   }) {
     return WaitingList(
       id: id ?? this.id,
@@ -91,14 +57,85 @@ class WaitingList {
       registrationTime: registrationTime ?? this.registrationTime,
       contact: contact ?? this.contact,
       status: status ?? this.status,
-      notes: notes ?? this.notes,
       calledTime: calledTime ?? this.calledTime,
       entryTime: entryTime ?? this.entryTime,
-      updatedAt: updatedAt ?? this.updatedAt,
+      notes: notes ?? this.notes,
       estimatedWaitTime: estimatedWaitTime ?? this.estimatedWaitTime,
+      menuItems: menuItems ?? this.menuItems,
     );
   }
 
-  // 下記のロジックは ViewModel へ移動
-  // static DateTime? getLastEntryTime(List<WaitingList> waitingList) { ... }
+  factory WaitingList.fromJson(Map<String, dynamic> json) {
+    return WaitingList(
+      id: json['id'],
+      storeId: json['store_id'] ?? '',
+      waitingId: json['waiting_id'] ?? '',
+      queueNumber: json['queue_number'] ?? 0,
+      partySize: json['party_size'] ?? 0,
+      nationality: json['nationality'] ?? '',
+      registrationTime: DateTime.parse(
+          json['registration_time'] ?? DateTime.now().toIso8601String()),
+      contact: json['contact'],
+      status: json['status'] ?? 'waiting',
+      calledTime: json['called_time'] != null && json['called_time'] != ''
+          ? DateTime.parse(json['called_time'])
+          : null,
+      entryTime: json['entry_time'] != null && json['entry_time'] != ''
+          ? DateTime.parse(json['entry_time'])
+          : null,
+      notes: json['notes'],
+      estimatedWaitTime: json['estimated_wait_time'] ?? 0,
+      menuItems: (json['menu_items'] as List<dynamic>?)
+              ?.map((e) => MenuItem.fromJson(e))
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'store_id': storeId,
+        'waiting_id': waitingId,
+        'queue_number': queueNumber,
+        'party_size': partySize,
+        'nationality': nationality,
+        'registration_time': registrationTime.toIso8601String(),
+        'contact': contact,
+        'status': status,
+        'called_time': calledTime?.toIso8601String(),
+        'entry_time': entryTime?.toIso8601String(),
+        'notes': notes,
+        'estimated_wait_time': estimatedWaitTime,
+        'menu_items': menuItems.map((e) => e.toJson()).toList(),
+      };
+}
+
+class MenuItem {
+  final String menuId;
+  final String name;
+  final int quantity;
+  final String? options;
+
+  MenuItem({
+    required this.menuId,
+    required this.name,
+    required this.quantity,
+    this.options,
+  });
+
+  factory MenuItem.fromJson(Map<String, dynamic> json) {
+    return MenuItem(
+      menuId: json['menu_id'] ?? '',
+      name: json['name'] ?? '',
+      quantity: json['quantity'] ?? 0,
+      options: json['options'],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'menu_id': menuId,
+        'name': name,
+        'quantity': quantity,
+        'options': options,
+      };
 }
