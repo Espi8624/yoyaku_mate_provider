@@ -42,8 +42,9 @@ class _StoreSelectionContent extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.background,
         elevation: 0,
+        scrolledUnderElevation: 0,
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -112,7 +113,6 @@ class _StoreSelectionContent extends StatelessWidget {
             ),
             const SizedBox(height: 40),
             Expanded(
-              flex: 5,
               child: stores.isEmpty
                   ? Center(
                       child: Icon(
@@ -147,7 +147,7 @@ class _StoreSelectionContent extends StatelessWidget {
                       },
                     ),
             ),
-            const Spacer(flex: 1),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -206,14 +206,15 @@ class StoreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRejected = store.staffStatus == StaffStatus.rejected;
-    final isPending = store.staffStatus == StaffStatus.pending;
-    final isApproved = store.staffStatus == StaffStatus.approved;
+    // final isPending = store.staffStatus == StaffStatus.pending; // Unused
+    // final isApproved = store.staffStatus == StaffStatus.approved; // Unused
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       elevation: 2,
       shadowColor: Colors.black.withOpacity(0.05),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: AppColors.accentPrimary,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -222,7 +223,9 @@ class StoreCard extends StatelessWidget {
           child: Row(
             children: [
               Icon(Icons.storefront,
-                  color: isRejected ? Colors.grey : AppColors.accentPrimary,
+                  color: isRejected
+                      ? AppColors.textSecondary
+                      : AppColors.textPrimaryLight,
                   size: 32),
               const SizedBox(width: 20),
               Expanded(
@@ -234,168 +237,87 @@ class StoreCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: isRejected ? Colors.grey : Colors.black,
+                        color: isRejected
+                            ? AppColors.textSecondary
+                            : AppColors.textPrimaryLight,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       store.address,
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: const TextStyle(color: Colors.white70),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (isRejected) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red),
-                        ),
-                        child: const Text(
-                          '参加拒否',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (isPending) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange),
-                        ),
-                        child: const Text(
-                          '承認待ち',
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (isApproved) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green),
-                        ),
-                        child: const Text(
-                          '承認済み',
-                          style: TextStyle(
-                            color: Colors.green,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                    // 管理者向け：店舗の承認ステータス表示 (スタッフステータスがない場合)
-                    if (store.staffStatus == null) ...[
-                      if (store.verificationStatus == 'PENDING' ||
-                          store.verificationStatus == 'PENDING_REVIEW') ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.orange),
-                          ),
-                          child: const Text(
-                            '審査中',
-                            style: TextStyle(
-                              color: Colors.orange,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (store.verificationStatus == 'APPROVED') ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green),
-                          ),
-                          child: const Text(
-                            '承認済み',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (store.verificationStatus == 'REJECTED') ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.red),
-                          ),
-                          child: const Text(
-                            '否認',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (store.verificationStatus == 'NOT_SUBMITTED' ||
-                          store.verificationStatus == null) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey),
-                          ),
-                          child: const Text(
-                            '未提出',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
                   ],
                 ),
               ),
-              if (!isRejected)
+              _buildStatusDot(store),
+              if (!isRejected) ...[
+                const SizedBox(width: 12),
                 const Icon(Icons.arrow_forward_ios_rounded,
-                    color: AppColors.textSecondary, size: 18),
+                    color: AppColors.textPrimaryLight, size: 18),
+              ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusDot(StoreProfile store) {
+    Color color;
+    String tooltip;
+
+    // スタッフとしてのステータスがある場合
+    if (store.staffStatus != null) {
+      switch (store.staffStatus) {
+        case StaffStatus.approved:
+          color = AppColors.approved;
+          tooltip = '承認済み';
+          break;
+        case StaffStatus.pending:
+          color = AppColors.pending;
+          tooltip = '承認待ち';
+          break;
+        case StaffStatus.rejected:
+          color = AppColors.rejected;
+          tooltip = '参加拒否';
+          break;
+        default:
+          color = AppColors.notSubmitted;
+          tooltip = store.staffStatus!;
+      }
+    } else {
+      // オーナー/管理者としての店舗ステータス
+      switch (store.verificationStatus) {
+        case 'APPROVED':
+          color = AppColors.approved;
+          tooltip = '承認済み';
+          break;
+        case 'PENDING':
+        case 'PENDING_REVIEW':
+          color = AppColors.pending;
+          tooltip = '審査中';
+          break;
+        case 'REJECTED':
+          color = AppColors.rejected;
+          tooltip = '否認';
+          break;
+        case 'NOT_SUBMITTED':
+        default:
+          color = AppColors.notSubmitted;
+          tooltip = '未提出';
+      }
+    }
+
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        width: 12,
+        height: 12,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
         ),
       ),
     );
