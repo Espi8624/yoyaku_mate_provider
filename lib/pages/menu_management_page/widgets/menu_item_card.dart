@@ -42,13 +42,26 @@ class MenuItemCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    menuItem.title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        menuItem.title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (menuItem.isPreOrderAvailable) ...[
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.star_rounded,
+                          size: 18,
+                          color: Colors
+                              .amber, // Use standard amber for "yellow" star
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   if (menuItem.description.isNotEmpty) ...[

@@ -116,25 +116,37 @@ class ClosedDays {
 class WaitingPolicy {
   final int maxWaitingCount;
   final int? estimatedWaitTime;
+  final bool enableMenuSelection;
 
-  WaitingPolicy({required this.maxWaitingCount, this.estimatedWaitTime});
+  WaitingPolicy({
+    required this.maxWaitingCount,
+    this.estimatedWaitTime,
+    this.enableMenuSelection = false,
+  });
 
   factory WaitingPolicy.fromJson(Map<String, dynamic> json) {
     return WaitingPolicy(
       maxWaitingCount: json['max_waiting_count'] ?? 0,
       estimatedWaitTime: json['estimated_wait_time'] ?? 0,
+      enableMenuSelection: json['enable_menu_selection'] ?? false,
     );
   }
 
   Map<String, dynamic> toJson() => {
         'max_waiting_count': maxWaitingCount,
         'estimated_wait_time': estimatedWaitTime,
+        'enable_menu_selection': enableMenuSelection,
       };
 
-  WaitingPolicy copyWith({int? maxWaitingCount, int? estimatedWaitTime}) {
+  WaitingPolicy copyWith({
+    int? maxWaitingCount,
+    int? estimatedWaitTime,
+    bool? enableMenuSelection,
+  }) {
     return WaitingPolicy(
       maxWaitingCount: maxWaitingCount ?? this.maxWaitingCount,
       estimatedWaitTime: estimatedWaitTime ?? this.estimatedWaitTime,
+      enableMenuSelection: enableMenuSelection ?? this.enableMenuSelection,
     );
   }
 }

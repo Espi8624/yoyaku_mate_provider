@@ -13,6 +13,7 @@ class MenuListItem extends Equatable {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String menuStatus;
+  final bool isPreOrderAvailable;
   final Uint8List? tempImageBytes;
 
   const MenuListItem({
@@ -27,6 +28,7 @@ class MenuListItem extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     required this.menuStatus,
+    this.isPreOrderAvailable = false,
     this.tempImageBytes,
   });
 
@@ -42,7 +44,9 @@ class MenuListItem extends Equatable {
         menuImageUrl,
         createdAt,
         updatedAt,
-        menuStatus
+        updatedAt,
+        menuStatus,
+        isPreOrderAvailable,
       ];
 
   MenuListItem copyWith({
@@ -57,6 +61,7 @@ class MenuListItem extends Equatable {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? menuStatus,
+    bool? isPreOrderAvailable,
     Uint8List? tempImageBytes,
     bool clearTempImage = false,
   }) {
@@ -72,6 +77,7 @@ class MenuListItem extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       menuStatus: menuStatus ?? this.menuStatus,
+      isPreOrderAvailable: isPreOrderAvailable ?? this.isPreOrderAvailable,
       tempImageBytes:
           clearTempImage ? null : tempImageBytes ?? this.tempImageBytes,
     );
@@ -94,6 +100,7 @@ class MenuListItem extends Equatable {
           ? DateTime.parse(json['updated_at'].toString())
           : DateTime.now(),
       menuStatus: json['menu_status']?.toString() ?? 'available',
+      isPreOrderAvailable: json['is_pre_order_available'] ?? false,
       tempImageBytes: null,
     );
   }
@@ -110,6 +117,7 @@ class MenuListItem extends Equatable {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'menu_status': menuStatus,
+      'is_pre_order_available': isPreOrderAvailable,
       'menu_image_url': menuImageUrl,
     };
 
