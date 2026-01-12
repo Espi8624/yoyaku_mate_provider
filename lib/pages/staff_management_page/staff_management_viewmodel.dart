@@ -28,10 +28,12 @@ class StaffManagementViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchStoreStaff(String storeId) async {
-    _isLoading = true;
+  Future<void> fetchStoreStaff(String storeId, {bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      notifyListeners();
+    }
     _errorMessage = null;
-    notifyListeners();
 
     try {
       final staff = await _profileService.fetchStoreStaff(storeId);
@@ -41,7 +43,9 @@ class StaffManagementViewModel extends ChangeNotifier {
     } catch (e) {
       _errorMessage = "予期しないエラーが発生しました: $e";
     } finally {
-      _isLoading = false;
+      if (!silent) {
+        _isLoading = false;
+      }
       notifyListeners();
     }
   }
@@ -53,11 +57,32 @@ class StaffManagementViewModel extends ChangeNotifier {
       _successMessage =
           status == StaffStatus.approved ? 'スタッフを承認しました' : 'スタッフを拒否しました';
 
-      // リストを再取得して最新状態にする
-      await fetchStoreStaff(storeId);
+      // リストを再取得して最新状態にする (サイレント更新)
+      await fetchStoreStaff(storeId, silent: true);
       return true;
     } on ApiException catch (e) {
       _errorMessage = "ステータス更新失敗: ${e.message}";
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = "予期しないエラーが発生しました: $e";
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateStoreStaffPermissions(
+      String storeId, String staffId, List<String> permissions) async {
+    try {
+      await _profileService.updateStoreStaffPermissions(
+          storeId, staffId, permissions);
+      _successMessage = '権限を更新しました';
+
+      // リストを再取得して最新状態にする (サイレント更新)
+      await fetchStoreStaff(storeId, silent: true);
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = "権限更新失敗: ${e.message}";
       notifyListeners();
       return false;
     } catch (e) {

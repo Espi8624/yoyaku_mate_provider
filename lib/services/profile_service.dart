@@ -395,4 +395,23 @@ class ProviderProfileService {
           'Failed to update staff status. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
+
+  // スタッフ権限更新
+  Future<void> updateStoreStaffPermissions(
+      String storeId, String staffId, List<String> permissions) async {
+    final token = await _getIdToken();
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/stores/$storeId/staff/$staffId/permissions'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'permissions': permissions}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(
+          'Failed to update staff permissions. Status: ${response.statusCode}, Body: ${response.body}');
+    }
+  }
 }
