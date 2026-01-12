@@ -64,6 +64,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         if (mounted) {
           CustomSnackBar.show(context,
               message: _viewModel.errorMessage!, status: SnackBarStatus.error);
+          _viewModel.clearErrorMessage();
         }
       });
     }
@@ -112,6 +113,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     if (_viewModel.errorMessage != null && mounted) {
       CustomSnackBar.show(context,
           message: _viewModel.errorMessage!, status: SnackBarStatus.error);
+      _viewModel.clearErrorMessage();
     }
   }
 

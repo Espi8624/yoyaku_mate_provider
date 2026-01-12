@@ -57,140 +57,240 @@ class _StaffManagementViewState extends State<StaffManagementView> {
       itemCount: vm.staffList.length,
       itemBuilder: (context, index) {
         final staff = vm.staffList[index];
-        final status = staff['status'];
-        // final isPending = status == StaffStatus.pending; // Not strictly needed if we switch on status or check specific cases
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          color: AppColors.cardBackground,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          staff['user_name'] ?? 'Unknown User',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          staff['email'] ?? '',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                    _buildStatusChip(status),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // 承認済みの場合: 拒否ボタンを表示 (承認取り消し)
-                    if (status == StaffStatus.approved)
-                      OutlinedButton(
-                        onPressed: () => vm.updateStoreStaffStatus(
-                            widget.storeId, staff['_id'], StaffStatus.rejected),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                        ),
-                        child: const Text('承認取り消し'),
-                      ),
-
-                    // 承認待ちの場合: 拒否と承認ボタンを表示
-                    if (status == StaffStatus.pending) ...[
-                      OutlinedButton(
-                        onPressed: () => vm.updateStoreStaffStatus(
-                            widget.storeId, staff['_id'], StaffStatus.rejected),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                        ),
-                        child: const Text('拒否'),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: () => vm.updateStoreStaffStatus(
-                            widget.storeId, staff['_id'], StaffStatus.approved),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentPrimary,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('承認'),
-                      ),
-                    ],
-
-                    // 拒否済みの場合: 承認ボタンを表示 (再承認)
-                    if (status == StaffStatus.rejected)
-                      ElevatedButton(
-                        onPressed: () => vm.updateStoreStaffStatus(
-                            widget.storeId, staff['_id'], StaffStatus.approved),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentPrimary,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('再承認'),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+        return _StaffCard(
+          staff: staff,
+          storeId: widget.storeId,
+          vm: vm,
         );
       },
     );
   }
 
-  Widget _buildStatusChip(String status) {
+  // Helper method moved to inside _StaffCard or kept global if stateless
+}
+
+class _StaffCard extends StatefulWidget {
+  final Map<String, dynamic> staff;
+  final String storeId;
+  final StaffManagementViewModel vm;
+
+  const _StaffCard({
+    required this.staff,
+    required this.storeId,
+    required this.vm,
+  });
+
+  @override
+  State<_StaffCard> createState() => _StaffCardState();
+}
+
+class _StaffCardState extends State<_StaffCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = widget.staff['status'];
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: AppColors.cardBackground,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.staff['user_name'] ?? 'Unknown User',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.staff['email'] ?? '',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                _buildStatusDot(status),
+              ],
+            ),
+
+            // 承認済みの場合のみ「権限設定」の展開ボタンを表示
+            if (status == StaffStatus.approved) ...[
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isExpanded = !_isExpanded;
+                  });
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      "権限設定",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Icon(
+                      _isExpanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      size: 20,
+                      color: Colors.grey[700],
+                    ),
+                  ],
+                ),
+              ),
+              if (_isExpanded) ...[
+                const SizedBox(height: 12),
+                const Divider(),
+                Row(
+                  children: [
+                    const Text(
+                      'メニュー編集権限:',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 8),
+                    Switch(
+                      value: (widget.staff['permissions'] as List<dynamic>?)
+                              ?.contains('menu_edit') ??
+                          false,
+                      onChanged: (value) {
+                        final currentPermissions =
+                            (widget.staff['permissions'] as List<dynamic>?)
+                                    ?.map((e) => e.toString())
+                                    .toList() ??
+                                [];
+                        if (value) {
+                          currentPermissions.add('menu_edit');
+                        } else {
+                          currentPermissions.remove('menu_edit');
+                        }
+                        widget.vm.updateStoreStaffPermissions(widget.storeId,
+                            widget.staff['_id'], currentPermissions);
+                      },
+                      activeColor: AppColors.accentPrimary,
+                    ),
+                  ],
+                ),
+              ],
+            ],
+
+            // const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // 承認済みの場合: 拒否ボタンを表示 (承認取り消し)
+                if (status == StaffStatus.approved)
+                  ElevatedButton(
+                    onPressed: () => widget.vm.updateStoreStaffStatus(
+                        widget.storeId,
+                        widget.staff['_id'],
+                        StaffStatus.rejected),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.rejected,
+                      foregroundColor: AppColors.textPrimaryLight,
+                    ),
+                    child: const Text('承認取り消し'),
+                  ),
+
+                // 承認待ちの場合: 拒否と承認ボタンを表示
+                if (status == StaffStatus.pending) ...[
+                  OutlinedButton(
+                    onPressed: () => widget.vm.updateStoreStaffStatus(
+                        widget.storeId,
+                        widget.staff['_id'],
+                        StaffStatus.rejected),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                    ),
+                    child: const Text('拒否'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () => widget.vm.updateStoreStaffStatus(
+                        widget.storeId,
+                        widget.staff['_id'],
+                        StaffStatus.approved),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentPrimary,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('承認'),
+                  ),
+                ],
+
+                // 拒否済みの場合: 承認ボタンを表示 (再承認)
+                if (status == StaffStatus.rejected)
+                  ElevatedButton(
+                    onPressed: () => widget.vm.updateStoreStaffStatus(
+                        widget.storeId,
+                        widget.staff['_id'],
+                        StaffStatus.approved),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentPrimary,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('再承認'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusDot(String status) {
     Color color;
-    String label;
+    String tooltip;
 
     switch (status) {
       case StaffStatus.approved:
-        color = Colors.green;
-        label = '承認済み';
+        color = AppColors.approved;
+        tooltip = '承認済み';
         break;
       case StaffStatus.pending:
-        color = Colors.orange;
-        label = '承認待ち';
+        color = AppColors.notSubmitted;
+        tooltip = '承認待ち';
         break;
       case StaffStatus.rejected:
-        color = Colors.red;
-        label = '拒否済み';
+        color = AppColors.notSubmitted;
+        tooltip = '拒否済み';
         break;
       default:
-        color = Colors.grey;
-        label = status;
+        color = AppColors.notSubmitted;
+        tooltip = status;
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        width: 12,
+        height: 12,
+        decoration: BoxDecoration(
           color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
+          shape: BoxShape.circle,
         ),
       ),
     );
