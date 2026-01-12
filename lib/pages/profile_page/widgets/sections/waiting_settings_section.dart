@@ -27,23 +27,42 @@ class WaitingSettingsSection extends StatelessWidget {
       title: '待機リスト政策',
       children: [
         ProfileSettingItem(
-            title: '最大待機人数',
-            subtitle: '${storeSettings.waitingPolicy.maxWaitingCount}人',
-            showTrailingIcon: !isReadOnly,
-            onTap: isReadOnly
+          title: '待機登録時メニュー選択有効化',
+          subtitle:
+              storeSettings.waitingPolicy.enableMenuSelection ? 'On' : 'Off',
+          showTrailingIcon: false,
+          trailing: Switch(
+            value: storeSettings.waitingPolicy.enableMenuSelection,
+            onChanged: isReadOnly
                 ? null
-                : () => _showNumberInputDialog(
-                      context,
-                      vm,
-                      title: '最大待機人数設定',
-                      initialValue: storeSettings.waitingPolicy.maxWaitingCount,
-                      onConfirm: (value) async {
-                        final updatedPolicy = storeSettings.waitingPolicy
-                            .copyWith(maxWaitingCount: value);
-                        await vm.updateStoreSettings(storeSettings.copyWith(
-                            waitingPolicy: updatedPolicy));
-                      },
-                    )),
+                : (value) async {
+                    final updatedPolicy = storeSettings.waitingPolicy
+                        .copyWith(enableMenuSelection: value);
+                    await vm.updateStoreSettings(
+                        storeSettings.copyWith(waitingPolicy: updatedPolicy));
+                  },
+          ),
+        ),
+        ProfileSettingItem(
+          title: '最大待機人数',
+          subtitle: '${storeSettings.waitingPolicy.maxWaitingCount}人',
+          showTrailingIcon: !isReadOnly,
+          onTap: isReadOnly
+              ? null
+              : () => _showNumberInputDialog(
+                    context,
+                    vm,
+                    title: '最大待機人数設定',
+                    initialValue: storeSettings.waitingPolicy.maxWaitingCount,
+                    onConfirm: (value) async {
+                      final updatedPolicy = storeSettings.waitingPolicy
+                          .copyWith(maxWaitingCount: value);
+                      await vm.updateStoreSettings(
+                        storeSettings.copyWith(waitingPolicy: updatedPolicy),
+                      );
+                    },
+                  ),
+        ),
       ],
     );
   }

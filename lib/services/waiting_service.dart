@@ -185,6 +185,7 @@ class WaitingService {
     String notes = '',
     required String storeId,
     String? vToken, // Added vToken parameter
+    List<MenuItem>? menuItems,
   }) async {
     try {
       final waitingId = _generateWaitingId();
@@ -197,6 +198,8 @@ class WaitingService {
         'contact': contact,
         'notes': notes,
         'status': 'waiting',
+        if (menuItems != null)
+          'menu_items': menuItems.map((e) => e.toJson()).toList(),
       };
 
       final headers = <String, String>{'Content-Type': 'application/json'};
