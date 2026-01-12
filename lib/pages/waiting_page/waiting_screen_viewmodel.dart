@@ -261,6 +261,9 @@ class WaitingScreenViewModel extends ChangeNotifier {
       final updatedItem = originalItem.copyWith(
         status: newStatus,
         updatedAt: DateTime.now(),
+        // notified(呼び出し)の場合は calledTime も更新
+        calledTime:
+            newStatus == 'notified' ? DateTime.now() : originalItem.calledTime,
         // completed(入店)の場合は entryTime も更新しないと「直前入場時間」が即時反映されない
         entryTime: newStatus == 'completed' ? DateTime.now() : null,
       );

@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import '../../../models/waiting_list.dart';
 
-class WaitingItemCard extends StatelessWidget {
+class WaitingItemCard extends StatefulWidget {
   final WaitingList item;
   final VoidCallback onAction;
   final VoidCallback? onCancel;
@@ -13,6 +14,30 @@ class WaitingItemCard extends StatelessWidget {
     required this.onAction,
     this.onCancel,
   });
+
+  @override
+  State<WaitingItemCard> createState() => _WaitingItemCardState();
+}
+
+class _WaitingItemCardState extends State<WaitingItemCard> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // 1秒ごとに画面を更新して経過時間を最新に保つ
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   IconData _getStatusIcon(String status) {
     switch (status) {
@@ -27,11 +52,14 @@ class WaitingItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     final notesText =
         (item.notes != null && item.notes!.isNotEmpty) ? item.notes! : 'なし';
 
-    final waitTimeStr =
-        item.estimatedWaitTime != null ? '${item.estimatedWaitTime}分' : '--分';
+    final duration = DateTime.now().difference(item.registrationTime);
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    final waitTimeStr = '$minutes分 $seconds秒';
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -83,7 +111,7 @@ class WaitingItemCard extends StatelessWidget {
                         ),
                       )
                     else ...[
-                      _buildInfoRow("予想待機", waitTimeStr),
+                      _buildInfoRow("待機時間", waitTimeStr),
                       const SizedBox(height: 4),
                       _buildInfoRow("備考", notesText),
                     ],
@@ -92,7 +120,7 @@ class WaitingItemCard extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               ElevatedButton(
-                onPressed: onAction,
+                onPressed: widget.onAction,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.textPrimary,
                   foregroundColor: Colors.white,
