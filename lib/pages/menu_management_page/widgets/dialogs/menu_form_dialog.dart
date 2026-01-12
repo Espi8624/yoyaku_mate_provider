@@ -28,6 +28,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
   late final TextEditingController _priceController;
   Uint8List? _tempImageBytes;
   bool _imageRemoved = false;
+  bool _isPreOrderAvailable = false;
   bool get _isEditing => widget.menuItem != null;
 
   @override
@@ -39,6 +40,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
     _priceController =
         TextEditingController(text: item?.price.toStringAsFixed(0));
     _tempImageBytes = item?.tempImageBytes;
+    _isPreOrderAvailable = item?.isPreOrderAvailable ?? false;
   }
 
   @override
@@ -69,6 +71,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
         createdAt: _isEditing ? widget.menuItem!.createdAt : now,
         updatedAt: now,
         menuStatus: _isEditing ? widget.menuItem!.menuStatus : 'available',
+        isPreOrderAvailable: _isPreOrderAvailable,
         tempImageBytes: _tempImageBytes,
       );
 
@@ -131,6 +134,18 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
                 if (value == null || value.isEmpty) return '価格を入力してください。';
                 if (double.tryParse(value) == null) return '有効な数値を入力してください。';
                 return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text("事前注文可能"),
+              subtitle: const Text("待機登録時にこのメニューを表示します"),
+              value: _isPreOrderAvailable,
+              onChanged: (value) {
+                setState(() {
+                  _isPreOrderAvailable = value;
+                });
               },
             ),
             const SizedBox(height: 24),

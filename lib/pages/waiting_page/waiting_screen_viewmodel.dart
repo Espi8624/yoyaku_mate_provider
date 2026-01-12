@@ -40,8 +40,9 @@ class WaitingScreenViewModel extends ChangeNotifier {
       if (settings.waitingPolicy.estimatedWaitTime != null &&
           settings.waitingPolicy.estimatedWaitTime! > 0) {
         _estimatedWaitTimePerTeam = settings.waitingPolicy.estimatedWaitTime!;
-        notifyListeners();
       }
+      _enableMenuSelection = settings.waitingPolicy.enableMenuSelection;
+      notifyListeners();
     } catch (e) {
       // print('Failed to load store settings: $e');
       // Default remains 10
@@ -65,6 +66,9 @@ class WaitingScreenViewModel extends ChangeNotifier {
 
   String? _qrToken;
   String? get qrToken => _qrToken;
+
+  bool _enableMenuSelection = false;
+  bool get enableMenuSelection => _enableMenuSelection;
 
   void setFilter(String filter) {
     if (_selectedFilter != filter) {
@@ -208,10 +212,14 @@ class WaitingScreenViewModel extends ChangeNotifier {
     try {
       final newWaitingItem = await _waitingService.createWaitingListItem(
         storeId: storeId,
-        partySize: data['partySize'],
-        nationality: data['nationality'],
-        contact: data['contact'],
-        notes: data['notes'],
+        partySize: data['partySize'] as int,
+        nationality: 'unknown',
+        contact: data['contact']?.toString() ?? '',
+        notes: data['notes']?.toString() ?? '',
+        // menuItems: data['menuItems'], // Note: WaitingService needs update to support this param
+        // WaitingService has been updated to accept menuItems, but we need to ensure data['menuItems'] is correct type
+        // It is collected as List<MenuItem> in dialog.
+        menuItems: data['menuItems'] as List<MenuItem>?,
         vToken: _qrToken,
       );
 
@@ -260,7 +268,6 @@ class WaitingScreenViewModel extends ChangeNotifier {
       // ローカルデータを先に修正し、UI 即アップデート (Optimistic Update)
       final updatedItem = originalItem.copyWith(
         status: newStatus,
-        updatedAt: DateTime.now(),
         // notified(呼び出し)の場合は calledTime も更新
         calledTime:
             newStatus == 'notified' ? DateTime.now() : originalItem.calledTime,
