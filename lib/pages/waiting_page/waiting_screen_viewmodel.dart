@@ -14,7 +14,8 @@ import '../../services/waiting_service.dart';
 import '../../services/store_settings_service.dart';
 import '../../widgets/common_widgets/custom_snack_bar.dart';
 
-class WaitingScreenViewModel extends ChangeNotifier {
+class WaitingScreenViewModel extends ChangeNotifier
+    with WidgetsBindingObserver {
   final WaitingService _waitingService;
   final StoreSettingsService _settingsService;
   final String storeId;
@@ -27,6 +28,7 @@ class WaitingScreenViewModel extends ChangeNotifier {
     required StoreSettingsService settingsService,
   })  : _waitingService = waitingService,
         _settingsService = settingsService {
+    WidgetsBinding.instance.addObserver(this);
     // コンストラクタ内での notifyListeners() 呼び出しを防ぐため、遅延実行
     Future.microtask(() {
       _loadStoreSettings();
@@ -400,6 +402,14 @@ class WaitingScreenViewModel extends ChangeNotifier {
         CustomSnackBar.show(context,
             message: '保存処理中にエラーが発生しました: $e', status: SnackBarStatus.error);
       }
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // アプリがフォアグラウンドに戻った時にデータを再取得＆SSE再接続
+      loadWaitingList();
     }
   }
 
