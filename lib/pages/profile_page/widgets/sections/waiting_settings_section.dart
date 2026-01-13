@@ -44,7 +44,7 @@ class WaitingSettingsSection extends StatelessWidget {
           ),
         ),
         ProfileSettingItem(
-          title: '最大待機人数',
+          title: '最大受付可能人数',
           subtitle: '${storeSettings.waitingPolicy.maxWaitingCount}人',
           showTrailingIcon: !isReadOnly,
           onTap: isReadOnly
@@ -52,7 +52,7 @@ class WaitingSettingsSection extends StatelessWidget {
               : () => _showNumberInputDialog(
                     context,
                     vm,
-                    title: '最大待機人数設定',
+                    title: '最大受付可能人数設定',
                     initialValue: storeSettings.waitingPolicy.maxWaitingCount,
                     onConfirm: (value) async {
                       final updatedPolicy = storeSettings.waitingPolicy
