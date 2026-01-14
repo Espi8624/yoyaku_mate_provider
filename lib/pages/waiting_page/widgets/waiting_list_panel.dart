@@ -8,12 +8,15 @@ class WaitingListPanel extends StatelessWidget {
   final Function(WaitingList) onItemAction;
   final double bottomPadding;
 
+  final String? qrToken;
+
   const WaitingListPanel({
     super.key,
     required this.waitingList,
     required this.onRefresh,
     required this.onItemAction,
     this.bottomPadding = 0.0,
+    this.qrToken,
   });
 
   @override
@@ -48,6 +51,7 @@ class WaitingListPanel extends StatelessWidget {
                       return WaitingItemCard(
                         item: item,
                         onAction: () => onItemAction(item),
+                        qrToken: qrToken,
                       );
                     },
                   ),
