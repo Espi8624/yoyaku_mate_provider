@@ -82,7 +82,7 @@ class _BaseDialogState extends State<BaseDialog> {
                       ],
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
+                      padding: const EdgeInsets.fromLTRB(24, 24, 16, 8),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -114,7 +114,7 @@ class _BaseDialogState extends State<BaseDialog> {
                     child: SingleChildScrollView(
                       // SingleChildScrollViewにScrollControllerを繋げる
                       controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                       child: widget.content,
                     ),
                   ),

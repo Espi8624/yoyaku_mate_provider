@@ -13,6 +13,7 @@ import 'widgets/waiting_action_buttons.dart';
 import 'widgets/waiting_list_panel.dart';
 import 'widgets/waiting_status_area.dart';
 import 'waiting_screen_viewmodel.dart';
+import '../../widgets/common_widgets/notes_display_with_translation.dart';
 
 class WaitingScreen extends StatelessWidget {
   final String storeId;
@@ -366,7 +367,6 @@ class _WaitingView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 16),
         const Text('事前注文:',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
@@ -378,6 +378,27 @@ class _WaitingView extends StatelessWidget {
               ),
             )),
       ],
+    );
+  }
+
+  Widget _buildDialogSection(Widget content) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: content,
     );
   }
 
@@ -395,53 +416,60 @@ class _WaitingView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('予約番号: ${item.waitingId}'),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Text('#${item.queueNumber.toString()} 番',
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
-                const Text('様を呼出します。', style: TextStyle(fontSize: 16)),
-              ],
+            _buildDialogSection(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.waitingId),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text('#${item.queueNumber.toString()} 番',
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      const Text('様を呼出します。', style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            const Text('最後に詳細をご確認ください。', style: TextStyle(fontSize: 16)),
-            Text('${item.partySize}名',
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            _buildDialogSection(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${item.partySize}名',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
             if (notesText != null)
-              Text(notesText,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold)),
-            _buildMenuItemsDisplay(item),
-            const SizedBox(height: 24),
+              _buildDialogSection(
+                  NotesDisplayWithTranslation(notes: notesText)),
+            if (item.menuItems.isNotEmpty)
+              _buildDialogSection(_buildMenuItemsDisplay(item)),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: Row(
                 children: [
-                  // Cancel Button
+                  // キャンセルボタン
                   Expanded(
-                    child: OutlinedButton(
+                    child: ElevatedButton(
                       onPressed: () {
-                        Navigator.of(ctx)
-                            .pop(); // Close notification dialog first? Or keep?
-                        // If I close it, context might be lost if using ctx.
-                        // I should probably use `context` from outer scope or check mounted.
-                        // The user probably wants to cancel from this dialog.
-                        // Let's call cancel confirmation.
+                        Navigator.of(ctx).pop();
                         _showCancelConfirmationDialog(context, item);
                       },
-                      style: OutlinedButton.styleFrom(
+                      style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: AppColors.error),
-                        foregroundColor: AppColors.error,
+                        backgroundColor: AppColors.error,
+                        foregroundColor: Colors.white,
                       ),
                       child: const Text('待機取消'),
                     ),
                   ),
                   const SizedBox(width: 16),
-                  // Call Button
+                  // 呼出ボタン
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
@@ -481,25 +509,43 @@ class _WaitingView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('予約番号: ${item.waitingId}'),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Text('#${item.queueNumber.toString()} 番',
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
-                const Text('様', style: TextStyle(fontSize: 16)),
-              ],
+            _buildDialogSection(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.waitingId),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text('#${item.queueNumber.toString()} 番',
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      const Text('様', style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            Text('${item.partySize}名',
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            if (contactText != null)
-              Text('連絡先: $contactText', style: const TextStyle(fontSize: 16)),
+            _buildDialogSection(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${item.partySize}名',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  if (contactText != null) ...[
+                    const SizedBox(height: 8),
+                    Text('連絡先: $contactText',
+                        style: const TextStyle(fontSize: 16)),
+                  ],
+                ],
+              ),
+            ),
             if (notesText != null)
-              Text('メモ: $notesText', style: const TextStyle(fontSize: 16)),
-            _buildMenuItemsDisplay(item),
+              _buildDialogSection(
+                  NotesDisplayWithTranslation(notes: notesText)),
+            if (item.menuItems.isNotEmpty)
+              _buildDialogSection(_buildMenuItemsDisplay(item)),
             const SizedBox(height: 16),
             const Text('入店処理を行いますか？',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -544,34 +590,58 @@ class _WaitingView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('予約番号: ${item.waitingId}'),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Text('${item.queueNumber} 番',
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
-                const Text('様', style: TextStyle(fontSize: 16)),
-              ],
+            _buildDialogSection(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.waitingId),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text('#${item.queueNumber} 番',
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      const Text('様', style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            Text('${item.partySize}名',
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            if (contactText != null)
-              Text('連絡先: $contactText', style: const TextStyle(fontSize: 16)),
+            _buildDialogSection(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${item.partySize}名',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  if (contactText != null) ...[
+                    const SizedBox(height: 8),
+                    Text('連絡先: $contactText',
+                        style: const TextStyle(fontSize: 16)),
+                  ],
+                ],
+              ),
+            ),
             if (notesText != null)
-              Text('メモ: $notesText', style: const TextStyle(fontSize: 16)),
-            _buildMenuItemsDisplay(item),
-            const SizedBox(height: 8),
-            Text('登録時間: $formattedRegistrationTime',
-                style: const TextStyle(fontSize: 16)),
-            if (formattedCalledTime != null)
-              Text('呼出時間: $formattedCalledTime',
-                  style: const TextStyle(fontSize: 16)),
-            if (formattedEntryTime != null)
-              Text('入店時間: $formattedEntryTime',
-                  style: const TextStyle(fontSize: 16)),
+              _buildDialogSection(
+                  NotesDisplayWithTranslation(notes: notesText)),
+            if (item.menuItems.isNotEmpty)
+              _buildDialogSection(_buildMenuItemsDisplay(item)),
+            _buildDialogSection(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('登録時間: $formattedRegistrationTime',
+                      style: const TextStyle(fontSize: 16)),
+                  if (formattedCalledTime != null)
+                    Text('呼出時間: $formattedCalledTime',
+                        style: const TextStyle(fontSize: 16)),
+                  if (formattedEntryTime != null)
+                    Text('入店時間: $formattedEntryTime',
+                        style: const TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
           ],
         ),
       ),
