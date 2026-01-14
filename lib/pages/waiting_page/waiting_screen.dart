@@ -121,6 +121,7 @@ class _WaitingView extends StatelessWidget {
                                     onItemAction: (item) =>
                                         _showStatusBasedDialog(context, item),
                                     bottomPadding: 85,
+                                    qrToken: vm.qrToken,
                                   ),
                                 ),
                               ],
@@ -236,6 +237,7 @@ class _WaitingView extends StatelessWidget {
                                   onRefresh: vm.loadWaitingList,
                                   onItemAction: (item) =>
                                       _showStatusBasedDialog(context, item),
+                                  qrToken: vm.qrToken,
                                 ),
                               ),
                             ],
