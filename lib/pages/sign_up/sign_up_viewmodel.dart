@@ -481,8 +481,11 @@ class SignUpViewModel extends ChangeNotifier {
     required String? staffName,
     required String? staffNameKana,
     required String? staffStoreId,
-    required String managerPhoneInput, // for internal formatting check
+    required String managerPhoneInput, // 内部フォーマットチェック用
     required String staffPhoneInput,
+    int estimatedWaitTime = 10,
+    int maxWaitingCount = 10,
+    bool isPreOrderEnabled = false,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -506,8 +509,8 @@ class SignUpViewModel extends ChangeNotifier {
           final internalManagerPhone =
               PhoneFormatter.formatPhoneNumberForInternal(managerPhoneInput);
 
-          // For "Add Store", we use ProviderProfile to carry store info
-          // The backend likely extracts store info from this flatten structure
+          // "Add Store"の場合、店舗情報を運ぶためにProviderProfileを使用
+          // バックエンドはおそらくこのフラットな構造から店舗情報を抽出する
           final profile = ProviderProfile(
             firebaseUid: currentUser.uid,
             email: currentUser.email!,
@@ -519,7 +522,10 @@ class SignUpViewModel extends ChangeNotifier {
             storeAddress: storeAddress,
             storeTelNumber:
                 PhoneFormatter.formatPhoneNumberForInternal(storePhone!),
-            // bizNumber is not in the form yet?
+            // 事業者番号はまだフォームにない？
+            estimatedWaitTime: estimatedWaitTime,
+            maxWaitingCount: maxWaitingCount,
+            enableMenuSelection: isPreOrderEnabled,
           );
 
           await _profileService.addNewStore(profile, idToken);
@@ -537,6 +543,9 @@ class SignUpViewModel extends ChangeNotifier {
             storeAddress: storeAddress,
             storeTelNumber:
                 PhoneFormatter.formatPhoneNumberForInternal(storePhone!),
+            estimatedWaitTime: estimatedWaitTime,
+            maxWaitingCount: maxWaitingCount,
+            enableMenuSelection: isPreOrderEnabled,
           );
 
           await _profileService.signUp(profile, idToken);
