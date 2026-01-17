@@ -4,8 +4,8 @@ class ProviderProfile {
   final String phoneNumber;
   final String name;
   final String nameFurigana;
-  final String role; // 'manager' or 'staff'
-  final String? storeId; // Optional for staff, required for manager
+  final String role; // 'manager' または 'staff'
+  final String? storeId; // スタッフは任意、マネージャーは必須
   final String? storeName;
   final String? storeAddress;
   final String? storeTelNumber;
@@ -16,6 +16,9 @@ class ProviderProfile {
   final DateTime? termsAgreedAt;
   final bool privacyAgreed;
   final DateTime? privacyAgreedAt;
+  final int? estimatedWaitTime;
+  final int? maxWaitingCount;
+  final bool? enableMenuSelection;
 
   ProviderProfile({
     required this.firebaseUid,
@@ -35,6 +38,9 @@ class ProviderProfile {
     this.termsAgreedAt,
     this.privacyAgreed = false,
     this.privacyAgreedAt,
+    this.estimatedWaitTime,
+    this.maxWaitingCount,
+    this.enableMenuSelection,
   });
 
   Map<String, dynamic> toJson() => {
@@ -57,6 +63,10 @@ class ProviderProfile {
         'privacy_agreed': privacyAgreed,
         if (privacyAgreedAt != null)
           'privacy_agreed_at': privacyAgreedAt!.toIso8601String(),
+        if (estimatedWaitTime != null) 'estimated_wait_time': estimatedWaitTime,
+        if (maxWaitingCount != null) 'max_waiting_count': maxWaitingCount,
+        if (enableMenuSelection != null)
+          'enable_menu_selection': enableMenuSelection,
       };
 
   factory ProviderProfile.fromJson(Map<String, dynamic> json) =>
