@@ -20,7 +20,7 @@ import 'package:yoyaku_mate_provider/pages/sign_up/steps/email_verification_step
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/phone_number_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/verification_code_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/manager_info_step.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/steps/manager_store_info_step.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_wizard_steps.dart'; // New Import
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_store_id_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_name_step.dart';
 
@@ -54,6 +54,11 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController storeNameController = TextEditingController();
   final TextEditingController storeAddressController = TextEditingController();
   final TextEditingController storePhoneController = TextEditingController();
+  final TextEditingController estimatedWaitTimeController =
+      TextEditingController(text: '10');
+  final TextEditingController maxWaitingCountController =
+      TextEditingController(text: '10');
+  bool _enableMenuSelection = false;
 
   final TextEditingController staffStoreIdController = TextEditingController();
   final TextEditingController staffEmailController = TextEditingController();
@@ -196,6 +201,8 @@ class _SignUpPageState extends State<SignUpPage> {
     storeNameController.dispose();
     storeAddressController.dispose();
     storePhoneController.dispose();
+    estimatedWaitTimeController.dispose();
+    maxWaitingCountController.dispose();
 
     staffStoreIdController.dispose();
     staffEmailController.dispose();
@@ -290,12 +297,39 @@ class _SignUpPageState extends State<SignUpPage> {
           firstNameKanaController: managerFirstNameKanaController,
           onNext: _nextPage,
         ), // 8
-        ManagerStoreInfoStep(
-          storeNameController: storeNameController,
-          storeAddressController: storeAddressController,
-          storePhoneController: storePhoneController,
-          onSubmit: _handleSignUp,
+        StoreBasicInfoStep(
+          nameController: storeNameController,
+          addressController: storeAddressController,
+          phoneController: storePhoneController,
+          onNext: _nextPage,
         ), // 9
+        StoreCapacityStep(
+          maxWaitingCountController: maxWaitingCountController,
+          onNext: _nextPage,
+        ), // 10
+        StoreTimeStep(
+          estimatedWaitTimeController: estimatedWaitTimeController,
+          onNext: _nextPage,
+        ), // 11
+        StorePreOrderStep(
+          isPreOrderEnabled: _enableMenuSelection,
+          onPreOrderChanged: (value) {
+            setState(() {
+              _enableMenuSelection = value;
+            });
+          },
+          onNext: _nextPage,
+        ), // 12
+        StoreReviewStep(
+          nameController: storeNameController,
+          addressController: storeAddressController,
+          phoneController: storePhoneController,
+          maxWaitingCountController: maxWaitingCountController,
+          estimatedWaitTimeController: estimatedWaitTimeController,
+          isPreOrderEnabled: _enableMenuSelection,
+          onSubmit: _handleSignUp,
+          isLoading: context.read<SignUpViewModel>().isLoading,
+        ), // 13
       ];
     } else {
       // Staff pages
@@ -519,6 +553,9 @@ class _SignUpPageState extends State<SignUpPage> {
       staffStoreId: staffStoreIdController.text.trim(),
       managerPhoneInput: managerPhoneController.text.trim(),
       staffPhoneInput: staffPhoneController.text.trim(),
+      estimatedWaitTime: int.tryParse(estimatedWaitTimeController.text) ?? 10,
+      maxWaitingCount: int.tryParse(maxWaitingCountController.text) ?? 10,
+      isPreOrderEnabled: _enableMenuSelection,
     );
 
     if (success && mounted) {
@@ -578,6 +615,9 @@ class _SignUpPageState extends State<SignUpPage> {
         storeNameController.clear();
         storeAddressController.clear();
         storePhoneController.clear();
+        estimatedWaitTimeController.text = '10';
+        maxWaitingCountController.text = '10';
+        _enableMenuSelection = false;
         staffStoreIdController.clear();
         staffEmailController.clear();
         staffPasswordController.clear();

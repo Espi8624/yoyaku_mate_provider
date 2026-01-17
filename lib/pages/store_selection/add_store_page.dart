@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
-import 'package:yoyaku_mate_provider/models/provider_profile.dart'; // Ensure these models exist and are exported
+import 'package:yoyaku_mate_provider/models/provider_profile.dart'; // 必要なモデルが存在し、エクスポートされていることを確認
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
-import 'package:yoyaku_mate_provider/pages/store_selection/widgets/store_info_form.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_wizard_steps.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
 
@@ -19,7 +19,6 @@ class AddStorePage extends StatefulWidget {
 
 class _AddStorePageState extends State<AddStorePage> {
   bool _isLoading = false;
-  String? _errorMessage;
 
   // Controllers
   final _lastNameController = TextEditingController();
@@ -30,6 +29,12 @@ class _AddStorePageState extends State<AddStorePage> {
   final _storeNameController = TextEditingController();
   final _storeAddressController = TextEditingController();
   final _storePhoneController = TextEditingController();
+  final _estimatedWaitTimeController = TextEditingController(text: '10');
+  final _maxWaitingCountController = TextEditingController(text: '10');
+  bool _enableMenuSelection = false;
+
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
 
   @override
   void initState() {
@@ -67,13 +72,15 @@ class _AddStorePageState extends State<AddStorePage> {
     _storeNameController.dispose();
     _storeAddressController.dispose();
     _storePhoneController.dispose();
+    _estimatedWaitTimeController.dispose();
+    _maxWaitingCountController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
@@ -95,10 +102,10 @@ class _AddStorePageState extends State<AddStorePage> {
           ProviderProfileService(baseUrl: 'https://saboten-server.fly.dev');
 
       final email = userProfile?.email ?? currentUser.email ?? '';
-      // Use existing phone number from profile
+      // プロフィールの既存の電話番号を使用
       final phoneNumber = userProfile?.phone_number ?? '';
 
-      // Combine Names
+      // 名前を結合 (姓名)
       final lastName = _lastNameController.text.trim();
       final firstName = _firstNameController.text.trim();
       final fullName = '$lastName $firstName'.trim();
@@ -120,6 +127,10 @@ class _AddStorePageState extends State<AddStorePage> {
         storeEmail: email,
         termsAgreed: true,
         privacyAgreed: true,
+        estimatedWaitTime:
+            int.tryParse(_estimatedWaitTimeController.text) ?? 10,
+        maxWaitingCount: int.tryParse(_maxWaitingCountController.text) ?? 10,
+        enableMenuSelection: _enableMenuSelection,
       );
 
       final createdProfileMap =
@@ -141,9 +152,13 @@ class _AddStorePageState extends State<AddStorePage> {
       context.pop();
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _errorMessage = "エラー : ${e is ApiException ? e.message : e.toString()}";
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text("エラー : ${e is ApiException ? e.message : e.toString()}"),
+          backgroundColor: AppColors.error,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -158,27 +173,111 @@ class _AddStorePageState extends State<AddStorePage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new,
               color: AppColors.textPrimary),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (_pageController.hasClients && _pageController.page! > 0) {
+              _pageController.previousPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut);
+            } else {
+              context.pop();
+            }
+          },
         ),
+        backgroundColor: AppColors.background,
+        elevation: 0,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
-          child: StoreInfoForm(
-            nameController: _storeNameController,
-            addressController: _storeAddressController,
-            phoneController: _storePhoneController,
-            onSubmit: _submit,
-            isLoading: _isLoading,
-            errorMessage: _errorMessage,
-          ),
+        child: Column(
+          children: [
+            // Progress Indicator (optional)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 32.0, vertical: 8),
+              child: LinearProgressIndicator(
+                value: (_currentPage + 1) / 5,
+                backgroundColor: AppColors.border,
+                color: AppColors.accentPrimary,
+              ),
+            ),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(), // Disable swipe
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                },
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32.0, vertical: 24.0),
+                    child: StoreBasicInfoStep(
+                      nameController: _storeNameController,
+                      addressController: _storeAddressController,
+                      phoneController: _storePhoneController,
+                      onNext: _nextPage,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32.0, vertical: 24.0),
+                    child: StoreCapacityStep(
+                      maxWaitingCountController: _maxWaitingCountController,
+                      onNext: _nextPage,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32.0, vertical: 24.0),
+                    child: StoreTimeStep(
+                      estimatedWaitTimeController: _estimatedWaitTimeController,
+                      onNext: _nextPage,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32.0, vertical: 24.0),
+                    child: StorePreOrderStep(
+                      isPreOrderEnabled: _enableMenuSelection,
+                      onPreOrderChanged: (val) {
+                        setState(() {
+                          _enableMenuSelection = val;
+                        });
+                      },
+                      onNext: _nextPage,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32.0, vertical: 24.0),
+                    child: StoreReviewStep(
+                      nameController: _storeNameController,
+                      addressController: _storeAddressController,
+                      phoneController: _storePhoneController,
+                      maxWaitingCountController: _maxWaitingCountController,
+                      estimatedWaitTimeController: _estimatedWaitTimeController,
+                      isPreOrderEnabled: _enableMenuSelection,
+                      onSubmit: _submit,
+                      isLoading: _isLoading,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  void _nextPage() {
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
     );
   }
 }
