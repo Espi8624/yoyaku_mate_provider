@@ -170,7 +170,7 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
     // TODO: 実際の運用環境に合わせてホストを変更してください (e.g. https://yoyaku-mate.web.app)
     // ローカルテスト用: http://localhost:3000
     // 実機でテストする場合: http://[PC_IP_ADDRESS]:3000
-    const String webBaseUrl = "http://localhost:3000";
+    const String webBaseUrl = "https://yoyaku-mate.vercel.app";
     String url =
         "$webBaseUrl/waiting-screen-flow?store_id=$storeId&waiting_id=$waitingId";
 
