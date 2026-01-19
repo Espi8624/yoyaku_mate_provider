@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../constants/app_colors.dart';
-import '../../../../widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../profile_screen_viewmodel.dart';
 import '../dialogs/edit_profile_dialog.dart';
 import '../profile_header.dart';
@@ -43,8 +43,7 @@ class StoreProfileView extends StatelessWidget {
       final success =
           await vm.updateProfileField(storeFieldKey: fieldKey, value: newValue);
       if (success && context.mounted) {
-        CustomSnackBar.show(context,
-            message: '変更が保存されました', status: SnackBarStatus.success);
+        ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
       }
     }
   }
@@ -63,16 +62,16 @@ class StoreProfileView extends StatelessWidget {
 
       if (context.mounted) {
         if (success) {
-          CustomSnackBar.show(
+          ToastWidget.show(
             context,
-            message: "正常にアップロードされました。",
-            status: SnackBarStatus.success,
+            '正常にアップロードされました。',
+            type: ToastType.success,
           );
         } else if (vm.errorMessage != null) {
-          CustomSnackBar.show(
+          ToastWidget.show(
             context,
-            message: vm.errorMessage!,
-            status: SnackBarStatus.error,
+            vm.errorMessage!,
+            type: ToastType.error,
           );
         }
       }

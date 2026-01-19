@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../models/store_settings.dart';
-import '../../../../widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../dialogs/business_hours_dialog.dart';
 import '../../dialogs/holiday_dialog.dart';
 import '../../dialogs/number_input_dialog.dart';
@@ -85,12 +85,10 @@ class OperationSettingsSection extends StatelessWidget {
 
       if (context.mounted) {
         if (vm.errorMessage != null) {
-          CustomSnackBar.show(context,
-              message: vm.errorMessage!, status: SnackBarStatus.error);
+          ToastWidget.show(context, vm.errorMessage!, type: ToastType.error);
         } else if (vm.successMessage != null) {
-          CustomSnackBar.show(context,
-              message: '予想待機時間が${result}分に設定されました。',
-              status: SnackBarStatus.success);
+          ToastWidget.show(context, '予想待機時間が${result}分に設定されました。',
+              type: ToastType.success);
           vm.clearSuccessMessage();
         }
       }
@@ -114,11 +112,10 @@ class OperationSettingsSection extends StatelessWidget {
 
       if (context.mounted) {
         if (vm.errorMessage != null) {
-          CustomSnackBar.show(context,
-              message: vm.errorMessage!, status: SnackBarStatus.error);
+          ToastWidget.show(context, vm.errorMessage!, type: ToastType.error);
         } else if (vm.successMessage != null) {
-          CustomSnackBar.show(context,
-              message: vm.successMessage!, status: SnackBarStatus.success);
+          ToastWidget.show(context, vm.successMessage!,
+              type: ToastType.success);
           vm.clearSuccessMessage();
         }
       }
@@ -142,11 +139,10 @@ class OperationSettingsSection extends StatelessWidget {
 
       if (context.mounted) {
         if (vm.errorMessage != null) {
-          CustomSnackBar.show(context,
-              message: vm.errorMessage!, status: SnackBarStatus.error);
+          ToastWidget.show(context, vm.errorMessage!, type: ToastType.error);
         } else if (vm.successMessage != null) {
-          CustomSnackBar.show(context,
-              message: vm.successMessage!, status: SnackBarStatus.success);
+          ToastWidget.show(context, vm.successMessage!,
+              type: ToastType.success);
           vm.clearSuccessMessage();
         }
       }

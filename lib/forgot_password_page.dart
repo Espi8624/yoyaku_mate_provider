@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -23,21 +23,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         email: _emailController.text.trim(),
       );
       if (mounted) {
-        CustomSnackBar.show(
+        ToastWidget.show(
           context,
-          message: 'パスワード再設定用のメールを送信しました。受信トレイをご確認ください。',
-          status: SnackBarStatus.success,
+          'パスワード再設定用のメールを送信しました。受信トレイをご確認ください。',
+          type: ToastType.success,
         );
         Navigator.of(context).pop(); // 成功後、ログイン画面へ遷移
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        CustomSnackBar.show(
+        ToastWidget.show(
           context,
-          message: e.code == 'user-not-found'
+          e.code == 'user-not-found'
               ? 'このメールアドレスで登録されたユーザーが見つかりません。'
               : 'エラーが発生しました: ${e.message}',
-          status: SnackBarStatus.error,
+          type: ToastType.error,
         );
       }
     } finally {

@@ -23,6 +23,7 @@ import 'package:yoyaku_mate_provider/pages/sign_up/steps/manager_info_step.dart'
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_wizard_steps.dart'; // New Import
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_store_id_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_name_step.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -437,12 +438,10 @@ class _SignUpPageState extends State<SignUpPage> {
       final success = await vm.createAccountAndSendEmail(email, password, '');
       if (success) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('認証メールを送信しました。メールボックスをご確認ください。'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (!mounted) return;
+        ToastWidget.show(context, '認証メールを送信しました。メールボックスをご確認ください。',
+            type: ToastType.success);
+        _nextPage();
         _nextPage();
       }
     } on FirebaseAuthException catch (_) {
@@ -475,10 +474,9 @@ class _SignUpPageState extends State<SignUpPage> {
     final success = await vm.resendEmailLink(
         emailController.text, passwordController.text, '');
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('認証メールを再送信しました。'), backgroundColor: Colors.blue),
-      );
+      if (success && mounted) {
+        ToastWidget.show(context, '認証メールを再送信しました。', type: ToastType.info);
+      }
     }
   }
 
@@ -491,11 +489,11 @@ class _SignUpPageState extends State<SignUpPage> {
     final success =
         await vm.sendPhoneCode(rawPhoneNumber, vm.role ?? 'manager');
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('認証コードを送信しました。'), backgroundColor: Colors.green),
-      );
-      _nextPage();
+      if (success && mounted) {
+        ToastWidget.show(context, '認証コードを送信しました。', type: ToastType.success);
+        _nextPage();
+        _nextPage();
+      }
     }
   }
 
@@ -507,10 +505,10 @@ class _SignUpPageState extends State<SignUpPage> {
           vm.role == 'manager' ? managerPhoneController : staffPhoneController;
       vm.savePhoneProgress(phoneController.text.trim());
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('電話番号認証が完了しました。'), backgroundColor: Colors.green),
-      );
+      vm.savePhoneProgress(phoneController.text.trim());
+
+      ToastWidget.show(context, '電話番号認証が完了しました。', type: ToastType.success);
+      _nextPage();
       _nextPage();
     }
   }
@@ -522,10 +520,9 @@ class _SignUpPageState extends State<SignUpPage> {
     final success = await vm.sendPhoneCode(
         phoneController.text.trim(), vm.role ?? 'manager');
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('認証コードを再送信しました。'), backgroundColor: Colors.green),
-      );
+      if (success && mounted) {
+        ToastWidget.show(context, '認証コードを再送信しました。', type: ToastType.success);
+      }
     }
   }
 

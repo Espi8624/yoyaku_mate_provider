@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
-import '../../widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import 'profile_screen_viewmodel.dart';
 import './widgets/views/personal_profile_view.dart';
 import './widgets/views/store_profile_view.dart';
@@ -42,13 +42,13 @@ class _ProfileViewState extends State<_ProfileView>
 
     // エラー表示
     if (_viewModel.errorMessage != null) {
-      CustomSnackBar.show(context,
-          message: _viewModel.errorMessage!, status: SnackBarStatus.error);
+      ToastWidget.show(context, _viewModel.errorMessage!,
+          type: ToastType.error);
     }
     // 成功表示
     else if (_viewModel.successMessage != null) {
-      CustomSnackBar.show(context,
-          message: _viewModel.successMessage!, status: SnackBarStatus.success);
+      ToastWidget.show(context, _viewModel.successMessage!,
+          type: ToastType.success);
       _viewModel.clearSuccessMessage();
     }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import '../../../widgets/common_dialogs/base_dialog.dart';
-import '../../../widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 // 営業時間設定のためのダイアログウィジェット
 class BusinessHoursDialog extends StatefulWidget {
@@ -71,8 +71,8 @@ class _BusinessHoursDialogState extends State<BusinessHoursDialog> {
       final start = times['startHour']! * 60 + times['startMinute']!;
       final end = times['endHour']! * 60 + times['endMinute']!;
       if (start >= end) {
-        CustomSnackBar.show(context,
-            message: '閉店時間は開店時間より早く設定できません。', status: SnackBarStatus.error);
+        ToastWidget.show(context, '閉店時間は開店時間より早く設定できません。',
+            type: ToastType.error);
         return;
       }
     }

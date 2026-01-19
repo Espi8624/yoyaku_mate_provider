@@ -12,7 +12,7 @@ import '../../models/waiting_list.dart';
 import '../../services/api_exception.dart';
 import '../../services/waiting_service.dart';
 import '../../services/store_settings_service.dart';
-import '../../widgets/common_widgets/custom_snack_bar.dart';
+import '../../widgets/common_widgets/toast_widget.dart';
 
 class WaitingScreenViewModel extends ChangeNotifier
     with WidgetsBindingObserver {
@@ -232,8 +232,7 @@ class WaitingScreenViewModel extends ChangeNotifier
       notifyListeners();
 
       if (context.mounted) {
-        CustomSnackBar.show(context,
-            message: '待機が正常に追加されました', status: SnackBarStatus.success);
+        ToastWidget.show(context, '待機が正常に追加されました', type: ToastType.success);
       }
     } catch (e) {
       if (context.mounted) {
@@ -245,8 +244,7 @@ class WaitingScreenViewModel extends ChangeNotifier
         }
         final finalMessage = errorMessage.trim();
 
-        CustomSnackBar.show(context,
-            message: '追加失敗: $finalMessage', status: SnackBarStatus.error);
+        ToastWidget.show(context, '追加失敗: $finalMessage', type: ToastType.error);
       }
       await loadWaitingList();
     } finally {
@@ -286,15 +284,17 @@ class WaitingScreenViewModel extends ChangeNotifier
       String message = '';
       if (newStatus == 'notified') message = 'お客様を呼び出しました';
       if (newStatus == 'completed') message = '入店処理が完了しました';
+      if (newStatus == 'cancelled') message = '待機を取り消しました';
       if (context.mounted) {
-        CustomSnackBar.show(context,
-            message: message, status: SnackBarStatus.success);
+        // messageが空でなければ表示 (一応空チェックを入れるか、ToastWidget側で空なら表示しないかだが、ここでは空なら表示しないようにガードする方が丁寧かも)
+        if (message.isNotEmpty) {
+          ToastWidget.show(context, message, type: ToastType.success);
+        }
       }
     } on ApiException catch (e) {
       if (context.mounted) {
-        CustomSnackBar.show(context,
-            message: 'ステータスアップデート失敗: ${e.message}',
-            status: SnackBarStatus.error);
+        ToastWidget.show(context, 'ステータスアップデート失敗: ${e.message}',
+            type: ToastType.error);
       }
       // 失敗時、UI を以前の状態にロールバック
       _waitingList[itemIndex] = originalItem;
@@ -319,13 +319,11 @@ class WaitingScreenViewModel extends ChangeNotifier
       await _waitingService.clearWaitingList(storeId);
 
       if (context.mounted) {
-        CustomSnackBar.show(context,
-            message: '待機目録を初期化しました', status: SnackBarStatus.success);
+        ToastWidget.show(context, '待機目録を初期化しました', type: ToastType.success);
       }
     } on ApiException catch (e) {
       if (context.mounted) {
-        CustomSnackBar.show(context,
-            message: '初期化失敗: ${e.message}', status: SnackBarStatus.error);
+        ToastWidget.show(context, '初期化失敗: ${e.message}', type: ToastType.error);
       }
       // 失敗時、UI を以前の状態にロールバック
       _waitingList = originalList;
@@ -356,8 +354,8 @@ class WaitingScreenViewModel extends ChangeNotifier
         await Gal.putImageBytes(pngBytes, name: "yoyaku_mate_qr");
 
         if (context.mounted) {
-          CustomSnackBar.show(context,
-              message: 'QRコードがギャラリーに保存されました', status: SnackBarStatus.success);
+          ToastWidget.show(context, 'QRコードがギャラリーに保存されました',
+              type: ToastType.success);
         }
 
         // ギャラリーアプリを開く
@@ -388,9 +386,8 @@ class WaitingScreenViewModel extends ChangeNotifier
           final file = File('${directory.path}/$fileName');
           await file.writeAsBytes(pdfBytes);
           if (context.mounted) {
-            CustomSnackBar.show(context,
-                message: 'PDFがダウンロードフォルダに保存されました',
-                status: SnackBarStatus.success);
+            ToastWidget.show(context, 'PDFがダウンロードフォルダに保存されました',
+                type: ToastType.success);
           }
         }
       } else {
@@ -399,8 +396,8 @@ class WaitingScreenViewModel extends ChangeNotifier
       }
     } catch (e) {
       if (context.mounted) {
-        CustomSnackBar.show(context,
-            message: '保存処理中にエラーが発生しました: $e', status: SnackBarStatus.error);
+        ToastWidget.show(context, '保存処理中にエラーが発生しました: $e',
+            type: ToastType.error);
       }
     }
   }

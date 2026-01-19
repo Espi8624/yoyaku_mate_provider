@@ -9,6 +9,7 @@ import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_wizard_steps.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 class AddStorePage extends StatefulWidget {
   const AddStorePage({super.key});
@@ -146,18 +147,15 @@ class _AddStorePageState extends State<AddStorePage> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('新しい店舗が追加されました。')),
-      );
+      if (!mounted) return;
+      ToastWidget.show(context, '新しい店舗が追加されました。', type: ToastType.success);
       context.pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text("エラー : ${e is ApiException ? e.message : e.toString()}"),
-          backgroundColor: AppColors.error,
-        ),
+      ToastWidget.show(
+        context,
+        "エラー : ${e is ApiException ? e.message : e.toString()}",
+        type: ToastType.error,
       );
     } finally {
       if (mounted) {

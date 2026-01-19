@@ -8,7 +8,7 @@ import 'package:yoyaku_mate_provider/constants/terms_of_service.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 import '../../../../models/user_profile.dart';
-import '../../../../widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../profile_screen_viewmodel.dart';
 import '../dialogs/edit_profile_dialog.dart';
 import '../profile_header.dart';
@@ -43,8 +43,7 @@ class PersonalProfileView extends StatelessWidget {
         final success = await vm.updateProfileField(
             userFieldKey: fieldKey!, value: newValue);
         if (success && context.mounted) {
-          CustomSnackBar.show(context,
-              message: '変更が保存されました', status: SnackBarStatus.success);
+          ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
         }
       }
     }
@@ -76,14 +75,12 @@ class PersonalProfileView extends StatelessWidget {
       } else {
         // フォールバック: クリップボードにコピーするなど、あるいはエラー表示
         if (context.mounted) {
-          CustomSnackBar.show(context,
-              message: 'メールアプリを開けませんでした。', status: SnackBarStatus.error);
+          ToastWidget.show(context, 'メールアプリを開けませんでした。', type: ToastType.error);
         }
       }
     } catch (e) {
       if (context.mounted) {
-        CustomSnackBar.show(context,
-            message: 'メールアプリの起動に失敗しました。', status: SnackBarStatus.error);
+        ToastWidget.show(context, 'メールアプリの起動に失敗しました。', type: ToastType.error);
       }
     }
   }
