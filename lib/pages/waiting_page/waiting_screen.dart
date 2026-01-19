@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Clipboard
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/waiting_list.dart';
@@ -13,6 +15,7 @@ import 'widgets/waiting_action_buttons.dart';
 import 'widgets/waiting_list_panel.dart';
 import 'widgets/waiting_status_area.dart';
 import 'waiting_screen_viewmodel.dart';
+import '../../widgets/common_widgets/toast_widget.dart';
 import '../../widgets/common_widgets/notes_display_with_translation.dart';
 
 class WaitingScreen extends StatelessWidget {
@@ -93,9 +96,9 @@ class _WaitingView extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                                icon: const Icon(Icons.delete_sweep_rounded),
+                                icon: const Icon(Icons.monitor),
                                 onPressed: () =>
-                                    _showClearConfirmationDialog(context)),
+                                    _showMonitorUrlDialog(context, vm)),
                             QRCodeButton(data: qrCodeData),
                           ],
                         ),
@@ -201,8 +204,8 @@ class _WaitingView extends StatelessWidget {
                             WaitingActionButtons(
                               onAddWaiting: () =>
                                   _showAddWaitingDialog(context),
-                              onClearAll: () =>
-                                  _showClearConfirmationDialog(context),
+                              onShowMonitor: () =>
+                                  _showMonitorUrlDialog(context, vm),
                             ),
                           ],
                         ),
@@ -275,15 +278,97 @@ class _WaitingView extends StatelessWidget {
     }
   }
 
-  Future<void> _showClearConfirmationDialog(BuildContext context) async {
-    final confirmed = await showConfirmationDialog(
+  Future<void> _showMonitorUrlDialog(
+      BuildContext context, WaitingScreenViewModel vm) async {
+    final String url =
+        "https://yoyaku-mate.vercel.app/board?store_id=${vm.storeId}";
+
+    await showDialog(
       context: context,
-      title: '待機目録初期化',
-      content: '現在の待機目録を全て初期化しますか？\nこの操作は取り消しできません。',
+      builder: (ctx) => BaseDialog(
+        title: '待機状況モニターURL',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '店舗内のサイネージやタブレットで表示するためのURLです。\nブラウザで開くと全画面の待機状況が表示されます。',
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+            const SizedBox(height: 24),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: QrImageView(
+                  data: url,
+                  version: QrVersions.auto,
+                  size: 160.0,
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      url,
+                      style: const TextStyle(
+                        fontFamily: 'Courier',
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: url));
+                  if (context.mounted) {
+                    Navigator.of(ctx).pop();
+                    ToastWidget.show(context, 'URLをクリップボードにコピーしました',
+                        type: ToastType.success);
+                  }
+                },
+                icon: const Icon(Icons.copy, size: 20),
+                label: const Text('URLをコピー'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
-    if (confirmed == true && context.mounted) {
-      await context.read<WaitingScreenViewModel>().clearWaitingList(context);
-    }
   }
 
   Future<void> _showCancelConfirmationDialog(
