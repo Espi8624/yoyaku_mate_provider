@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
-import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 class EditProfileDialog extends StatefulWidget {
   final String title;
@@ -118,10 +118,10 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        CustomSnackBar.show(
+        ToastWidget.show(
           context,
-          message: 'パスワードが正常に変更されました。',
-          status: SnackBarStatus.success,
+          'パスワードが正常に変更されました。',
+          type: ToastType.success,
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -132,13 +132,11 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
         } else if (e.code == 'weak-password') {
           errorMessage = 'パスワードは6文字以上で入力してください。';
         }
-        CustomSnackBar.show(context,
-            message: errorMessage, status: SnackBarStatus.error);
+        ToastWidget.show(context, errorMessage, type: ToastType.error);
       }
     } catch (e) {
       if (mounted) {
-        CustomSnackBar.show(context,
-            message: '予期せぬエラーが発生しました。', status: SnackBarStatus.error);
+        ToastWidget.show(context, '予期せぬエラーが発生しました。', type: ToastType.error);
       }
     } finally {
       if (mounted) {

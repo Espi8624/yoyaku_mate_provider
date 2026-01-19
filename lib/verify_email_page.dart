@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
-import 'package:yoyaku_mate_provider/widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 class VerifyEmailPage extends StatefulWidget {
   const VerifyEmailPage({super.key});
@@ -47,13 +47,12 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     try {
       await FirebaseAuth.instance.currentUser?.sendEmailVerification();
       if (mounted) {
-        CustomSnackBar.show(context,
-            message: '確認メールを再送信しました。', status: SnackBarStatus.success);
+        ToastWidget.show(context, '確認メールを再送信しました。', type: ToastType.success);
       }
     } catch (e) {
       if (mounted) {
-        CustomSnackBar.show(context,
-            message: 'エラー: ${e.toString()}', status: SnackBarStatus.error);
+        ToastWidget.show(context, 'エラー: ${e.toString()}',
+            type: ToastType.error);
       }
     }
   }

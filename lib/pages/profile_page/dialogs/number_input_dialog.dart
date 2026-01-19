@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import '../../../widgets/common_dialogs/base_dialog.dart';
-import '../../../widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 //　数字入力のための共通ダイアログウィジェット
 class NumberInputDialog extends StatefulWidget {
@@ -38,8 +38,7 @@ class _NumberInputDialogState extends State<NumberInputDialog> {
   void _submit() {
     final value = int.tryParse(_controller.text);
     if (value == null) {
-      CustomSnackBar.show(context,
-          message: '有効な数字を入力してください', status: SnackBarStatus.error);
+      ToastWidget.show(context, '有効な数字を入力してください', type: ToastType.error);
       return;
     }
     Navigator.of(context).pop(value);

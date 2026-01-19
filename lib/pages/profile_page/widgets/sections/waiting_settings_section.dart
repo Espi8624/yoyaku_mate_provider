@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../dialogs/number_input_dialog.dart';
 import '../../profile_screen_viewmodel.dart';
 import '../profile_section.dart';
@@ -83,11 +83,10 @@ class WaitingSettingsSection extends StatelessWidget {
       await onConfirm(result);
       if (context.mounted) {
         if (vm.errorMessage != null) {
-          CustomSnackBar.show(context,
-              message: vm.errorMessage!, status: SnackBarStatus.error);
+          ToastWidget.show(context, vm.errorMessage!, type: ToastType.error);
         } else if (vm.successMessage != null) {
-          CustomSnackBar.show(context,
-              message: '$titleが$result人に設定されました。', status: SnackBarStatus.info);
+          ToastWidget.show(context, '$titleが$result人に設定されました。',
+              type: ToastType.info);
           vm.clearSuccessMessage();
         }
       }

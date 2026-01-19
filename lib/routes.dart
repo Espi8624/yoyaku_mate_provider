@@ -41,7 +41,10 @@ class GoRouterRefreshStream extends ChangeNotifier {
 }
 
 // Router設定Object生成
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final GoRouter router = GoRouter(
+  navigatorKey: rootNavigatorKey,
   routerNeglect: true,
   refreshListenable: GoRouterRefreshStream(),
   // 初期経路

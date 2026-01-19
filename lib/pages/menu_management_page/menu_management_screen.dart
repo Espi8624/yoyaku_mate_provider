@@ -8,7 +8,7 @@ import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/panels/a
 import '../../models/menu_list.dart';
 import '../../services/menu_service.dart';
 import '../../widgets/common_dialogs/confirmation_dialog.dart';
-import '../../widgets/common_widgets/custom_snack_bar.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../widgets/common_widgets/loading_indicator.dart';
 import 'menu_management_screen_viewmodel.dart';
 import 'widgets/dialogs/category_form_dialog.dart';
@@ -62,8 +62,8 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     if (_viewModel.errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          CustomSnackBar.show(context,
-              message: _viewModel.errorMessage!, status: SnackBarStatus.error);
+          ToastWidget.show(context, _viewModel.errorMessage!,
+              type: ToastType.error);
           _viewModel.clearErrorMessage();
         }
       });
@@ -111,8 +111,8 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     }
 
     if (_viewModel.errorMessage != null && mounted) {
-      CustomSnackBar.show(context,
-          message: _viewModel.errorMessage!, status: SnackBarStatus.error);
+      ToastWidget.show(context, _viewModel.errorMessage!,
+          type: ToastType.error);
       _viewModel.clearErrorMessage();
     }
   }
@@ -157,8 +157,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         content: 'このカテゴリーと含まれる全てのメニューを削除しますか？');
     if (confirmed == true) {
       _viewModel.deleteCategory(index);
-      CustomSnackBar.show(context,
-          message: 'カテゴリーが削除されました', status: SnackBarStatus.success);
+      ToastWidget.show(context, 'カテゴリーが削除されました', type: ToastType.success);
     }
   }
 
@@ -178,8 +177,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
       final savedMenu = await _viewModel.addMenu(newMenu);
 
       if (savedMenu == null) {
-        CustomSnackBar.show(context,
-            message: 'メニュー追加に失敗しました', status: SnackBarStatus.error);
+        ToastWidget.show(context, 'メニュー追加に失敗しました', type: ToastType.error);
         return;
       }
 
@@ -193,8 +191,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         await _viewModel.updateMenuWithImage(savedMenu, imageFile);
       }
 
-      CustomSnackBar.show(context,
-          message: 'メニューが追加されました', status: SnackBarStatus.success);
+      ToastWidget.show(context, 'メニューが追加されました', type: ToastType.success);
     }
   }
 
@@ -224,8 +221,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         // イメージ削除　→ 空の文字列で更新
         final menuWithoutImage = updatedMenu.copyWith(menuImageUrl: '');
         _viewModel.editMenu(menuWithoutImage);
-        CustomSnackBar.show(context,
-            message: '画像が削除されました', status: SnackBarStatus.success);
+        ToastWidget.show(context, '画像が削除されました', type: ToastType.success);
       } else {
         // テキスト情報のみ更新
         _viewModel.editMenu(updatedMenu);
@@ -239,8 +235,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     if (confirmed == true) {
       final category = _viewModel.categories[categoryIndex];
       _viewModel.deleteMenu(category, menuIndex);
-      CustomSnackBar.show(context,
-          message: 'メニューが削除されました', status: SnackBarStatus.success);
+      ToastWidget.show(context, 'メニューが削除されました', type: ToastType.success);
     }
   }
 
@@ -251,8 +246,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         content: '全てのメニューを削除状態にしますか？\nこの操作は「保存」を押すと確定されます。');
     if (confirmed == true) {
       _viewModel.deleteAllMenus();
-      CustomSnackBar.show(context,
-          message: '全てのメニューが削除状態になりました', status: SnackBarStatus.info);
+      ToastWidget.show(context, '全てのメニューが削除状態になりました', type: ToastType.info);
     }
   }
 

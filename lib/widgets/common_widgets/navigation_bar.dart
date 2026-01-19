@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
+
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 
 class SideNavigationBar extends StatelessWidget {

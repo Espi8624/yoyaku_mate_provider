@@ -11,6 +11,7 @@ import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.
 
 import 'package:yoyaku_mate_provider/pages/store_selection/store_selection_viewmodel.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 class StoreSelectionView extends StatelessWidget {
   const StoreSelectionView({super.key});
@@ -139,7 +140,10 @@ class _StoreSelectionContent extends StatelessWidget {
 
                             final success = await vm.selectStore(store.id);
 
-                            if (success && context.mounted) {
+                            if (success) {
+                              ToastWidget.show(
+                                  context, '${store.name}が選択されました.',
+                                  type: ToastType.success);
                               // selectStoreが返すstoreをそのままStoreProfileに変換してローカルリスト(myStores)に追加する
                             }
                           },
