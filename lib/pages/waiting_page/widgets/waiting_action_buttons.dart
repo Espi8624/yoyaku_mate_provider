@@ -3,12 +3,12 @@ import '../../../constants/app_colors.dart';
 
 class WaitingActionButtons extends StatelessWidget {
   final VoidCallback onAddWaiting;
-  final VoidCallback onClearAll;
+  final VoidCallback onShowMonitor;
 
   const WaitingActionButtons({
     super.key,
     required this.onAddWaiting,
-    required this.onClearAll,
+    required this.onShowMonitor,
   });
 
   @override
@@ -31,16 +31,16 @@ class WaitingActionButtons extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Tooltip(
-          message: "待機目録初期化",
+          message: "待機モニターURL",
           child: ElevatedButton(
-            onPressed: onClearAll,
+            onPressed: onShowMonitor,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
+              backgroundColor: AppColors.textPrimary, // 削除の赤色から通常色へ変更
               foregroundColor: Colors.white,
               padding: const EdgeInsets.all(16),
               minimumSize: Size.zero,
             ),
-            child: const Icon(Icons.delete_sweep, color: Colors.white),
+            child: const Icon(Icons.monitor, color: Colors.white),
           ),
         ),
       ],
