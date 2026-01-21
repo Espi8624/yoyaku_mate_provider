@@ -41,7 +41,9 @@ class OperationSettingsSection extends StatelessWidget {
         const Divider(height: 1, indent: 16, endIndent: 16),
         ProfileSettingItem(
           title: '営業時間',
-          subtitle: _buildBusinessHoursSummary(storeSettings.operatingHours),
+          subtitle: storeSettings.is24Hours
+              ? '24時間営業 (リセット: ${storeSettings.resetTime})'
+              : _buildBusinessHoursSummary(storeSettings.operatingHours),
           showTrailingIcon: !isReadOnly,
           onTap:
               isReadOnly ? null : () => _showBusinessHoursDialog(context, vm),
@@ -100,14 +102,22 @@ class OperationSettingsSection extends StatelessWidget {
     final storeSettings = vm.storeSettings;
     if (storeSettings == null) return;
 
-    final result = await showDialog<Map<String, Map<String, String>>>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) =>
-          BusinessHoursDialog(initialHours: storeSettings.operatingHours),
+      builder: (_) => BusinessHoursDialog(
+        initialHours: storeSettings.operatingHours,
+        initialIs24Hours: storeSettings.is24Hours,
+        initialResetTime: storeSettings.resetTime,
+      ),
     );
 
     if (result != null) {
-      final updatedSettings = storeSettings.copyWith(operatingHours: result);
+      final updatedSettings = storeSettings.copyWith(
+        operatingHours:
+            result['operatingHours'] as Map<String, Map<String, String>>,
+        is24Hours: result['is24Hours'] as bool,
+        resetTime: result['resetTime'] as String,
+      );
       await vm.updateStoreSettings(updatedSettings);
 
       if (context.mounted) {

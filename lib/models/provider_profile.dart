@@ -19,6 +19,9 @@ class ProviderProfile {
   final int? estimatedWaitTime;
   final int? maxWaitingCount;
   final bool? enableMenuSelection;
+  final Map<String, Map<String, String>>? operatingHours;
+  final bool? is24Hours;
+  final String? resetTime;
 
   ProviderProfile({
     required this.firebaseUid,
@@ -41,6 +44,9 @@ class ProviderProfile {
     this.estimatedWaitTime,
     this.maxWaitingCount,
     this.enableMenuSelection,
+    this.operatingHours,
+    this.is24Hours,
+    this.resetTime,
   });
 
   Map<String, dynamic> toJson() => {
@@ -67,6 +73,9 @@ class ProviderProfile {
         if (maxWaitingCount != null) 'max_waiting_count': maxWaitingCount,
         if (enableMenuSelection != null)
           'enable_menu_selection': enableMenuSelection,
+        if (operatingHours != null) 'operating_hours': operatingHours,
+        if (is24Hours != null) 'is_24_hours': is24Hours,
+        if (resetTime != null) 'reset_time': resetTime,
       };
 
   factory ProviderProfile.fromJson(Map<String, dynamic> json) =>
