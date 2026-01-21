@@ -7,6 +7,7 @@ import 'package:yoyaku_mate_provider/models/provider_profile.dart'; // 必要な
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_wizard_steps.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_business_hours_step.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
@@ -33,6 +34,9 @@ class _AddStorePageState extends State<AddStorePage> {
   final _estimatedWaitTimeController = TextEditingController(text: '10');
   final _maxWaitingCountController = TextEditingController(text: '10');
   bool _enableMenuSelection = false;
+  Map<String, Map<String, String>>? _operatingHours;
+  bool _is24Hours = false;
+  String _resetTime = '06:00';
 
   final PageController _pageController = PageController();
   int _currentPage = 0;
@@ -132,6 +136,9 @@ class _AddStorePageState extends State<AddStorePage> {
             int.tryParse(_estimatedWaitTimeController.text) ?? 10,
         maxWaitingCount: int.tryParse(_maxWaitingCountController.text) ?? 10,
         enableMenuSelection: _enableMenuSelection,
+        operatingHours: _operatingHours,
+        is24Hours: _is24Hours,
+        resetTime: _resetTime,
       );
 
       final createdProfileMap =
@@ -195,7 +202,7 @@ class _AddStorePageState extends State<AddStorePage> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 32.0, vertical: 8),
               child: LinearProgressIndicator(
-                value: (_currentPage + 1) / 5,
+                value: (_currentPage + 1) / 6,
                 backgroundColor: AppColors.border,
                 color: AppColors.accentPrimary,
               ),
@@ -226,6 +233,20 @@ class _AddStorePageState extends State<AddStorePage> {
                     child: StoreCapacityStep(
                       maxWaitingCountController: _maxWaitingCountController,
                       onNext: _nextPage,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32.0, vertical: 24.0),
+                    child: StoreBusinessHoursStep(
+                      onNext: (hours, is24h, resetTime) {
+                        setState(() {
+                          _operatingHours = hours;
+                          _is24Hours = is24h;
+                          _resetTime = resetTime;
+                        });
+                        _nextPage();
+                      },
                     ),
                   ),
                   Padding(

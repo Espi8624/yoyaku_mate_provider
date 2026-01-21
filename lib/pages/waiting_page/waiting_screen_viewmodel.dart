@@ -149,7 +149,12 @@ class WaitingScreenViewModel extends ChangeNotifier
   }
 
   Future<void> loadWaitingList() async {
-    _setLoading(true);
+    // 既存データがある場合はローディング画面を表示しない（サイレント更新）ことでチラつきを防ぐ
+    final bool shouldShowLoading = _waitingList.isEmpty;
+
+    if (shouldShowLoading) {
+      _setLoading(true);
+    }
     _setError(null);
     _waitingListSubscription?.cancel();
 
@@ -186,6 +191,11 @@ class WaitingScreenViewModel extends ChangeNotifier
         },
         onError: (e) => _handleStreamError(e),
       );
+
+      // データ更新を通知（サイレント更新の場合必要）
+      if (!shouldShowLoading) {
+        notifyListeners();
+      }
     } catch (e) {
       if (e is ApiException) {
         _handleStreamError(e);
@@ -193,7 +203,9 @@ class WaitingScreenViewModel extends ChangeNotifier
         _setError('データの読み込みに失敗しました: $e');
       }
     } finally {
-      _setLoading(false);
+      if (shouldShowLoading) {
+        _setLoading(false);
+      }
     }
   }
 
@@ -412,6 +424,7 @@ class WaitingScreenViewModel extends ChangeNotifier
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _waitingListSubscription?.cancel();
     _waitingService.dispose();
     super.dispose();

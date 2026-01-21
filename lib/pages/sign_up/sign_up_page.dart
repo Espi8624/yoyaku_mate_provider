@@ -21,6 +21,7 @@ import 'package:yoyaku_mate_provider/pages/sign_up/steps/phone_number_input_step
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/verification_code_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/manager_info_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_wizard_steps.dart'; // New Import
+import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_business_hours_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_store_id_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_name_step.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
@@ -308,10 +309,13 @@ class _SignUpPageState extends State<SignUpPage> {
           maxWaitingCountController: maxWaitingCountController,
           onNext: _nextPage,
         ), // 10
+        StoreBusinessHoursStep(
+          onNext: _handleBusinessHours,
+        ), // 11
         StoreTimeStep(
           estimatedWaitTimeController: estimatedWaitTimeController,
           onNext: _nextPage,
-        ), // 11
+        ), // 12
         StorePreOrderStep(
           isPreOrderEnabled: _enableMenuSelection,
           onPreOrderChanged: (value) {
@@ -320,7 +324,7 @@ class _SignUpPageState extends State<SignUpPage> {
             });
           },
           onNext: _nextPage,
-        ), // 12
+        ), // 13
         StoreReviewStep(
           nameController: storeNameController,
           addressController: storeAddressController,
@@ -562,6 +566,12 @@ class _SignUpPageState extends State<SignUpPage> {
         context.go('/signup-prompt');
       }
     }
+  }
+
+  void _handleBusinessHours(
+      Map<String, Map<String, String>> hours, bool is24h, String resetTime) {
+    context.read<SignUpViewModel>().saveBusinessHours(hours, is24h, resetTime);
+    _nextPage();
   }
 
   void _nextPage() {
