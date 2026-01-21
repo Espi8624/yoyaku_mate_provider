@@ -94,6 +94,24 @@ class SignUpViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Business Hours State
+  Map<String, Map<String, String>>? _operatingHours;
+  Map<String, Map<String, String>>? get operatingHours => _operatingHours;
+
+  bool _is24Hours = false;
+  bool get is24Hours => _is24Hours;
+
+  String _resetTime = '06:00';
+  String get resetTime => _resetTime;
+
+  void saveBusinessHours(
+      Map<String, Map<String, String>> hours, bool is24h, String reset) {
+    _operatingHours = hours;
+    _is24Hours = is24h;
+    _resetTime = reset;
+    notifyListeners();
+  }
+
   // --- Logic Methods ---
 
   // Load Progress from SharedPreferences
@@ -526,6 +544,9 @@ class SignUpViewModel extends ChangeNotifier {
             estimatedWaitTime: estimatedWaitTime,
             maxWaitingCount: maxWaitingCount,
             enableMenuSelection: isPreOrderEnabled,
+            operatingHours: _operatingHours,
+            is24Hours: _is24Hours,
+            resetTime: _resetTime,
           );
 
           await _profileService.addNewStore(profile, idToken);
@@ -546,6 +567,9 @@ class SignUpViewModel extends ChangeNotifier {
             estimatedWaitTime: estimatedWaitTime,
             maxWaitingCount: maxWaitingCount,
             enableMenuSelection: isPreOrderEnabled,
+            operatingHours: _operatingHours,
+            is24Hours: _is24Hours,
+            resetTime: _resetTime,
           );
 
           await _profileService.signUp(profile, idToken);

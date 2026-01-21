@@ -4,6 +4,8 @@ class StoreSettings {
   final Map<String, Map<String, String>> operatingHours;
   final ClosedDays closedDays;
   final WaitingPolicy waitingPolicy;
+  final bool is24Hours;
+  final String resetTime;
 
   StoreSettings({
     required this.storeId,
@@ -11,6 +13,8 @@ class StoreSettings {
     required this.operatingHours,
     required this.closedDays,
     required this.waitingPolicy,
+    this.is24Hours = false,
+    this.resetTime = '06:00',
   });
 
   factory StoreSettings.fromJson(Map<String, dynamic> json) {
@@ -24,6 +28,8 @@ class StoreSettings {
       closedDays: ClosedDays.fromJson(json['settings']['closed_days'] ?? {}),
       waitingPolicy:
           WaitingPolicy.fromJson(json['settings']['waiting_policy'] ?? {}),
+      is24Hours: json['settings']['is_24_hours'] ?? false,
+      resetTime: json['settings']['reset_time'] ?? '06:00',
     );
   }
 
@@ -34,6 +40,8 @@ class StoreSettings {
           'operating_hours': operatingHours,
           'closed_days': closedDays.toJson(),
           'waiting_policy': waitingPolicy.toJson(),
+          'is_24_hours': is24Hours,
+          'reset_time': resetTime,
         },
       };
 
@@ -43,6 +51,8 @@ class StoreSettings {
     Map<String, Map<String, String>>? operatingHours,
     ClosedDays? closedDays,
     WaitingPolicy? waitingPolicy,
+    bool? is24Hours,
+    String? resetTime,
   }) {
     return StoreSettings(
       storeId: storeId ?? this.storeId,
@@ -50,6 +60,8 @@ class StoreSettings {
       operatingHours: operatingHours ?? this.operatingHours,
       closedDays: closedDays ?? this.closedDays,
       waitingPolicy: waitingPolicy ?? this.waitingPolicy,
+      is24Hours: is24Hours ?? this.is24Hours,
+      resetTime: resetTime ?? this.resetTime,
     );
   }
 }
