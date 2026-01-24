@@ -37,10 +37,11 @@ class NavigationBarMobile extends StatelessWidget {
             _buildNavItem(0, Icons.list_alt_rounded, Icons.list_alt_rounded),
             _buildNavItem(
                 1, Icons.table_view_rounded, Icons.table_view_rounded),
+            _buildNavItem(2, Icons.bar_chart_rounded, Icons.bar_chart_rounded),
             if (isManager)
               _buildNavItem(
-                  2, Icons.people_alt_outlined, Icons.people_alt_rounded),
-            _buildNavItem(isManager ? 3 : 2, Icons.settings, Icons.settings),
+                  3, Icons.people_alt_outlined, Icons.people_alt_rounded),
+            _buildNavItem(isManager ? 4 : 3, Icons.settings, Icons.settings),
           ],
         ),
       ),
