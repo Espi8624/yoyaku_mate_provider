@@ -14,6 +14,7 @@ import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_managemen
 import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/services/store_settings_service.dart';
+import 'package:yoyaku_mate_provider/pages/statistics_page/statistics_screen.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar_mobile.dart';
@@ -206,6 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final List<Widget> pages = [
         WaitingScreen(storeId: storeId),
         MenuManagementScreen(storeId: storeId),
+        StatisticsScreen(storeId: storeId),
         if (isManager) StaffManagementScreen(storeId: storeId),
         const ProfileScreen(),
       ];
