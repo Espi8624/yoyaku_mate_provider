@@ -76,153 +76,130 @@ class _WaitingView extends StatelessWidget {
         if (isMobile) {
           // mobile layout
           return Scaffold(
-            body: SafeArea(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          '待機中のお客様リスト',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                                icon: const Icon(Icons.monitor),
-                                onPressed: () =>
-                                    _showMonitorUrlDialog(context, vm)),
-                            QRCodeButton(data: qrCodeData),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Stack(
-                      clipBehavior: Clip.none, // 影が切れないようにする
-                      children: [
-                        // 待機目録リスト
-                        Positioned.fill(
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildFilterBar(context, vm),
-                                Expanded(
-                                  child: WaitingListPanel(
-                                    waitingList: vm.filteredWaitingList,
-                                    onRefresh: vm.loadWaitingList,
-                                    onItemAction: (item) =>
-                                        _showStatusBasedDialog(context, item),
-                                    bottomPadding: 85,
-                                    qrToken: vm.qrToken,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
+            backgroundColor: const Color(0xFFF5F7FA),
+            appBar: AppBar(
+              title: const Text(
+                '待機リスト',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              centerTitle: false,
+              actions: [
+                IconButton(
+                    icon:
+                        const Icon(Icons.monitor, color: AppColors.textPrimary),
+                    onPressed: () => _showMonitorUrlDialog(context, vm)),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: QRCodeButton(data: qrCodeData),
+                ),
+              ],
+            ),
+            body: Column(
+              children: [
+                Expanded(
+                  child: Stack(
+                    clipBehavior: Clip.none, // 影が切れないようにする
+                    children: [
+                      // 待機目録リスト
+                      Positioned.fill(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                    right: 16.0, bottom: 16.0),
-                                child: FloatingActionButton(
-                                  onPressed: () =>
-                                      _showAddWaitingDialog(context),
-                                  backgroundColor: AppColors.accentPrimary,
-                                  child: const Icon(Icons.add,
-                                      color: Colors.white),
+                              _buildFilterBar(context, vm),
+                              Expanded(
+                                child: WaitingListPanel(
+                                  waitingList: vm.filteredWaitingList,
+                                  onRefresh: vm.loadWaitingList,
+                                  onItemAction: (item) =>
+                                      _showStatusBasedDialog(context, item),
+                                  bottomPadding: 85,
+                                  qrToken: vm.qrToken,
                                 ),
                               ),
-                              const WaitingStatusArea(),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        } else {
-          // desktop layout
-          return Scaffold(
-            body: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Row(
-                          children: [
-                            const Text(
-                              '待機中のお客様リスト',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            const Spacer(),
-                            Tooltip(
-                              message: "更新",
-                              child: ElevatedButton(
-                                onPressed: vm.loadWaitingList,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.textPrimary,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.all(16),
-                                  minimumSize: Size.zero,
-                                ),
-                                child: const Icon(Icons.refresh,
-                                    color: Colors.white),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            WaitingActionButtons(
-                              onAddWaiting: () =>
-                                  _showAddWaitingDialog(context),
-                              onShowMonitor: () =>
-                                  _showMonitorUrlDialog(context, vm),
-                            ),
-                          ],
-                        ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 1,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            QRCodeButton(data: qrCodeData),
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                  right: 16.0, bottom: 16.0),
+                              child: FloatingActionButton(
+                                onPressed: () => _showAddWaitingDialog(context),
+                                backgroundColor: AppColors.accentPrimary,
+                                child:
+                                    const Icon(Icons.add, color: Colors.white),
+                              ),
+                            ),
+                            const WaitingStatusArea(),
                           ],
                         ),
                       ),
                     ],
                   ),
                 ),
+              ],
+            ),
+          );
+        } else {
+          // desktop layout
+          return Scaffold(
+            backgroundColor: const Color(0xFFF5F7FA),
+            appBar: AppBar(
+              title: const Text(
+                '待機リスト',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              centerTitle: false,
+              actions: [
+                Tooltip(
+                  message: "更新",
+                  child: ElevatedButton(
+                    onPressed: vm.loadWaitingList,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.textPrimary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.all(16),
+                      minimumSize: Size.zero,
+                    ),
+                    child: const Icon(Icons.refresh, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                WaitingActionButtons(
+                  onAddWaiting: () => _showAddWaitingDialog(context),
+                  onShowMonitor: () => _showMonitorUrlDialog(context, vm),
+                ),
+                const SizedBox(width: 8),
+                QRCodeButton(data: qrCodeData),
+                const SizedBox(width: 16),
+              ],
+            ),
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24.0),
