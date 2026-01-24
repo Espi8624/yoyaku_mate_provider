@@ -263,89 +263,89 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         // mobile layout
         if (isMobile) {
           return Scaffold(
-            body: SafeArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 36),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'メニュー管理',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        _SaveStatusIndicator(status: vm.saveStatus),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          bottom: 150,
-                          child: MenuListPanel(
-                            tabController: _tabController,
-                            categories: vm.categories,
-                            categorizedMenu: vm.categorizedMenu,
-                            onEditCategory: _showEditCategoryDialog,
-                            onDeleteCategory: _showDeleteCategoryDialog,
-                            onEditMenu: _showEditMenuDialog,
-                            onDeleteMenu: _showDeleteMenuDialog,
-                          ),
-                        ),
-
-                        // 下段ボタンパネル
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: ActionButtonsPanelMobile(
-                            isCategoryEmpty: vm.categories.isEmpty,
-                            onAddCategory: _showAddCategoryDialog,
-                            onAddMenu: _showAddMenuDialog,
-                            // onSaveChanges: _saveChanges,
-                            onResetAll: _showDeleteAllMenusDialog,
-                          ),
-                        ),
-
-                        // ローディング表示
-                        if (vm.isLoading) const LoadingIndicator(),
-                      ],
-                    ),
-                  ),
-                ],
+            backgroundColor: const Color(0xFFF5F7FA),
+            appBar: AppBar(
+              title: const Text(
+                'メニュー管理',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              centerTitle: false,
+              actions: [
+                _SaveStatusIndicator(status: vm.saveStatus),
+                const SizedBox(width: 16),
+              ],
+            ),
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        bottom: 150,
+                        child: MenuListPanel(
+                          tabController: _tabController,
+                          categories: vm.categories,
+                          categorizedMenu: vm.categorizedMenu,
+                          onEditCategory: _showEditCategoryDialog,
+                          onDeleteCategory: _showDeleteCategoryDialog,
+                          onEditMenu: _showEditMenuDialog,
+                          onDeleteMenu: _showDeleteMenuDialog,
+                        ),
+                      ),
+
+                      // 下段ボタンパネル
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: ActionButtonsPanelMobile(
+                          isCategoryEmpty: vm.categories.isEmpty,
+                          onAddCategory: _showAddCategoryDialog,
+                          onAddMenu: _showAddMenuDialog,
+                          // onSaveChanges: _saveChanges,
+                          onResetAll: _showDeleteAllMenusDialog,
+                        ),
+                      ),
+
+                      // ローディング表示
+                      if (vm.isLoading) const LoadingIndicator(),
+                    ],
+                  ),
+                ),
+              ],
             ),
           );
         } else {
           // desktop layout
           return Scaffold(
+            backgroundColor: const Color(0xFFF5F7FA),
+            appBar: AppBar(
+              title: const Text(
+                'メニュー管理',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              centerTitle: false,
+              actions: [
+                _SaveStatusIndicator(status: vm.saveStatus),
+                const SizedBox(width: 24),
+              ],
+            ),
             body: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'メニュー管理',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      _SaveStatusIndicator(status: vm.saveStatus),
-                    ],
-                  ),
-                ),
                 Expanded(
                   child: Stack(
                     children: [

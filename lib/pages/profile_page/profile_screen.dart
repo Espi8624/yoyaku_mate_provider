@@ -102,6 +102,20 @@ class _ProfileViewState extends State<_ProfileView>
     final bool isManager = vm.userProfile?.role == 'manager';
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        title: const Text(
+          "設定",
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           const double mobileBreakpoint = 700;
@@ -125,14 +139,7 @@ class _ProfileViewState extends State<_ProfileView>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Header
-        const Padding(
-          padding: EdgeInsets.fromLTRB(24, 12, 24, 24),
-          child: Text("設定",
-              style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary)),
-        ),
+
         // Contents
         Expanded(
           // _tabController が生成されるまではローディングインディケーターを表示

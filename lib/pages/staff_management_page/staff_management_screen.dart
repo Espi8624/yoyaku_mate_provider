@@ -17,6 +17,20 @@ class StaffManagementScreen extends StatelessWidget {
         profileService: context.read<ProviderProfileService>(),
       ),
       child: Scaffold(
+        backgroundColor: const Color(0xFFF5F7FA),
+        appBar: AppBar(
+          title: const Text(
+            "スタッフ管理",
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: false,
+        ),
         body: LayoutBuilder(
           builder: (context, constraints) {
             const double mobileBreakpoint = 700;
@@ -39,17 +53,6 @@ class StaffManagementScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(24, 12, 24, 24),
-          child: Text(
-            "スタッフ管理",
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ),
         Expanded(
           child: StaffManagementView(storeId: storeId),
         ),
