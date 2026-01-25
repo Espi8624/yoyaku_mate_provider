@@ -266,7 +266,6 @@ class ProviderProfileService {
       throw ApiException(
           'Failed to upload license image. Status: ${response.statusCode}, Body: $responseBody');
     }
-    print('License image uploaded successfully!');
   }
 
   // 店舗存在確認
