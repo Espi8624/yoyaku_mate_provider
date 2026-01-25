@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +17,7 @@ import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/services/store_settings_service.dart';
 import 'package:yoyaku_mate_provider/pages/statistics_page/statistics_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar_mobile.dart';
@@ -24,6 +27,15 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await dotenv.load(fileName: ".env");
+
+  // Crashlytics Configuration
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
+
   runApp(const MyApp());
 }
 
@@ -36,11 +48,11 @@ class MyApp extends StatelessWidget {
       providers: [
         Provider<ProviderProfileService>(
           create: (_) =>
-              ProviderProfileService(baseUrl: 'https://saboten-server.fly.dev'),
+              ProviderProfileService(baseUrl: dotenv.env['API_URL'] ?? ''),
         ),
         Provider<StoreSettingsService>(
           create: (_) =>
-              StoreSettingsService(baseUrl: 'https://saboten-server.fly.dev'),
+              StoreSettingsService(baseUrl: dotenv.env['API_URL'] ?? ''),
         ),
         StreamProvider<User?>(
           create: (_) => FirebaseAuth.instance.authStateChanges(),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -24,17 +25,23 @@ class StatisticsService {
         'Authorization': 'Bearer $idToken',
         'Content-Type': 'application/json',
       },
-    );
+    ).timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body);
-      if (decoded['status'] == 'success') {
-        return decoded['data'];
-      } else {
-        throw Exception(decoded['message'] ?? 'Failed to load statistics');
-      }
+      // Use compute to parse JSON in a background isolate
+      return await compute(_parseStatistics, response.body);
     } else {
       throw Exception('Failed to load statistics: ${response.statusCode}');
     }
+  }
+}
+
+// Top-level function for isolate
+Map<String, dynamic> _parseStatistics(String responseBody) {
+  final decoded = jsonDecode(responseBody);
+  if (decoded['status'] == 'success') {
+    return decoded['data'] as Map<String, dynamic>;
+  } else {
+    throw Exception(decoded['message'] ?? 'Failed to load statistics');
   }
 }
