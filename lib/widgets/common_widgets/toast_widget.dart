@@ -24,12 +24,12 @@ class ToastWidget {
       try {
         overlayState = rootNavigatorKey.currentState?.overlay;
       } catch (e) {
-        print("ToastWidget: Global Navigator overlay error: $e");
+        // print("ToastWidget: Global Navigator overlay error: $e");
       }
     }
 
     if (overlayState == null) {
-      print("ToastWidget: Overlay not found via context or global key.");
+      // print("ToastWidget: Overlay not found via context or global key.");
       return;
     }
 
