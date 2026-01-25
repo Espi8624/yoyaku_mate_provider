@@ -1,8 +1,10 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/pages/statistics_page/statistics_viewmodel.dart';
 import 'package:yoyaku_mate_provider/services/statistics_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class StatisticsScreen extends StatelessWidget {
   final String storeId;
@@ -13,8 +15,7 @@ class StatisticsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => StatisticsViewModel(
-        service: StatisticsService(
-            baseUrl: 'https://saboten-server.fly.dev'), // TODO: 動的ベースURLを使用する
+        service: StatisticsService(baseUrl: dotenv.env['API_URL'] ?? ''),
         storeId: storeId,
       ),
       child: const _StatisticsView(),
@@ -234,6 +235,7 @@ class _StatisticsView extends StatelessWidget {
               else
                 _buildDynamicChartCard(
                     data['no_show_chart_data'] as List<dynamic>?),
+
               const SizedBox(height: 40),
             ],
           ),
@@ -500,14 +502,7 @@ class _StatisticsView extends StatelessWidget {
                       barRods: [
                         BarChartRodData(
                           toY: count,
-                          gradient: const LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [
-                              Color(0xFF212529), // Dark Gray
-                              Color(0xFF868E96), // Light Gray
-                            ],
-                          ),
+                          color: AppColors.accentPrimary,
                           width: 12,
                           borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(6)),
@@ -711,14 +706,7 @@ class _StatisticsView extends StatelessWidget {
                           barRods: [
                             BarChartRodData(
                               toY: val,
-                              gradient: const LinearGradient(
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                                colors: [
-                                  Color(0xFF212529),
-                                  Color(0xFF868E96),
-                                ],
-                              ),
+                              color: const Color(0xFF212529),
                               width: 12,
                               borderRadius: const BorderRadius.vertical(
                                   top: Radius.circular(6)),
