@@ -129,11 +129,13 @@ class WaitingPolicy {
   final int maxWaitingCount;
   final int? estimatedWaitTime;
   final bool enableMenuSelection;
+  final bool requireOneMenuPerPerson;
 
   WaitingPolicy({
     required this.maxWaitingCount,
     this.estimatedWaitTime,
     this.enableMenuSelection = false,
+    this.requireOneMenuPerPerson = false,
   });
 
   factory WaitingPolicy.fromJson(Map<String, dynamic> json) {
@@ -141,6 +143,7 @@ class WaitingPolicy {
       maxWaitingCount: json['max_waiting_count'] ?? 0,
       estimatedWaitTime: json['estimated_wait_time'] ?? 0,
       enableMenuSelection: json['enable_menu_selection'] ?? false,
+      requireOneMenuPerPerson: json['require_one_menu_per_person'] ?? false,
     );
   }
 
@@ -148,17 +151,21 @@ class WaitingPolicy {
         'max_waiting_count': maxWaitingCount,
         'estimated_wait_time': estimatedWaitTime,
         'enable_menu_selection': enableMenuSelection,
+        'require_one_menu_per_person': requireOneMenuPerPerson,
       };
 
   WaitingPolicy copyWith({
     int? maxWaitingCount,
     int? estimatedWaitTime,
     bool? enableMenuSelection,
+    bool? requireOneMenuPerPerson,
   }) {
     return WaitingPolicy(
       maxWaitingCount: maxWaitingCount ?? this.maxWaitingCount,
       estimatedWaitTime: estimatedWaitTime ?? this.estimatedWaitTime,
       enableMenuSelection: enableMenuSelection ?? this.enableMenuSelection,
+      requireOneMenuPerPerson:
+          requireOneMenuPerPerson ?? this.requireOneMenuPerPerson,
     );
   }
 }

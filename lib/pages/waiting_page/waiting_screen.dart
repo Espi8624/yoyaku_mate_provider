@@ -248,6 +248,7 @@ class _WaitingView extends StatelessWidget {
       builder: (_) => AddWaitingDialog(
         storeId: vm.storeId,
         enableMenuSelection: vm.enableMenuSelection,
+        requireOneMenuPerPerson: vm.requireOneMenuPerPerson,
       ),
     );
     if (result != null && context.mounted) {

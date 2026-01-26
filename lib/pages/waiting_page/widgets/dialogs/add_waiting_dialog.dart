@@ -4,16 +4,20 @@ import '../../../../models/menu_list.dart';
 import '../../../../models/waiting_list.dart'; // Import for MenuItem
 import '../../../../services/menu_service.dart';
 import '../../../../widgets/common_dialogs/base_dialog.dart';
+import '../../../../widgets/common_widgets/toast_widget.dart';
 
 class AddWaitingDialog extends StatefulWidget {
   final String storeId;
   final bool enableMenuSelection;
+  final bool requireOneMenuPerPerson;
 
   const AddWaitingDialog({
     super.key,
     required this.storeId,
     bool? enableMenuSelection,
-  }) : enableMenuSelection = enableMenuSelection ?? false;
+    bool? requireOneMenuPerPerson,
+  })  : enableMenuSelection = enableMenuSelection ?? false,
+        requireOneMenuPerPerson = requireOneMenuPerPerson ?? false;
 
   @override
   State<AddWaitingDialog> createState() => _AddWaitingDialogState();
@@ -74,6 +78,7 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
     if (_formKey.currentState!.validate()) {
       // Build selected menu items list
       final List<MenuItem> selectedMenuItems = [];
+      int totalQuantity = 0;
       _selectedMenuCounts.forEach((menuId, count) {
         if (count > 0) {
           final menu = _availableMenus.firstWhere((m) => m.menuId == menuId);
@@ -83,11 +88,21 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
             quantity: count,
             // options: ... (could be added later if needed)
           ));
+          totalQuantity += count;
         }
       });
 
+      final partySize = int.parse(_partySizeController.text);
+
+      // Validation: One Menu Per Person
+      if (widget.requireOneMenuPerPerson && totalQuantity < partySize) {
+        ToastWidget.show(context, '1人1メニュー制限: 人数分以上のメニューを選択してください',
+            type: ToastType.error);
+        return;
+      }
+
       final newItemData = {
-        'partySize': int.parse(_partySizeController.text),
+        'partySize': partySize,
         'contact': _contactController.text.trim().isEmpty
             ? ''
             : _contactController.text.trim(),
