@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
+import '../../../../models/store_settings.dart';
 import '../../dialogs/number_input_dialog.dart';
+import '../../dialogs/menu_selection_settings_dialog.dart';
 import '../../profile_screen_viewmodel.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
@@ -30,18 +32,11 @@ class WaitingSettingsSection extends StatelessWidget {
           title: '待機登録時メニュー選択有効化',
           subtitle:
               storeSettings.waitingPolicy.enableMenuSelection ? 'On' : 'Off',
-          showTrailingIcon: false,
-          trailing: Switch(
-            value: storeSettings.waitingPolicy.enableMenuSelection,
-            onChanged: isReadOnly
-                ? null
-                : (value) async {
-                    final updatedPolicy = storeSettings.waitingPolicy
-                        .copyWith(enableMenuSelection: value);
-                    await vm.updateStoreSettings(
-                        storeSettings.copyWith(waitingPolicy: updatedPolicy));
-                  },
-          ),
+          showTrailingIcon: !isReadOnly,
+          onTap: isReadOnly
+              ? null
+              : () =>
+                  _showMenuSelectionSettingsDialog(context, vm, storeSettings),
         ),
         ProfileSettingItem(
           title: '最大受付可能人数',
@@ -65,6 +60,35 @@ class WaitingSettingsSection extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _showMenuSelectionSettingsDialog(
+    BuildContext context,
+    ProfileScreenViewModel vm,
+    StoreSettings storeSettings,
+  ) async {
+    final result = await showDialog<MenuSelectionSettingsResult>(
+      context: context,
+      builder: (_) => MenuSelectionSettingsDialog(
+        initialEnableMenuSelection:
+            storeSettings.waitingPolicy.enableMenuSelection,
+        initialRequireOneMenuPerPerson:
+            storeSettings.waitingPolicy.requireOneMenuPerPerson,
+      ),
+    );
+
+    if (result != null) {
+      final updatedPolicy = storeSettings.waitingPolicy.copyWith(
+        enableMenuSelection: result.enableMenuSelection,
+        requireOneMenuPerPerson: result.requireOneMenuPerPerson,
+      );
+      await vm.updateStoreSettings(
+        storeSettings.copyWith(waitingPolicy: updatedPolicy),
+      );
+      if (context.mounted) {
+        ToastWidget.show(context, 'メニュー選択設定を更新しました', type: ToastType.info);
+      }
+    }
   }
 
   Future<void> _showNumberInputDialog(

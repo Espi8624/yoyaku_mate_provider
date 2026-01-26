@@ -43,7 +43,9 @@ class WaitingScreenViewModel extends ChangeNotifier
           settings.waitingPolicy.estimatedWaitTime! > 0) {
         _estimatedWaitTimePerTeam = settings.waitingPolicy.estimatedWaitTime!;
       }
+
       _enableMenuSelection = settings.waitingPolicy.enableMenuSelection;
+      _requireOneMenuPerPerson = settings.waitingPolicy.requireOneMenuPerPerson;
       notifyListeners();
     } catch (e) {
       // print('Failed to load store settings: $e');
@@ -71,6 +73,9 @@ class WaitingScreenViewModel extends ChangeNotifier
 
   bool _enableMenuSelection = false;
   bool get enableMenuSelection => _enableMenuSelection;
+
+  bool _requireOneMenuPerPerson = false;
+  bool get requireOneMenuPerPerson => _requireOneMenuPerPerson;
 
   void setFilter(String filter) {
     if (_selectedFilter != filter) {
