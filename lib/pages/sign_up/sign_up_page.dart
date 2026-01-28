@@ -20,7 +20,7 @@ import 'package:yoyaku_mate_provider/pages/sign_up/steps/email_verification_step
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/phone_number_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/verification_code_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/manager_info_step.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_wizard_steps.dart'; // New Import
+import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_wizard_steps.dart'; // 新規インポート
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_business_hours_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_store_id_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_name_step.dart';
@@ -37,7 +37,7 @@ class _SignUpPageState extends State<SignUpPage> {
   late PageController _pageController;
   int _currentPageIndex = 0;
 
-  // Controllers
+  // コントローラー
   final TextEditingController managerEmailController = TextEditingController();
   final TextEditingController managerPasswordController =
       TextEditingController();
@@ -54,13 +54,22 @@ class _SignUpPageState extends State<SignUpPage> {
       TextEditingController();
 
   final TextEditingController storeNameController = TextEditingController();
+  final TextEditingController storeZipCodeController =
+      TextEditingController(); // 新規追加
+  final TextEditingController storePrefectureController =
+      TextEditingController(); // 新規追加
+  final TextEditingController storeCityController =
+      TextEditingController(); // 新規追加
   final TextEditingController storeAddressController = TextEditingController();
+  final TextEditingController storeBuildingController =
+      TextEditingController(); // 新規追加
   final TextEditingController storePhoneController = TextEditingController();
   final TextEditingController estimatedWaitTimeController =
       TextEditingController(text: '10');
   final TextEditingController maxWaitingCountController =
       TextEditingController(text: '10');
   bool _enableMenuSelection = false;
+  bool _requireOneMenuPerPerson = false; // 新規追加
 
   final TextEditingController staffStoreIdController = TextEditingController();
   final TextEditingController staffEmailController = TextEditingController();
@@ -96,7 +105,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     final vm = context.read<SignUpViewModel>();
 
-    // Cache the view models here to ensure they are available
+    // ここでViewModelをキャッシュして利用可能にする
     _profileVM = context.read<ProfileScreenViewModel>();
     _profileVM?.addListener(_populateUserData);
 
@@ -114,19 +123,18 @@ class _SignUpPageState extends State<SignUpPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final profileVM = _profileVM;
-        // Check if profileVM is effectively available
+        // profileVMが有効か確認
         if (profileVM == null) return;
 
         final userProfile = profileVM.userProfile;
         final currentUser = FirebaseAuth.instance.currentUser;
 
         if (userProfile != null) {
-          // If user profile exists, they shouldn't be in sign up flow unless it was add_store which is removed.
-          // However, keeping safe fallback or if we need to pre-fill from profile for restart?
-          // Since add_store is gone, likely we rely on currentUser (Firebase) primarily for fresh sign up resume.
-          // We'll remove the userProfile specific block as it was mainly for Add Store.
+          // ユーザープロファイルが存在する場合、Add Storeでない限りサインアップフローにはいないはず
+          // しかし、再開のための事前入力などが必要な場合の安全策として維持？
+          // Add Store機能は削除されたため、主にFirebaseのcurrentUserに依存して再開する
         } else if (currentUser != null) {
-          // Regular flow or add_store with no local profile yet
+          // 通常フローまたはローカルプロファイルなしのAdd Store
           managerEmailController.text = currentUser.email ?? '';
           staffEmailController.text = currentUser.email ?? '';
 
@@ -141,7 +149,7 @@ class _SignUpPageState extends State<SignUpPage> {
             managerPhoneController.text = phone;
             staffPhoneController.text = phone;
           } else {
-            // Check SharedPreferences as fallback
+            // フォールバックとしてSharedPreferencesを確認
             SharedPreferences.getInstance().then((prefs) {
               final savedPhone = prefs.getString('signup_phone');
               if (savedPhone != null && mounted) {
@@ -164,7 +172,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     if (mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // Check mounted again before using controller because of async gap
+        // 非同期ギャップのためコントローラーを使用する前にmountedを再確認
         if (mounted && _pageController.hasClients) {
           if (_pageController.page?.round() != targetPage) {
             _pageController.jumpToPage(targetPage);
@@ -202,6 +210,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     storeNameController.dispose();
     storeAddressController.dispose();
+    storeBuildingController.dispose(); // 新規追加
     storePhoneController.dispose();
     estimatedWaitTimeController.dispose();
     maxWaitingCountController.dispose();
@@ -222,7 +231,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
-    context.watch<SignUpViewModel>(); // Watch for rebuilds
+    context.watch<SignUpViewModel>(); // 再ビルドを監視
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -301,7 +310,11 @@ class _SignUpPageState extends State<SignUpPage> {
         ), // 8
         StoreBasicInfoStep(
           nameController: storeNameController,
+          zipCodeController: storeZipCodeController, // 新規追加
+          prefectureController: storePrefectureController, // 新規追加
+          cityController: storeCityController, // 新規追加
           addressController: storeAddressController,
+          buildingController: storeBuildingController, // 新規追加
           phoneController: storePhoneController,
           onNext: _nextPage,
         ), // 9
@@ -325,19 +338,29 @@ class _SignUpPageState extends State<SignUpPage> {
           },
           onNext: _nextPage,
         ), // 13
+        StoreOneMenuRuleStep(
+          requireOneMenuPerPerson: _requireOneMenuPerPerson,
+          onRequireRuleChanged: (value) {
+            setState(() {
+              _requireOneMenuPerPerson = value;
+            });
+          },
+          onNext: _nextPage,
+        ), // 14 (新規追加)
         StoreReviewStep(
           nameController: storeNameController,
           addressController: storeAddressController,
+          buildingController: storeBuildingController, // 新規追加
           phoneController: storePhoneController,
           maxWaitingCountController: maxWaitingCountController,
           estimatedWaitTimeController: estimatedWaitTimeController,
           isPreOrderEnabled: _enableMenuSelection,
           onSubmit: _handleSignUp,
           isLoading: context.read<SignUpViewModel>().isLoading,
-        ), // 13
+        ), // 15
       ];
     } else {
-      // Staff pages
+      // スタッフ用ページ
       return [
         RoleSelectionStep(onRoleSelected: _handleRoleSelection), // 0
         TermsOfServiceStep(
@@ -369,14 +392,14 @@ class _SignUpPageState extends State<SignUpPage> {
         StaffStoreIdStep(
           storeIdController: staffStoreIdController,
           onNext: _nextPage,
-        ), // 8 (Store ID)
+        ), // 8 (店舗ID)
         StaffNameStep(
           lastNameController: staffLastNameController,
           firstNameController: staffFirstNameController,
           lastNameKanaController: staffLastNameKanaController,
           firstNameKanaController: staffFirstNameKanaController,
           onSubmit: _handleSignUp,
-        ), // 9 (Name)
+        ), // 9 (氏名)
       ];
     }
   }
@@ -441,7 +464,6 @@ class _SignUpPageState extends State<SignUpPage> {
     try {
       final success = await vm.createAccountAndSendEmail(email, password, '');
       if (success) {
-        if (!mounted) return;
         if (!mounted) return;
         ToastWidget.show(context, '認証メールを送信しました。メールボックスをご確認ください。',
             type: ToastType.success);
@@ -509,8 +531,6 @@ class _SignUpPageState extends State<SignUpPage> {
           vm.role == 'manager' ? managerPhoneController : staffPhoneController;
       vm.savePhoneProgress(phoneController.text.trim());
 
-      vm.savePhoneProgress(phoneController.text.trim());
-
       ToastWidget.show(context, '電話番号認証が完了しました。', type: ToastType.success);
       _nextPage();
       _nextPage();
@@ -547,7 +567,11 @@ class _SignUpPageState extends State<SignUpPage> {
       managerName: managerName,
       managerNameKana: managerNameKana,
       storeName: storeNameController.text.trim(),
+      storeZipCode: storeZipCodeController.text.trim(), // 新規追加
+      storePrefecture: storePrefectureController.text.trim(), // 新規追加
+      storeCity: storeCityController.text.trim(), // 新規追加
       storeAddress: storeAddressController.text.trim(),
+      storeBuilding: storeBuildingController.text.trim(), // 新規追加
       storePhone: storePhoneController.text.trim(),
       staffName: staffName,
       staffNameKana: staffNameKana,
@@ -557,6 +581,7 @@ class _SignUpPageState extends State<SignUpPage> {
       estimatedWaitTime: int.tryParse(estimatedWaitTimeController.text) ?? 10,
       maxWaitingCount: int.tryParse(maxWaitingCountController.text) ?? 10,
       isPreOrderEnabled: _enableMenuSelection,
+      requireOneMenuPerPerson: _requireOneMenuPerPerson, // 新規追加
     );
 
     if (success && mounted) {
@@ -579,14 +604,19 @@ class _SignUpPageState extends State<SignUpPage> {
     final currentUser = FirebaseAuth.instance.currentUser;
     int nextIndex = _currentPageIndex + 1;
 
+    // 事前注文が無効の場合、1人1メニュー設定(index 14)をスキップ
+    if (_currentPageIndex == 13 && !_enableMenuSelection) {
+      nextIndex = 15;
+    }
+
     if (currentUser != null) {
       if (_currentPageIndex == 2) {
-        // Privacy -> Email
+        // プライバシー -> メール
         final isEmailVerified = context.read<SignUpViewModel>().isEmailVerified;
         if (isEmailVerified) {
           nextIndex = 6; // Phone
         } else {
-          nextIndex = 5; // Email Verify Wait
+          nextIndex = 5; // メール認証待機
         }
       } else if (_currentPageIndex == 5 &&
           context.read<SignUpViewModel>().isEmailVerified) {

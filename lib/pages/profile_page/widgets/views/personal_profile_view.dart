@@ -28,20 +28,30 @@ class PersonalProfileView extends StatelessWidget {
     bool isName = false,
   }) async {
     if (!isPassword) {
-      final newValue = await showDialog<String>(
+      final result = await showDialog(
         context: context,
         builder: (_) => EditProfileDialog(
           title: title,
           initialValue: initialValue,
+          initialFurigana:
+              isName ? userProfile.nameFurigana : null, // Pass Furigana
           isPassword: false,
           isName: isName,
         ),
       );
 
-      if (newValue != null && newValue.isNotEmpty) {
+      if (result != null) {
         final vm = context.read<ProfileScreenViewModel>();
-        final success = await vm.updateProfileField(
-            userFieldKey: fieldKey!, value: newValue);
+        bool success = false;
+
+        if (result is Map && isName) {
+          success = await vm
+              .updateUserProfileFields(Map<String, dynamic>.from(result));
+        } else if (result is String && result.isNotEmpty) {
+          success = await vm.updateProfileField(
+              userFieldKey: fieldKey!, value: result);
+        }
+
         if (success && context.mounted) {
           ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
         }
@@ -97,6 +107,7 @@ class PersonalProfileView extends StatelessWidget {
             children: [
               ProfileHeader(
                 name: userProfile.name,
+                furigana: userProfile.nameFurigana, // New
                 imageUrl: userProfile.userImageUrl,
                 onTapImage: () {
                   vm.uploadUserImage();

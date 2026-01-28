@@ -8,6 +8,10 @@ class ProviderProfile {
   final String? storeId; // スタッフは任意、マネージャーは必須
   final String? storeName;
   final String? storeAddress;
+  final String? storeBuilding; // New
+  final String? storeZipCode;
+  final String? storePrefecture;
+  final String? storeCity;
   final String? storeTelNumber;
   final String? storeEmail;
   final String? bizNumber;
@@ -19,6 +23,7 @@ class ProviderProfile {
   final int? estimatedWaitTime;
   final int? maxWaitingCount;
   final bool? enableMenuSelection;
+  final bool? requireOneMenuPerPerson; // New
   final Map<String, Map<String, String>>? operatingHours;
   final bool? is24Hours;
   final String? resetTime;
@@ -33,6 +38,10 @@ class ProviderProfile {
     this.storeId,
     this.storeName,
     this.storeAddress,
+    this.storeBuilding,
+    this.storeZipCode,
+    this.storePrefecture,
+    this.storeCity,
     this.storeTelNumber,
     this.storeEmail,
     this.bizNumber,
@@ -44,6 +53,7 @@ class ProviderProfile {
     this.estimatedWaitTime,
     this.maxWaitingCount,
     this.enableMenuSelection,
+    this.requireOneMenuPerPerson, // New
     this.operatingHours,
     this.is24Hours,
     this.resetTime,
@@ -59,6 +69,10 @@ class ProviderProfile {
         if (storeId != null) 'store_id': storeId,
         if (storeName != null) 'store_name': storeName,
         if (storeAddress != null) 'store_address': storeAddress,
+        if (storeBuilding != null) 'store_building': storeBuilding,
+        if (storeZipCode != null) 'store_zip_code': storeZipCode,
+        if (storePrefecture != null) 'store_prefecture': storePrefecture,
+        if (storeCity != null) 'store_city': storeCity,
         if (storeTelNumber != null) 'store_tel_number': storeTelNumber,
         if (storeEmail != null) 'store_email': storeEmail,
         if (bizNumber != null) 'biz_number': bizNumber,
@@ -73,6 +87,8 @@ class ProviderProfile {
         if (maxWaitingCount != null) 'max_waiting_count': maxWaitingCount,
         if (enableMenuSelection != null)
           'enable_menu_selection': enableMenuSelection,
+        if (requireOneMenuPerPerson != null)
+          'require_one_menu_per_person': requireOneMenuPerPerson, // New
         if (operatingHours != null) 'operating_hours': operatingHours,
         if (is24Hours != null) 'is_24_hours': is24Hours,
         if (resetTime != null) 'reset_time': resetTime,

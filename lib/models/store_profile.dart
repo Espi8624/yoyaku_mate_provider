@@ -2,6 +2,10 @@ class StoreProfile {
   final String id;
   final String name;
   final String address;
+  final String? zipCode; // New
+  final String? prefecture; // New
+  final String? city; // New
+  final String? building;
   final String phone_number;
   final String bizNumber;
   final String? storeImageUrl;
@@ -12,6 +16,10 @@ class StoreProfile {
     required this.id,
     required this.name,
     required this.address,
+    this.zipCode, // New
+    this.prefecture, // New
+    this.city, // New
+    this.building,
     required this.phone_number,
     required this.bizNumber,
     this.storeImageUrl,
@@ -24,6 +32,10 @@ class StoreProfile {
       id: json['store_id'] as String? ?? '',
       name: json['store_name'] as String? ?? '',
       address: json['address'] as String? ?? '',
+      zipCode: json['zip_code'] as String?, // New
+      prefecture: json['prefecture'] as String?, // New
+      city: json['city'] as String?, // New
+      building: json['building'] as String?,
       phone_number:
           json['phone_number'] as String? ?? json['phone'] as String? ?? '',
       bizNumber: json['biz_number'] as String? ?? '',

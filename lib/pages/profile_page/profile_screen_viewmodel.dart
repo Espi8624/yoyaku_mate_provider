@@ -299,38 +299,78 @@ class ProfileScreenViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateProfileField({
-    String? userFieldKey,
-    String? storeFieldKey,
-    required String value,
-  }) async {
+  Future<bool> updateUserProfileFields(Map<String, dynamic> updates) async {
     _isLoading = true;
     notifyListeners();
     _errorMessage = null;
     bool success = false;
 
     try {
-      if (userFieldKey != null) {
-        if (_mongoUserId.isEmpty) {
-          throw ApiException('ユーザーIDが見つかりません。');
-        }
+      if (_mongoUserId.isEmpty) {
+        throw ApiException('ユーザーIDが見つかりません。');
+      }
 
-        // Optimistic Update: UIを即時反映させる
-        if (_userProfile != null) {
-          if (userFieldKey == 'user_name' || userFieldKey == 'name') {
-            _userProfile = _userProfile!.copyWith(name: value);
-          } else if (userFieldKey == 'email') {
-            _userProfile = _userProfile!.copyWith(email: value);
-          } else if (userFieldKey == 'phone_number') {
-            _userProfile = _userProfile!.copyWith(phone_number: value);
+      // Optimistic Update
+      Map<String, dynamic> backendUpdates = {};
+
+      if (_userProfile != null) {
+        UserProfile updated = _userProfile!;
+        updates.forEach((key, value) {
+          if (key == 'name') {
+            updated = updated.copyWith(name: value);
+            backendUpdates['user_name'] = value;
+          } else if (key == 'name_furigana') {
+            updated = updated.copyWith(nameFurigana: value);
+            backendUpdates['user_name_furigana'] = value;
+          } else if (key == 'email') {
+            updated = updated.copyWith(email: value);
+            backendUpdates['email'] = value;
+          } else if (key == 'phone_number') {
+            updated = updated.copyWith(phone_number: value);
+            backendUpdates['phone'] = value;
+          } else {
+            // その他のキーはそのまま使用 (必要であればマッピング追加)
+            backendUpdates[key] = value;
           }
-          notifyListeners();
-        }
+        });
+        _userProfile = updated;
+        notifyListeners();
+      }
 
-        await _profileService
-            .updateUserProfile(_mongoUserId, {userFieldKey: value});
-        await _fetchInitialUserProfile();
-      } else if (storeFieldKey != null && storeId.isNotEmpty) {
+      await _profileService.updateUserProfile(_mongoUserId, backendUpdates);
+      await _fetchInitialUserProfile();
+      success = true;
+    } on ApiException catch (e) {
+      _errorMessage = '更新に失敗しました: ${e.message}';
+    } catch (e) {
+      _errorMessage = '予期せぬエラーが発生しました: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+
+    return success;
+  }
+
+  Future<bool> updateProfileField({
+    String? userFieldKey,
+    String? storeFieldKey,
+    required String value,
+  }) async {
+    // ユーザー情報の単純更新の場合、新しいメソッドに委譲
+    if (userFieldKey != null) {
+      return updateUserProfileFields({userFieldKey: value});
+    }
+
+    // 店舗更新ロジックは今のところ固有のままか、同様のリファクタリングが必要
+    // 安全のため、店舗ロジックはそのまま維持
+    _isLoading = true;
+    notifyListeners();
+    _errorMessage = null;
+    bool success = false;
+
+    try {
+      if (storeFieldKey != null && storeId.isNotEmpty) {
         await _profileService
             .updateStoreProfile(storeId, {storeFieldKey: value});
 
@@ -363,6 +403,74 @@ class ProfileScreenViewModel extends ChangeNotifier {
       success = true;
     } on ApiException catch (e) {
       _errorMessage = '更新に失敗しました: ${e.message}';
+    } catch (e) {
+      _errorMessage = '予期せぬエラーが発生しました: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+
+    return success;
+  }
+
+  Future<bool> updateStoreAddress({
+    required String zipCode,
+    required String prefecture,
+    required String city,
+    required String address,
+    required String building,
+  }) async {
+    if (storeId.isEmpty) return false;
+
+    _isLoading = true;
+    notifyListeners();
+    _errorMessage = null;
+    bool success = false;
+
+    try {
+      final updates = {
+        'zip_code': zipCode,
+        'prefecture': prefecture,
+        'city': city,
+        'address': address,
+        'building': building,
+      };
+
+      await _profileService.updateStoreProfile(storeId, updates);
+
+      // データを更新
+      final response = await _profileService.fetchStoreProfile(storeId);
+      if (response.containsKey('data') && response['data'] is Map) {
+        final updatedStore =
+            StoreProfile.fromJson(response['data'] as Map<String, dynamic>);
+
+        final index = _myStores.indexWhere((s) => s.id == storeId);
+        if (index != -1) {
+          final oldStore = _myStores[index];
+          // 更新で返されないフィールドがある場合に備えて保持（通常fetchは完全なプロファイルを返すが）
+          // 万が一APIが全てを返さない場合に備えて、既存のステータスで再構築
+          final newStore = StoreProfile(
+            id: updatedStore.id,
+            name: updatedStore.name,
+            address: updatedStore.address,
+            zipCode: updatedStore.zipCode,
+            prefecture: updatedStore.prefecture,
+            city: updatedStore.city,
+            building: updatedStore.building,
+            phone_number: updatedStore.phone_number,
+            bizNumber: updatedStore.bizNumber,
+            storeImageUrl: updatedStore.storeImageUrl,
+            verificationStatus:
+                updatedStore.verificationStatus ?? oldStore.verificationStatus,
+            staffStatus: updatedStore.staffStatus ?? oldStore.staffStatus,
+          );
+          _myStores[index] = newStore;
+        }
+        await selectStore(storeId);
+      }
+      success = true;
+    } on ApiException catch (e) {
+      _errorMessage = '住所の更新に失敗しました: ${e.message}';
     } catch (e) {
       _errorMessage = '予期せぬエラーが発生しました: $e';
     } finally {

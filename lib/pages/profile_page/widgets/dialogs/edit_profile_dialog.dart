@@ -7,6 +7,7 @@ import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 class EditProfileDialog extends StatefulWidget {
   final String title;
   final String initialValue;
+  final String? initialFurigana; // New
   final bool isPassword;
   final bool isName;
 
@@ -14,6 +15,7 @@ class EditProfileDialog extends StatefulWidget {
     super.key,
     required this.title,
     required this.initialValue,
+    this.initialFurigana, // New
     this.isPassword = false,
     this.isName = false,
   });
@@ -33,6 +35,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   // 名前分割編集用
   late final TextEditingController _lastNameController;
   late final TextEditingController _firstNameController;
+  late final TextEditingController _lastNameKanaController; // New
+  late final TextEditingController _firstNameKanaController; // New
 
   bool _isLoading = false;
 
@@ -47,25 +51,33 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
     // 名前分割初期化
     if (widget.isName) {
-      final rawName =
-          widget.initialValue.replaceAll(RegExp(r'[\u3000\s]+'), ' ').trim();
-      if (rawName.isEmpty) {
-        _lastNameController = TextEditingController();
-        _firstNameController = TextEditingController();
-      } else {
-        final parts = rawName.split(RegExp(r'\s+'));
-        if (parts.length == 1) {
-          _lastNameController = TextEditingController(text: parts[0]);
-          _firstNameController = TextEditingController();
-        } else {
-          _lastNameController = TextEditingController(text: parts.first);
-          _firstNameController =
-              TextEditingController(text: parts.sublist(1).join(' '));
-        }
-      }
+      _initNameControllers(widget.initialValue, (last, first) {
+        _lastNameController = TextEditingController(text: last);
+        _firstNameController = TextEditingController(text: first);
+      });
+      _initNameControllers(widget.initialFurigana ?? '', (last, first) {
+        _lastNameKanaController = TextEditingController(text: last);
+        _firstNameKanaController = TextEditingController(text: first);
+      });
     } else {
       _lastNameController = TextEditingController();
       _firstNameController = TextEditingController();
+      _lastNameKanaController = TextEditingController();
+      _firstNameKanaController = TextEditingController();
+    }
+  }
+
+  void _initNameControllers(String fullValue, Function(String, String) onSet) {
+    final raw = fullValue.replaceAll(RegExp(r'[\u3000\s]+'), ' ').trim();
+    if (raw.isEmpty) {
+      onSet('', '');
+    } else {
+      final parts = raw.split(RegExp(r'\s+'));
+      if (parts.length == 1) {
+        onSet(parts[0], '');
+      } else {
+        onSet(parts.first, parts.sublist(1).join(' '));
+      }
     }
   }
 
@@ -77,6 +89,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     _confirmPasswordController.dispose();
     _lastNameController.dispose();
     _firstNameController.dispose();
+    _lastNameKanaController.dispose();
+    _firstNameKanaController.dispose();
     super.dispose();
   }
 
@@ -84,11 +98,22 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     if (widget.isName) {
       final lastName = _lastNameController.text.trim();
       final firstName = _firstNameController.text.trim();
+      final lastNameKana = _lastNameKanaController.text.trim();
+      final firstNameKana = _firstNameKanaController.text.trim();
+
       if (lastName.isEmpty && firstName.isEmpty) {
         Navigator.of(context).pop();
         return;
       }
-      Navigator.of(context).pop('$lastName $firstName'.trim());
+
+      final fullName = '$lastName $firstName'.trim();
+      final fullKana = '$lastNameKana $firstNameKana'.trim();
+
+      // Return Map for multiple fields
+      Navigator.of(context).pop({
+        'name': fullName,
+        'name_furigana': fullKana,
+      });
     } else {
       Navigator.of(context).pop(_controller.text);
     }
@@ -187,6 +212,40 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                   decoration: InputDecoration(
                     labelText: '名',
                     hintText: '太郎',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                  ),
+                  onSubmitted: (_) => _submit(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _lastNameKanaController,
+                  decoration: InputDecoration(
+                    labelText: 'フリガナ (姓)',
+                    hintText: 'ヤマダ',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                  ),
+                  onSubmitted: (_) => _submit(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _firstNameKanaController,
+                  decoration: InputDecoration(
+                    labelText: 'フリガナ (名)',
+                    hintText: 'タロウ',
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12)),
                     contentPadding: const EdgeInsets.symmetric(

@@ -3,6 +3,7 @@ import '../../../constants/app_colors.dart';
 
 class ProfileHeader extends StatelessWidget {
   final String name;
+  final String? furigana; // New
   final String? subtitle;
   final String? imageUrl;
   final IconData? icon;
@@ -12,6 +13,7 @@ class ProfileHeader extends StatelessWidget {
   const ProfileHeader({
     super.key,
     required this.name,
+    this.furigana, // New
     this.subtitle,
     this.imageUrl,
     this.icon,
@@ -41,18 +43,34 @@ class ProfileHeader extends StatelessWidget {
           GestureDetector(
             onTap: onTapName,
             child: IntrinsicWidth(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              child: Column(
                 children: [
-                  Text(name,
-                      style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary)),
-                  if (onTapName != null) ...[
-                    const SizedBox(width: 12),
-                    Icon(Icons.edit, color: Colors.grey[600], size: 20),
-                  ],
+                  if (furigana != null && furigana!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        furigana!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(name,
+                          style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary)),
+                      if (onTapName != null) ...[
+                        const SizedBox(width: 12),
+                        Icon(Icons.edit, color: Colors.grey[600], size: 20),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
