@@ -52,6 +52,8 @@
 		<!-- Permission for saving to gallery -->
 		<key>NSPhotoLibraryAddUsageDescription</key>
 		<string>QRコードを保存するためにフォトライブラリへのアクセスが必要です。</string>
+		<key>NSCameraUsageDescription</key>
+		<string>店舗IDのQRコードを読み取るためにカメラへのアクセスが必要です。</string>
 		<key>CFBundleURLTypes</key>
 		<array>
 			<dict>

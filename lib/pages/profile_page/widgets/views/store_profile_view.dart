@@ -1,21 +1,30 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 
 import '../../../../constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../profile_screen_viewmodel.dart';
 import '../dialogs/edit_profile_dialog.dart';
+import '../dialogs/edit_address_dialog.dart';
 import '../profile_header.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
 import 'staff_approval_status_view.dart';
 import 'store_license_status_view.dart';
+import 'package:yoyaku_mate_provider/models/store_profile.dart';
 import '../sections/operation_settings_section.dart';
 import '../sections/waiting_settings_section.dart';
 
+/// 店舗プロフィール表示・編集用ビュー
+///
+/// 店舗の基本情報の表示、編集、営業許可証のアップロードなどを行います。
+/// isReadOnlyフラグがtrueの場合（スタッフなど）、編集機能は無効化されます。
 class StoreProfileView extends StatelessWidget {
   final bool isReadOnly;
 
@@ -24,6 +33,8 @@ class StoreProfileView extends StatelessWidget {
     this.isReadOnly = false,
   });
 
+  /// 汎用的な編集ダイアログを表示するメソッド
+  /// [EditProfileDialog] を使用して、指定されたフィールド[fieldKey]を更新します。
   Future<void> _showEditDialog(
     BuildContext context, {
     required String title,
@@ -48,6 +59,8 @@ class StoreProfileView extends StatelessWidget {
     }
   }
 
+  /// 営業許可証の画像をアップロードするメソッド
+  /// デバイスのギャラリーから画像を選択し、[ProfileScreenViewModel]を通じてアップロードします。
   Future<void> _handleImageUpload(BuildContext context) async {
     if (isReadOnly) return;
 
@@ -76,6 +89,114 @@ class StoreProfileView extends StatelessWidget {
         }
       }
     }
+  }
+
+  /// 住所編集用ダイアログを表示するメソッド
+  /// [EditAddressDialog] を使用して、郵便番号検索による住所更新を行います。
+  Future<void> _handleAddressEdit(
+      BuildContext context, StoreProfile profile) async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (_) => EditAddressDialog(
+        initialZipCode: profile.zipCode ?? '',
+        initialPrefecture: profile.prefecture ?? '',
+        initialCity: profile.city ?? '',
+        initialAddress: profile.address,
+        initialBuilding: profile.building ?? '',
+      ),
+    );
+
+    if (result != null && context.mounted) {
+      final vm = context.read<ProfileScreenViewModel>();
+
+      // 取得した住所情報(ZipCode, 都道府県, 市区町村, 住所, 建物名)を一括更新します。
+      final success = await vm.updateStoreAddress(
+        zipCode: result['zip_code']!,
+        prefecture: result['prefecture']!,
+        city: result['city']!,
+        address: result['address']!,
+        building: result['building']!,
+      );
+
+      if (success && context.mounted) {
+        ToastWidget.show(context, '住所が更新されました', type: ToastType.success);
+      }
+    }
+  }
+
+  /// 店舗IDのQRコードを表示するダイアログ
+  void _showQRCodeDialog(
+      BuildContext context, String storeId, String storeName) {
+    showDialog(
+      context: context,
+      builder: (context) => BaseDialog(
+        title: '店舗ID QRコード',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Text(storeName,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border, width: 1),
+              ),
+              child: QrImageView(
+                data: storeId,
+                version: QrVersions.auto,
+                size: 200.0,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // ID Display & Copy Button Section
+            Container(
+              padding:
+                  const EdgeInsets.only(left: 16, right: 8, top: 4, bottom: 4),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SelectableText(
+                    storeId,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon:
+                        const Icon(Icons.copy, color: AppColors.textSecondary),
+                    tooltip: 'IDをコピー',
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: storeId));
+                      ToastWidget.show(context, 'IDをコピーしました',
+                          type: ToastType.success);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'スタッフにこのQRコードを提示するか、\nIDを共有してください',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -211,15 +332,21 @@ class StoreProfileView extends StatelessWidget {
                 title: '基本情報',
                 children: [
                   ProfileSettingItem(
+                    title: '店舗ID',
+                    subtitle: storeProfile.id,
+                    showTrailingIcon: true,
+                    trailing: const Icon(Icons.qr_code,
+                        color: AppColors.accentPrimary),
+                    onTap: () => _showQRCodeDialog(
+                        context, storeProfile.id, storeProfile.name),
+                  ),
+                  ProfileSettingItem(
                     title: '住所',
                     subtitle: storeProfile.address,
                     showTrailingIcon: !isReadOnly,
                     onTap: isReadOnly
                         ? null
-                        : () => _showEditDialog(context,
-                            title: '住所',
-                            fieldKey: 'address',
-                            initialValue: storeProfile.address),
+                        : () => _handleAddressEdit(context, storeProfile),
                   ),
                   ProfileSettingItem(
                     title: '電話番号',
