@@ -122,33 +122,37 @@ class _StoreSelectionContent extends StatelessWidget {
                         color: AppColors.textSecondary.withOpacity(0.4),
                       ),
                     )
-                  : ListView.builder(
-                      itemCount: stores.length,
-                      itemBuilder: (context, index) {
-                        final store = stores[index];
+                  : RefreshIndicator(
+                      onRefresh: vm.refreshStores,
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: stores.length,
+                        itemBuilder: (context, index) {
+                          final store = stores[index];
 
-                        return StoreCard(
-                          store: store,
-                          onTap: () async {
-                            if (store.staffStatus == StaffStatus.rejected) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('この店舗への参加は拒否されました。')),
-                              );
-                              return;
-                            }
+                          return StoreCard(
+                            store: store,
+                            onTap: () async {
+                              if (store.staffStatus == StaffStatus.rejected) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('この店舗への参加は拒否されました。')),
+                                );
+                                return;
+                              }
 
-                            final success = await vm.selectStore(store.id);
+                              final success = await vm.selectStore(store.id);
 
-                            if (success) {
-                              ToastWidget.show(
-                                  context, '${store.name}が選択されました.',
-                                  type: ToastType.success);
-                              // selectStoreが返すstoreをそのままStoreProfileに変換してローカルリスト(myStores)に追加する
-                            }
-                          },
-                        );
-                      },
+                              if (success) {
+                                ToastWidget.show(
+                                    context, '${store.name}が選択されました.',
+                                    type: ToastType.success);
+                                // selectStoreが返すstoreをそのままStoreProfileに変換してローカルリスト(myStores)に追加する
+                              }
+                            },
+                          );
+                        },
+                      ),
                     ),
             ),
             const SizedBox(height: 16),

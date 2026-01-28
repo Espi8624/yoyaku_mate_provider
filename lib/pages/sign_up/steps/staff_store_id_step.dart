@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_viewmodel.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/qr_scanner_view.dart';
 import 'package:yoyaku_mate_provider/widgets/common_buttons/action_button.dart';
 
 class StaffStoreIdStep extends StatefulWidget {
@@ -65,6 +66,19 @@ class _StaffStoreIdStepState extends State<StaffStoreIdStep> {
     }
   }
 
+  Future<void> _scanQRCode() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (context) => const QrScannerView()),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        widget.storeIdController.text = result;
+      });
+    }
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -80,6 +94,10 @@ class _StaffStoreIdStepState extends State<StaffStoreIdStep> {
         ),
         focusedBorder: const UnderlineInputBorder(
           borderSide: BorderSide(color: AppColors.accentPrimary, width: 2),
+        ),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.qr_code_scanner),
+          onPressed: _scanQRCode,
         ),
       ),
       validator: (value) {

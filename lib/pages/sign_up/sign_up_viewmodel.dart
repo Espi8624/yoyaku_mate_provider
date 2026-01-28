@@ -15,7 +15,7 @@ class SignUpViewModel extends ChangeNotifier {
       : _profileService = profileService ??
             ProviderProfileService(baseUrl: 'https://saboten-server.fly.dev');
 
-  // State Variables
+  // 状態変数
   String? _role;
   String? get role => _role;
 
@@ -40,15 +40,15 @@ class SignUpViewModel extends ChangeNotifier {
   bool _isPhoneVerified = false;
   bool get isPhoneVerified => _isPhoneVerified;
 
-  // Phone Auth State
+  // 電話番号認証の状態
   String? _verificationId;
   int? _resendToken;
 
-  // Internal
+  // 内部変数
   User? _pendingUser;
   bool _isInitialized = false;
 
-  // Setters
+  // セッター
   void setRole(String role) {
     _role = role;
     notifyListeners();
@@ -94,7 +94,7 @@ class SignUpViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Business Hours State
+  // 営業時間の状態
   Map<String, Map<String, String>>? _operatingHours;
   Map<String, Map<String, String>>? get operatingHours => _operatingHours;
 
@@ -114,14 +114,14 @@ class SignUpViewModel extends ChangeNotifier {
 
   // --- Logic Methods ---
 
-  // Load Progress from SharedPreferences
+  // SharedPreferencesから進捗を読み込む
   Future<int> loadSignUpProgress(String? widgetMode) async {
     if (_isInitialized) return _currentPageIndex;
     _isInitialized = true;
 
     if (widgetMode == 'add_store') {
-      // logic handled in view setup roughly, but here we can just return
-      // The view handles initialPage logic for add_store
+      // viewのセットアップでおおよそ処理されるが、ここでは単に戻す
+      // add_store用の初期ページロジックはViewで処理される
       return widgetMode == 'add_store' ? (_role == 'staff' ? 6 : 7) : 0;
     }
 
@@ -129,13 +129,13 @@ class SignUpViewModel extends ChangeNotifier {
     final currentUser = FirebaseAuth.instance.currentUser;
 
     if (currentUser == null) {
-      // Fresh Start
+      // 新規開始
       await prefs.remove('signup_role');
       await prefs.remove('terms_agreed');
-      return 0; // Role Selection
+      return 0; // 役割選択
     }
 
-    // Resume Flow
+    // 再開フロー
     final savedRole = prefs.getString('signup_role');
     final savedTerms = prefs.getBool('terms_agreed') ?? false;
 
@@ -154,18 +154,18 @@ class SignUpViewModel extends ChangeNotifier {
 
     final savedPhone = prefs.getString('signup_phone');
     if (savedPhone != null && !_isPhoneVerified) {
-      // Logic if we want to use saved phone as a fallback for verification UI
+      // 認証UIのフォールバックとして保存された電話番号を使用したい場合のロジック
     }
 
     notifyListeners();
 
-    // Determine Target Page
+    // ターゲットページを決定
     if (_role == null) return 0;
     if (!savedTerms) return 1;
     if (!_isEmailVerified) return 5;
-    if (!_isPhoneVerified) return 6; // Phone Verification
+    if (!_isPhoneVerified) return 6; // 電話番号認証
 
-    return 8; // User/Store Info
+    return 8; // ユーザー/店舗情報
   }
 
   Future<void> saveSignUpProgress() async {
@@ -174,8 +174,8 @@ class SignUpViewModel extends ChangeNotifier {
       await prefs.setString('signup_role', _role!);
     }
     await prefs.setBool('terms_agreed', _isTermsAgreed);
-    // Note: phone number is usually managed by controllers in View,
-    // but we can save the internal version if we want to survive app kills.
+    // メモ: 電話番号は通常Viewのコントローラーで管理されるが、
+    // アプリキル後も維持したい場合は内部バージョンを保存可能
   }
 
   Future<void> savePhoneProgress(String phone) async {
@@ -183,7 +183,7 @@ class SignUpViewModel extends ChangeNotifier {
     await prefs.setString('signup_phone', phone);
   }
 
-  // Check Email Duplicate
+  // メールアドレスの重複チェック
   Future<bool> checkEmailDuplicate(String email) async {
     _isLoading = true;
     _errorMessage = null;
@@ -205,7 +205,7 @@ class SignUpViewModel extends ChangeNotifier {
       return true;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
-        // View should handle showing login dialog based on this specific error or return false/enum
+        // この特定のエラーに基づいてViewでログインダイアログを表示するか、false/enumを返す
         rethrow;
       }
       _errorMessage = e.message;
@@ -219,7 +219,7 @@ class SignUpViewModel extends ChangeNotifier {
     }
   }
 
-  // Create Account
+  // アカウント作成
   Future<bool> createAccountAndSendEmail(
       String email, String password, String mode) async {
     _isLoading = true;
@@ -246,7 +246,7 @@ class SignUpViewModel extends ChangeNotifier {
           );
         }
       } else {
-        // Validation handled in View (Form Key)
+        // バリデーションはView(Form Key)で処理
         final userCredential =
             await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: email,
@@ -256,12 +256,12 @@ class SignUpViewModel extends ChangeNotifier {
         if (_pendingUser == null) throw Exception('アカウント作成に失敗しました。');
 
         await _pendingUser!.sendEmailVerification();
-        // Removed signOut() to keep the session active during verification flow
+        // 検証フローの間セッションを維持するためにsignOut()を削除
       }
       return true;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
-        rethrow; // Let View handle dialog
+        rethrow; // Viewでダイアログを処理させる
       } else if (e.code == 'weak-password') {
         _errorMessage = 'パスワードが弱すぎます。';
       } else {
@@ -278,7 +278,7 @@ class SignUpViewModel extends ChangeNotifier {
     }
   }
 
-  // Verify Email Complete
+  // メール認証完了確認
   Future<bool> verifyEmailComplete(
       String emailInput, String passwordInput) async {
     _isLoading = true;
@@ -298,7 +298,7 @@ class SignUpViewModel extends ChangeNotifier {
           return true;
         }
       } else {
-        // Retry Logic
+        // 再試行ロジック
         if (emailInput.isNotEmpty && passwordInput.isNotEmpty) {
           try {
             final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -311,12 +311,12 @@ class SignUpViewModel extends ChangeNotifier {
                 _isEmailVerified = true;
                 return true;
               } else {
-                // Sign in succeeded but still not verified
+                // サインイン成功したが未認証
                 return false;
               }
             }
           } catch (_) {
-            // absorb
+            // 無視
           }
         }
         throw Exception('セッションが切れました。再度ログインしてください。');
@@ -332,7 +332,7 @@ class SignUpViewModel extends ChangeNotifier {
     }
   }
 
-  // Resend Email
+  // メール再送信
   Future<bool> resendEmailLink(
       String emailInput, String passwordInput, String mode) async {
     _isLoading = true;
@@ -345,7 +345,7 @@ class SignUpViewModel extends ChangeNotifier {
       if (mode == 'resume' && FirebaseAuth.instance.currentUser != null) {
         user = FirebaseAuth.instance.currentUser;
       } else {
-        // Silently re-login
+        // 静かに再ログイン
         final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: emailInput.trim(),
           password: passwordInput,
@@ -354,7 +354,7 @@ class SignUpViewModel extends ChangeNotifier {
       }
 
       await user?.sendEmailVerification();
-      // NOTE: Removed signOut() as per recent fix
+      // NOTE: 最近の修正に従いsignOut()を削除
       return true;
     } catch (e) {
       _errorMessage = 'メール送信失敗: $e';
@@ -366,10 +366,10 @@ class SignUpViewModel extends ChangeNotifier {
     }
   }
 
-  // --- Phone Auth Logic ---
+  // --- 電話番号認証ロジック ---
 
   Future<bool> sendPhoneCode(String phoneNumber, String role) async {
-    // Note: Validation is done in View
+    // メモ: バリデーションはViewで行われる
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -387,9 +387,9 @@ class SignUpViewModel extends ChangeNotifier {
         phoneNumber: phoneNumberForFirebase,
         timeout: const Duration(seconds: 60),
         verificationCompleted: (PhoneAuthCredential credential) async {
-          // Auto-complete logic can go here, but usually codeSent is main flow
-          // For simplicity in MVVM, we might just expose a stream or callback
-          // But let's assume we proceed manually or handle it via a listener if needed
+          // 自動完了ロジックをここに記述可能だが、通常はcodeSentがメインフロー
+          // MVVMのシンプルさのため、ストリームやコールバックを公開するだけにしても良い
+          // ここでは手動で進むか、必要ならリスナー経由で処理すると仮定
           _isPhoneVerified = true;
           notifyListeners();
         },
@@ -408,7 +408,7 @@ class SignUpViewModel extends ChangeNotifier {
           _verificationId = verificationId;
           _resendToken = resendToken;
           _isLoading = false;
-          // setSignUpInProgress remains true
+          // setSignUpInProgressはtrueのまま
           notifyListeners();
           if (!completer.isCompleted) completer.complete(true);
         },
@@ -495,6 +495,10 @@ class SignUpViewModel extends ChangeNotifier {
     required String? managerNameKana,
     required String? storeName,
     required String? storeAddress,
+    String? storeZipCode, // New
+    String? storePrefecture, // New
+    String? storeCity, // New
+    String? storeBuilding, // New
     required String? storePhone,
     required String? staffName,
     required String? staffNameKana,
@@ -504,6 +508,7 @@ class SignUpViewModel extends ChangeNotifier {
     int estimatedWaitTime = 10,
     int maxWaitingCount = 10,
     bool isPreOrderEnabled = false,
+    bool requireOneMenuPerPerson = false, // New parameter
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -538,12 +543,17 @@ class SignUpViewModel extends ChangeNotifier {
             role: 'manager',
             storeName: storeName,
             storeAddress: storeAddress,
+            storeBuilding: storeBuilding, // New
+            storeZipCode: storeZipCode,
+            storePrefecture: storePrefecture,
+            storeCity: storeCity,
             storeTelNumber:
                 PhoneFormatter.formatPhoneNumberForInternal(storePhone!),
             // 事業者番号はまだフォームにない？
             estimatedWaitTime: estimatedWaitTime,
             maxWaitingCount: maxWaitingCount,
             enableMenuSelection: isPreOrderEnabled,
+            requireOneMenuPerPerson: requireOneMenuPerPerson, // New
             operatingHours: _operatingHours,
             is24Hours: _is24Hours,
             resetTime: _resetTime,
@@ -562,11 +572,16 @@ class SignUpViewModel extends ChangeNotifier {
             role: 'manager',
             storeName: storeName,
             storeAddress: storeAddress,
+            storeBuilding: storeBuilding, // New
+            storeZipCode: storeZipCode,
+            storePrefecture: storePrefecture,
+            storeCity: storeCity,
             storeTelNumber:
                 PhoneFormatter.formatPhoneNumberForInternal(storePhone!),
             estimatedWaitTime: estimatedWaitTime,
             maxWaitingCount: maxWaitingCount,
             enableMenuSelection: isPreOrderEnabled,
+            requireOneMenuPerPerson: requireOneMenuPerPerson, // New
             operatingHours: _operatingHours,
             is24Hours: _is24Hours,
             resetTime: _resetTime,
