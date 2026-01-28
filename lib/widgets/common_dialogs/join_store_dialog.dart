@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/qr_scanner_view.dart';
 import '../../constants/app_colors.dart';
 
 Future<String?> showJoinStoreDialog({
@@ -6,30 +8,23 @@ Future<String?> showJoinStoreDialog({
 }) async {
   final TextEditingController controller = TextEditingController();
 
+  Future<void> _scanQRCode(
+      BuildContext context, TextEditingController controller) async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (context) => const QrScannerView()),
+    );
+
+    if (result != null && context.mounted) {
+      controller.text = result;
+    }
+  }
+
   return showDialog<String>(
     context: context,
     builder: (context) {
-      return AlertDialog(
-        backgroundColor: AppColors.cardBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Expanded(
-              child: Text(
-                '店舗に参加',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close, color: AppColors.textSecondary),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              splashRadius: 20,
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        ),
+      return BaseDialog(
+        title: '店舗に参加',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -44,15 +39,20 @@ Future<String?> showJoinStoreDialog({
             const SizedBox(height: 16),
             TextField(
               controller: controller,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: '店舗ID',
-                // hintText: '例: 507f1f77bcf86cd799439011',
-                border: OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
+                border: const OutlineInputBorder(),
+                focusedBorder: const OutlineInputBorder(
                   borderSide: BorderSide(
                     color: AppColors.accentPrimary,
                     width: 2,
                   ),
+                ),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.qr_code_scanner,
+                      color: AppColors.textSecondary),
+                  onPressed: () => _scanQRCode(context, controller),
+                  tooltip: 'QRコードをスキャン',
                 ),
               ),
               autofocus: true,
@@ -68,9 +68,9 @@ Future<String?> showJoinStoreDialog({
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentPrimary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: const Text(

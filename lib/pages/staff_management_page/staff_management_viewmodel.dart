@@ -54,10 +54,20 @@ class StaffManagementViewModel extends ChangeNotifier {
       String storeId, String staffId, String status) async {
     try {
       await _profileService.updateStoreStaffStatus(storeId, staffId, status);
+      // Optimistic Update: APIリクエスト成功後、即座にローカルの状態を更新する
+      final index = _staffList.indexWhere((s) => s['id'] == staffId);
+      if (index != -1) {
+        // Mapはimmutableな場合があるので、新しいMapを作成して置換
+        final updatedStaff = Map<String, dynamic>.from(_staffList[index]);
+        updatedStaff['status'] = status;
+        _staffList[index] = updatedStaff;
+        notifyListeners(); // リスナーに通知してUIを即時更新
+      }
+
       _successMessage =
           status == StaffStatus.approved ? 'スタッフを承認しました' : 'スタッフを拒否しました';
 
-      // リストを再取得して最新状態にする (サイレント更新)
+      // バックグラウンドでリストを再取得して整合性を保つ (サイレント更新)
       await fetchStoreStaff(storeId, silent: true);
       return true;
     } on ApiException catch (e) {
