@@ -20,9 +20,6 @@ import 'package:yoyaku_mate_provider/pages/sign_up/steps/email_verification_step
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/phone_number_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/verification_code_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/manager_info_step.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_wizard_steps.dart'; // 新規インポート
-import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_business_hours_step.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_store_id_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_name_step.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
@@ -53,25 +50,6 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController managerFirstNameKanaController =
       TextEditingController();
 
-  final TextEditingController storeNameController = TextEditingController();
-  final TextEditingController storeZipCodeController =
-      TextEditingController(); // 新規追加
-  final TextEditingController storePrefectureController =
-      TextEditingController(); // 新規追加
-  final TextEditingController storeCityController =
-      TextEditingController(); // 新規追加
-  final TextEditingController storeAddressController = TextEditingController();
-  final TextEditingController storeBuildingController =
-      TextEditingController(); // 新規追加
-  final TextEditingController storePhoneController = TextEditingController();
-  final TextEditingController estimatedWaitTimeController =
-      TextEditingController(text: '10');
-  final TextEditingController maxWaitingCountController =
-      TextEditingController(text: '10');
-  bool _enableMenuSelection = false;
-  bool _requireOneMenuPerPerson = false; // 新規追加
-
-  final TextEditingController staffStoreIdController = TextEditingController();
   final TextEditingController staffEmailController = TextEditingController();
   final TextEditingController staffPasswordController = TextEditingController();
   final TextEditingController staffConfirmPasswordController =
@@ -208,14 +186,6 @@ class _SignUpPageState extends State<SignUpPage> {
     managerLastNameKanaController.dispose();
     managerFirstNameKanaController.dispose();
 
-    storeNameController.dispose();
-    storeAddressController.dispose();
-    storeBuildingController.dispose(); // 新規追加
-    storePhoneController.dispose();
-    estimatedWaitTimeController.dispose();
-    maxWaitingCountController.dispose();
-
-    staffStoreIdController.dispose();
     staffEmailController.dispose();
     staffPasswordController.dispose();
     staffConfirmPasswordController.dispose();
@@ -306,58 +276,8 @@ class _SignUpPageState extends State<SignUpPage> {
           firstNameController: managerFirstNameController,
           lastNameKanaController: managerLastNameKanaController,
           firstNameKanaController: managerFirstNameKanaController,
-          onNext: _nextPage,
+          onNext: _handleSignUp, // Step 8で完了
         ), // 8
-        StoreBasicInfoStep(
-          nameController: storeNameController,
-          zipCodeController: storeZipCodeController, // 新規追加
-          prefectureController: storePrefectureController, // 新規追加
-          cityController: storeCityController, // 新規追加
-          addressController: storeAddressController,
-          buildingController: storeBuildingController, // 新規追加
-          phoneController: storePhoneController,
-          onNext: _nextPage,
-        ), // 9
-        StoreCapacityStep(
-          maxWaitingCountController: maxWaitingCountController,
-          onNext: _nextPage,
-        ), // 10
-        StoreBusinessHoursStep(
-          onNext: _handleBusinessHours,
-        ), // 11
-        StoreTimeStep(
-          estimatedWaitTimeController: estimatedWaitTimeController,
-          onNext: _nextPage,
-        ), // 12
-        StorePreOrderStep(
-          isPreOrderEnabled: _enableMenuSelection,
-          onPreOrderChanged: (value) {
-            setState(() {
-              _enableMenuSelection = value;
-            });
-          },
-          onNext: _nextPage,
-        ), // 13
-        StoreOneMenuRuleStep(
-          requireOneMenuPerPerson: _requireOneMenuPerPerson,
-          onRequireRuleChanged: (value) {
-            setState(() {
-              _requireOneMenuPerPerson = value;
-            });
-          },
-          onNext: _nextPage,
-        ), // 14 (新規追加)
-        StoreReviewStep(
-          nameController: storeNameController,
-          addressController: storeAddressController,
-          buildingController: storeBuildingController, // 新規追加
-          phoneController: storePhoneController,
-          maxWaitingCountController: maxWaitingCountController,
-          estimatedWaitTimeController: estimatedWaitTimeController,
-          isPreOrderEnabled: _enableMenuSelection,
-          onSubmit: _handleSignUp,
-          isLoading: context.read<SignUpViewModel>().isLoading,
-        ), // 15
       ];
     } else {
       // スタッフ用ページ
@@ -389,17 +309,13 @@ class _SignUpPageState extends State<SignUpPage> {
           onVerify: _verifyPhoneCode,
           onResend: _resendPhoneCode,
         ), // 7
-        StaffStoreIdStep(
-          storeIdController: staffStoreIdController,
-          onNext: _nextPage,
-        ), // 8 (店舗ID)
         StaffNameStep(
           lastNameController: staffLastNameController,
           firstNameController: staffFirstNameController,
           lastNameKanaController: staffLastNameKanaController,
           firstNameKanaController: staffFirstNameKanaController,
-          onSubmit: _handleSignUp,
-        ), // 9 (氏名)
+          onSubmit: _handleSignUp, // Step 8で完了
+        ), // 8
       ];
     }
   }
@@ -562,41 +478,39 @@ class _SignUpPageState extends State<SignUpPage> {
     final staffNameKana =
         '${staffLastNameKanaController.text.trim()} ${staffFirstNameKanaController.text.trim()}';
 
+    // Refactor: Pass null/empty for store fields
     final success = await vm.handleSignUp(
       mode: null,
       managerName: managerName,
       managerNameKana: managerNameKana,
-      storeName: storeNameController.text.trim(),
-      storeZipCode: storeZipCodeController.text.trim(), // 新規追加
-      storePrefecture: storePrefectureController.text.trim(), // 新規追加
-      storeCity: storeCityController.text.trim(), // 新規追加
-      storeAddress: storeAddressController.text.trim(),
-      storeBuilding: storeBuildingController.text.trim(), // 新規追加
-      storePhone: storePhoneController.text.trim(),
+      storeName: null,
+      storeAddress: null,
+      storeZipCode: null,
+      storePrefecture: null,
+      storeCity: null,
+      storeBuilding: null,
+      storePhone: null,
       staffName: staffName,
       staffNameKana: staffNameKana,
-      staffStoreId: staffStoreIdController.text.trim(),
+      staffStoreId: null, // 店舗IDなし
       managerPhoneInput: managerPhoneController.text.trim(),
       staffPhoneInput: staffPhoneController.text.trim(),
-      estimatedWaitTime: int.tryParse(estimatedWaitTimeController.text) ?? 10,
-      maxWaitingCount: int.tryParse(maxWaitingCountController.text) ?? 10,
-      isPreOrderEnabled: _enableMenuSelection,
-      requireOneMenuPerPerson: _requireOneMenuPerPerson, // 新規追加
+      // Default values
+      estimatedWaitTime: 10,
+      maxWaitingCount: 10,
+      isPreOrderEnabled: false,
+      requireOneMenuPerPerson: false,
     );
 
     if (success && mounted) {
       // 登録完了後、グローバルなプロフィール情報を更新してから遷移
       await context.read<ProfileScreenViewModel>().loadProfiles();
       if (mounted) {
+        // Refactor: 登録完了画面 または ホームへ (main.dart route logic will redirect to StoreSelection)
+        // ここでは一旦完了画面へ
         context.go('/signup-prompt');
       }
     }
-  }
-
-  void _handleBusinessHours(
-      Map<String, Map<String, String>> hours, bool is24h, String resetTime) {
-    context.read<SignUpViewModel>().saveBusinessHours(hours, is24h, resetTime);
-    _nextPage();
   }
 
   void _nextPage() {
@@ -604,10 +518,7 @@ class _SignUpPageState extends State<SignUpPage> {
     final currentUser = FirebaseAuth.instance.currentUser;
     int nextIndex = _currentPageIndex + 1;
 
-    // 事前注文が無効の場合、1人1メニュー設定(index 14)をスキップ
-    if (_currentPageIndex == 13 && !_enableMenuSelection) {
-      nextIndex = 15;
-    }
+    // Refactor: StoreWizard skip logic removed
 
     if (currentUser != null) {
       if (_currentPageIndex == 2) {
@@ -649,14 +560,9 @@ class _SignUpPageState extends State<SignUpPage> {
         managerFirstNameController.clear();
         managerLastNameKanaController.clear();
         managerFirstNameKanaController.clear();
-        storeNameController.clear();
-        storeAddressController.clear();
-        storePhoneController.clear();
-        estimatedWaitTimeController.text = '10';
-        maxWaitingCountController.text = '10';
-        _enableMenuSelection = false;
-        staffStoreIdController.clear();
-        staffEmailController.clear();
+        managerFirstNameKanaController.dispose();
+
+        staffEmailController.dispose();
         staffPasswordController.clear();
         staffConfirmPasswordController.clear();
         staffPhoneController.clear();
