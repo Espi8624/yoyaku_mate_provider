@@ -532,8 +532,6 @@ class SignUpViewModel extends ChangeNotifier {
           final internalManagerPhone =
               PhoneFormatter.formatPhoneNumberForInternal(managerPhoneInput);
 
-          // "Add Store"の場合、店舗情報を運ぶためにProviderProfileを使用
-          // バックエンドはおそらくこのフラットな構造から店舗情報を抽出する
           final profile = ProviderProfile(
             firebaseUid: currentUser.uid,
             email: currentUser.email!,
@@ -543,17 +541,16 @@ class SignUpViewModel extends ChangeNotifier {
             role: 'manager',
             storeName: storeName,
             storeAddress: storeAddress,
-            storeBuilding: storeBuilding, // New
+            storeBuilding: storeBuilding,
             storeZipCode: storeZipCode,
             storePrefecture: storePrefecture,
             storeCity: storeCity,
             storeTelNumber:
                 PhoneFormatter.formatPhoneNumberForInternal(storePhone!),
-            // 事業者番号はまだフォームにない？
             estimatedWaitTime: estimatedWaitTime,
             maxWaitingCount: maxWaitingCount,
             enableMenuSelection: isPreOrderEnabled,
-            requireOneMenuPerPerson: requireOneMenuPerPerson, // New
+            requireOneMenuPerPerson: requireOneMenuPerPerson,
             operatingHours: _operatingHours,
             is24Hours: _is24Hours,
             resetTime: _resetTime,
@@ -561,8 +558,11 @@ class SignUpViewModel extends ChangeNotifier {
 
           await _profileService.addNewStore(profile, idToken);
         } else {
+          // Refactor: Manager Sign Up (No Store)
+          // 店舗情報が空でもユーザー作成リクエストを送る
           final internalManagerPhone =
               PhoneFormatter.formatPhoneNumberForInternal(managerPhoneInput);
+
           final profile = ProviderProfile(
             firebaseUid: currentUser.uid,
             email: currentUser.email!,
@@ -570,21 +570,7 @@ class SignUpViewModel extends ChangeNotifier {
             name: managerName!,
             nameFurigana: managerNameKana!,
             role: 'manager',
-            storeName: storeName,
-            storeAddress: storeAddress,
-            storeBuilding: storeBuilding, // New
-            storeZipCode: storeZipCode,
-            storePrefecture: storePrefecture,
-            storeCity: storeCity,
-            storeTelNumber:
-                PhoneFormatter.formatPhoneNumberForInternal(storePhone!),
-            estimatedWaitTime: estimatedWaitTime,
-            maxWaitingCount: maxWaitingCount,
-            enableMenuSelection: isPreOrderEnabled,
-            requireOneMenuPerPerson: requireOneMenuPerPerson, // New
-            operatingHours: _operatingHours,
-            is24Hours: _is24Hours,
-            resetTime: _resetTime,
+            // 店舗情報は含めない (null または 空文字)
           );
 
           await _profileService.signUp(profile, idToken);
@@ -594,6 +580,7 @@ class SignUpViewModel extends ChangeNotifier {
         if (isAddingStore) {
           await _profileService.joinStore(staffStoreId!);
         } else {
+          // Refactor: Staff Sign Up (No Store)
           final internalStaffPhone =
               PhoneFormatter.formatPhoneNumberForInternal(staffPhoneInput);
           final profile = ProviderProfile(
@@ -603,7 +590,7 @@ class SignUpViewModel extends ChangeNotifier {
             name: staffName!,
             nameFurigana: staffNameKana!,
             role: 'staff',
-            storeId: staffStoreId,
+            // 店舗IDは含めない
           );
           await _profileService.signUp(profile, idToken);
         }
