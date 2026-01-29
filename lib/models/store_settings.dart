@@ -6,6 +6,7 @@ class StoreSettings {
   final WaitingPolicy waitingPolicy;
   final bool is24Hours;
   final String resetTime;
+  final String aiAdditionalInfo;
 
   StoreSettings({
     required this.storeId,
@@ -15,6 +16,7 @@ class StoreSettings {
     required this.waitingPolicy,
     this.is24Hours = false,
     this.resetTime = '06:00',
+    this.aiAdditionalInfo = '',
   });
 
   factory StoreSettings.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,7 @@ class StoreSettings {
           WaitingPolicy.fromJson(json['settings']['waiting_policy'] ?? {}),
       is24Hours: json['settings']['is_24_hours'] ?? false,
       resetTime: json['settings']['reset_time'] ?? '06:00',
+      aiAdditionalInfo: json['settings']['ai_additional_info'] ?? '',
     );
   }
 
@@ -42,6 +45,7 @@ class StoreSettings {
           'waiting_policy': waitingPolicy.toJson(),
           'is_24_hours': is24Hours,
           'reset_time': resetTime,
+          'ai_additional_info': aiAdditionalInfo,
         },
       };
 
@@ -53,6 +57,7 @@ class StoreSettings {
     WaitingPolicy? waitingPolicy,
     bool? is24Hours,
     String? resetTime,
+    String? aiAdditionalInfo,
   }) {
     return StoreSettings(
       storeId: storeId ?? this.storeId,
@@ -62,6 +67,7 @@ class StoreSettings {
       waitingPolicy: waitingPolicy ?? this.waitingPolicy,
       is24Hours: is24Hours ?? this.is24Hours,
       resetTime: resetTime ?? this.resetTime,
+      aiAdditionalInfo: aiAdditionalInfo ?? this.aiAdditionalInfo,
     );
   }
 }
