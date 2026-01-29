@@ -124,11 +124,13 @@ class _StatisticsView extends StatelessWidget {
                     AnimatedAlign(
                       alignment: viewModel.selectedMetric == 'visitor'
                           ? Alignment.centerLeft
-                          : Alignment.centerRight,
+                          : (viewModel.selectedMetric == 'cancelled'
+                              ? Alignment.center
+                              : Alignment.centerRight),
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeInOut,
                       child: FractionallySizedBox(
-                        widthFactor: 0.5,
+                        widthFactor: 0.33,
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -153,11 +155,32 @@ class _StatisticsView extends StatelessWidget {
                             behavior: HitTestBehavior.translucent,
                             child: Center(
                               child: Text(
-                                '来店数推移',
+                                '来店数',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: viewModel.selectedMetric == 'visitor'
+                                      ? const Color(0xFF212529)
+                                      : const Color(0xFF868E96),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => viewModel.setMetric('cancelled'),
+                            behavior: HitTestBehavior.translucent,
+                            child: Center(
+                              child: Text(
+                                'キャンセル',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight:
+                                      viewModel.selectedMetric == 'cancelled'
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                  color: viewModel.selectedMetric == 'cancelled'
                                       ? const Color(0xFF212529)
                                       : const Color(0xFF868E96),
                                 ),
@@ -171,9 +194,9 @@ class _StatisticsView extends StatelessWidget {
                             behavior: HitTestBehavior.translucent,
                             child: Center(
                               child: Text(
-                                'No-Show数推移',
+                                'No-Show',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight:
                                       viewModel.selectedMetric == 'no_show'
                                           ? FontWeight.w600
@@ -198,7 +221,8 @@ class _StatisticsView extends StatelessWidget {
                 child: Row(
                   children: [
                     _buildPeriodButton(viewModel, 'auto', '今日',
-                        isDisabled: viewModel.selectedMetric == 'no_show'),
+                        isDisabled: viewModel.selectedMetric == 'no_show' ||
+                            viewModel.selectedMetric == 'cancelled'),
                     const SizedBox(width: 8),
                     _buildPeriodButton(viewModel, 'weekly', '週間'),
                     const SizedBox(width: 8),
@@ -232,6 +256,9 @@ class _StatisticsView extends StatelessWidget {
                   _buildHourlyChartCard(hourlyCongestion)
                 else
                   _buildDynamicChartCard(data['chart_data'] as List<dynamic>?)
+              else if (viewModel.selectedMetric == 'cancelled')
+                _buildDynamicChartCard(
+                    data['cancelled_chart_data'] as List<dynamic>?)
               else
                 _buildDynamicChartCard(
                     data['no_show_chart_data'] as List<dynamic>?),
