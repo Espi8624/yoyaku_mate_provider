@@ -16,31 +16,44 @@ class QRCodeButton extends StatelessWidget {
         title: 'QRコード',
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: 200,
-              height: 200,
-              child: Center(
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: QrImageView(
                   data: data,
                   version: QrVersions.auto,
-                  size: 180.0,
+                  size: 160.0,
                   backgroundColor: Colors.white,
                   foregroundColor: AppColors.textPrimary,
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              '※ QRコードは毎日変更されます。\n毎日新しく印刷して掲示してください。',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+            const Center(
+              child: Text(
+                '※ QRコードは毎日変更されます。\n毎日新しく印刷して掲示してください。',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             ElevatedButton.icon(
               icon: const Icon(Icons.print_outlined, color: Colors.white),
               label: const Text('出力', style: TextStyle(color: Colors.white)),
@@ -58,6 +71,7 @@ class QRCodeButton extends StatelessWidget {
                 Navigator.of(ctx).pop();
               },
             ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
