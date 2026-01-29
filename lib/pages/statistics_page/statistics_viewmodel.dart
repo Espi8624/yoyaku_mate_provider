@@ -38,9 +38,10 @@ class StatisticsViewModel extends ChangeNotifier {
     if (_selectedMetric == metric) return;
     _selectedMetric = metric;
 
-    // 'no_show'に切り替える際、現在の期間が'auto'（今日）の場合は'weekly'（週間）に切り替える
-    // 'auto'（今日）には時間別のNo-Showデータが存在しないため。
-    if (_selectedMetric == 'no_show' && _selectedPeriod == 'auto') {
+    // 'no_show' または 'cancelled' に切り替える際、現在の期間が'auto'（今日）の場合は'weekly'（週間）に切り替える
+    // 'auto'（今日）には時間別のNo-Show/Cancelデータが存在しないため。
+    if ((_selectedMetric == 'no_show' || _selectedMetric == 'cancelled') &&
+        _selectedPeriod == 'auto') {
       _selectedPeriod = 'weekly';
     }
 

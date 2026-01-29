@@ -299,11 +299,12 @@ class _WaitingView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding:
+                  const EdgeInsets.only(left: 16, right: 8, top: 4, bottom: 4),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!),
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
               ),
               child: Row(
                 children: [
@@ -319,30 +320,24 @@ class _WaitingView extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon:
+                        const Icon(Icons.copy, color: AppColors.textSecondary),
+                    tooltip: 'URLをコピー',
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: url));
+                      if (context.mounted) {
+                        Navigator.of(ctx).pop();
+                        ToastWidget.show(context, 'URLをクリップボードにコピーしました',
+                            type: ToastType.success);
+                      }
+                    },
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: url));
-                  if (context.mounted) {
-                    Navigator.of(ctx).pop();
-                    ToastWidget.show(context, 'URLをクリップボードにコピーしました',
-                        type: ToastType.success);
-                  }
-                },
-                icon: const Icon(Icons.copy, size: 20),
-                label: const Text('URLをコピー'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
