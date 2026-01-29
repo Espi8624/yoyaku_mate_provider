@@ -5,6 +5,7 @@ import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../dialogs/business_hours_dialog.dart';
 import '../../dialogs/holiday_dialog.dart';
 import '../../dialogs/number_input_dialog.dart';
+import '../../dialogs/text_input_dialog.dart';
 import '../../profile_screen_viewmodel.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
@@ -54,6 +55,17 @@ class OperationSettingsSection extends StatelessWidget {
           subtitle: storeSettings.closedDays.summary,
           showTrailingIcon: !isReadOnly,
           onTap: isReadOnly ? null : () => _showHolidayDialog(context, vm),
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        ProfileSettingItem(
+          title: 'AIアシスタントへの追加情報',
+          subtitle: storeSettings.aiAdditionalInfo.isNotEmpty
+              ? storeSettings.aiAdditionalInfo
+              : 'なし',
+          showTrailingIcon: !isReadOnly,
+          onTap: isReadOnly
+              ? null
+              : () => _showAIAdditionalInfoDialog(context, vm),
         ),
       ],
     );
@@ -145,6 +157,37 @@ class OperationSettingsSection extends StatelessWidget {
 
     if (result != null) {
       final updatedSettings = storeSettings.copyWith(closedDays: result);
+      await vm.updateStoreSettings(updatedSettings);
+
+      if (context.mounted) {
+        if (vm.errorMessage != null) {
+          ToastWidget.show(context, vm.errorMessage!, type: ToastType.error);
+        } else if (vm.successMessage != null) {
+          ToastWidget.show(context, vm.successMessage!,
+              type: ToastType.success);
+          vm.clearSuccessMessage();
+        }
+      }
+    }
+  }
+
+  Future<void> _showAIAdditionalInfoDialog(
+      BuildContext context, ProfileScreenViewModel vm) async {
+    final storeSettings = vm.storeSettings;
+    if (storeSettings == null) return;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (_) => TextInputDialog(
+        title: 'AIアシスタントへの追加情報',
+        labelText: '追加情報',
+        helperText: '周辺のランドマークや、AIに知っておいてほしい特定の情報を入力してください。',
+        initialValue: storeSettings.aiAdditionalInfo,
+      ),
+    );
+
+    if (result != null) {
+      final updatedSettings = storeSettings.copyWith(aiAdditionalInfo: result);
       await vm.updateStoreSettings(updatedSettings);
 
       if (context.mounted) {
