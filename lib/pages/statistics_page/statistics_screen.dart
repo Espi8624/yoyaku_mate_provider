@@ -37,6 +37,61 @@ class _StatisticsView extends StatelessWidget {
     }
 
     if (viewModel.errorMessage != null && data == null) {
+      if (viewModel.errorMessage!.contains('403')) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.pendingBackground,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.lock_clock_outlined,
+                    size: 48,
+                    color: AppColors.pending,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'アクセス権限がありません',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '統計情報を閲覧するには、\n管理者による承認が必要です。',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: AppColors.textPrimary.withOpacity(0.7),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                OutlinedButton.icon(
+                  onPressed: viewModel.refresh,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('再読み込み'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

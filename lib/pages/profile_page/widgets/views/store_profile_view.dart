@@ -133,23 +133,44 @@ class StoreProfileView extends StatelessWidget {
         title: '店舗ID QRコード',
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
-            Text(storeName,
+            Center(
+              child: Text(
+                storeName,
                 style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border, width: 1),
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
-              child: QrImageView(
-                data: storeId,
-                version: QrVersions.auto,
-                size: 200.0,
+            ),
+            const SizedBox(height: 16),
+            const Center(
+              child: Text(
+                'スタッフにこのQRコードを提示するか、IDを共有してください',
+                style: TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: QrImageView(
+                  data: storeId,
+                  version: QrVersions.auto,
+                  size: 160.0,
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.textPrimary,
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -163,14 +184,18 @@ class StoreProfileView extends StatelessWidget {
                 border: Border.all(color: AppColors.border),
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  SelectableText(
-                    storeId,
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2),
+                  Expanded(
+                    child: Text(
+                      storeId,
+                      style: const TextStyle(
+                        fontFamily: 'Courier',
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
@@ -179,18 +204,14 @@ class StoreProfileView extends StatelessWidget {
                     tooltip: 'IDをコピー',
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: storeId));
-                      ToastWidget.show(context, 'IDをコピーしました',
-                          type: ToastType.success);
+                      if (context.mounted) {
+                        ToastWidget.show(context, 'IDをコピーしました',
+                            type: ToastType.success);
+                      }
                     },
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'スタッフにこのQRコードを提示するか、\nIDを共有してください',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 16),
           ],
