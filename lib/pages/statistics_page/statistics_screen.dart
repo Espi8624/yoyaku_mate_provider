@@ -394,12 +394,13 @@ class _StatisticsView extends StatelessWidget {
 
   Widget _buildHourlyChartCard(List<dynamic> hourlyData) {
     // Find max Y for better scaling
-    final maxY = hourlyData.isEmpty
-        ? 10.0
+    final maxDataValue = hourlyData.isEmpty
+        ? 0.0
         : hourlyData
-                .map((e) => (e['count'] as num).toDouble())
-                .reduce((curr, next) => curr > next ? curr : next) +
-            2;
+            .map((e) => (e['count'] as num).toDouble())
+            .reduce((curr, next) => curr > next ? curr : next);
+    // Ensure minimum height of 10 and add 20% padding
+    final maxY = (maxDataValue < 10.0 ? 10.0 : maxDataValue) * 1.2;
 
     return Container(
       height: 280,
@@ -420,102 +421,159 @@ class _StatisticsView extends StatelessWidget {
         child: Column(
           children: [
             Expanded(
-              child: BarChart(
-                BarChartData(
-                  alignment: BarChartAlignment.spaceBetween,
-                  maxY: maxY,
-                  barTouchData: BarTouchData(
-                    touchTooltipData: BarTouchTooltipData(
-                      tooltipRoundedRadius: 8,
-                      tooltipPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      tooltipBgColor: const Color(0xFF2E2E2E),
-                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                        return BarTooltipItem(
-                          '${group.x}時\n',
-                          const TextStyle(
-                            color: Colors.white70,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+              child: Stack(
+                children: [
+                  // Layer 1: Bar Chart (Visuals Only)
+                  BarChart(
+                    BarChartData(
+                      alignment: BarChartAlignment.spaceBetween,
+                      maxY: maxY,
+                      barTouchData:
+                          BarTouchData(enabled: false), // Handled by LineChart
+                      titlesData: FlTitlesData(
+                        show: true,
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, meta) {
+                              if (value % 4 == 0) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    '${value.toInt()}',
+                                    style: const TextStyle(
+                                      color: Color(0xFFADB5BD),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
                           ),
-                          children: [
-                            TextSpan(
-                              text: '${rod.toY.toInt()}人',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                        ),
+                        leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                      ),
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: 5,
+                        getDrawingHorizontalLine: (value) => FlLine(
+                          color: Colors.grey.withOpacity(0.1),
+                          strokeWidth: 1,
+                          dashArray: [5, 5],
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      barGroups: hourlyData.map((data) {
+                        final hour = (data['hour'] as num).toInt();
+                        final count = (data['count'] as num).toDouble();
+                        return BarChartGroupData(
+                          x: hour,
+                          barRods: [
+                            BarChartRodData(
+                              toY: count,
+                              color: AppColors.accentPrimary,
+                              width: 12,
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(6)),
+                              backDrawRodData: BackgroundBarChartRodData(
+                                show: false,
                               ),
                             ),
                           ],
                         );
-                      },
+                      }).toList(),
                     ),
                   ),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                        getTitlesWidget: (value, meta) {
-                          if (value % 4 == 0) {
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(
-                                '${value.toInt()}',
-                                style: const TextStyle(
-                                  color: Color(0xFFADB5BD),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    ),
-                    leftTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
-                    topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
-                  ),
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: 5,
-                    getDrawingHorizontalLine: (value) => FlLine(
-                      color: Colors.grey.withOpacity(0.1),
-                      strokeWidth: 1,
-                      dashArray: [5, 5],
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  barGroups: hourlyData.map((data) {
-                    final hour = (data['hour'] as num).toInt();
-                    final count = (data['count'] as num).toDouble();
-                    return BarChartGroupData(
-                      x: hour,
-                      barRods: [
-                        BarChartRodData(
-                          toY: count,
-                          color: AppColors.accentPrimary,
-                          width: 12,
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(6)),
-                          backDrawRodData: BackgroundBarChartRodData(
-                            show: true,
-                            toY: maxY,
-                            color: const Color(0xFFF1F3F5),
+                  // Layer 2: Line Chart (Interaction Layer)
+                  LineChart(
+                    LineChartData(
+                      minX: 0,
+                      maxX: 23,
+                      minY: 0,
+                      maxY: maxY,
+                      titlesData: FlTitlesData(
+                        show: true,
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize:
+                                40, // Match BarChart to ensure alignment
+                            getTitlesWidget: (value, meta) =>
+                                const SizedBox.shrink(),
                           ),
                         ),
+                        leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                      ),
+                      gridData: FlGridData(show: false),
+                      borderData: FlBorderData(show: false),
+                      lineTouchData: LineTouchData(
+                        enabled: true,
+                        touchTooltipData: LineTouchTooltipData(
+                          tooltipRoundedRadius: 8,
+                          tooltipMargin: -50,
+                          tooltipPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          tooltipBgColor: Colors.black.withOpacity(0.7),
+                          getTooltipItems: (touchedSpots) {
+                            return touchedSpots.map((spot) {
+                              final hour = spot.x.toInt();
+                              final data = hourlyData.firstWhere(
+                                (element) =>
+                                    (element['hour'] as num).toInt() == hour,
+                                orElse: () => {'count': 0},
+                              );
+                              final count = (data['count'] as num).toInt();
+
+                              return LineTooltipItem(
+                                '$hour時\n',
+                                const TextStyle(
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: '$count人',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }).toList();
+                          },
+                        ),
+                      ),
+                      lineBarsData: [
+                        // Invisible line at maxY for touch detection
+                        LineChartBarData(
+                          spots: List.generate(24, (index) {
+                            return FlSpot(index.toDouble(), maxY);
+                          }),
+                          color: Colors.transparent,
+                          barWidth: 0,
+                          dotData: FlDotData(show: false),
+                        ),
                       ],
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -573,7 +631,8 @@ class _StatisticsView extends StatelessWidget {
           .map((e) => (e['prev_value'] as num?)?.toDouble() ?? 0.0)
           .reduce((curr, next) => curr > next ? curr : next);
       final absoluteMax = maxVal > maxPrev ? maxVal : maxPrev;
-      maxY = absoluteMax + 5; // Add padding
+      // Ensure minimum height of 10 and add 20% padding
+      maxY = (absoluteMax < 10.0 ? 10.0 : absoluteMax) * 1.2;
     }
 
     return Container(
@@ -597,61 +656,14 @@ class _StatisticsView extends StatelessWidget {
             Expanded(
               child: Stack(
                 children: [
-                  // Layer 1: Bar Chart (Current Period)
+                  // Layer 1: Bar Chart (Current Period - Visuals Only)
                   BarChart(
                     BarChartData(
                       alignment: BarChartAlignment.spaceAround,
                       maxY: maxY,
                       minY: 0,
-                      barTouchData: BarTouchData(
-                        enabled: true,
-                        touchTooltipData: BarTouchTooltipData(
-                          tooltipRoundedRadius: 8,
-                          tooltipPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          tooltipBgColor: const Color(0xFF2E2E2E),
-                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                            final index = group.x.toInt();
-                            if (index < 0 || index >= chartData.length)
-                              return null;
-
-                            final dataItem = chartData[index];
-                            final label = dataItem['label'];
-                            // Use safe casting
-                            final currentVal =
-                                (dataItem['value'] as num).toDouble();
-                            final prevVal =
-                                (dataItem['prev_value'] as num?)?.toDouble() ??
-                                    0.0;
-
-                            return BarTooltipItem(
-                              '$label\n',
-                              const TextStyle(
-                                color: Colors.white70,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: '今回: ${currentVal.toInt()}人\n',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: '前回: ${prevVal.toInt()}人',
-                                  style: const TextStyle(
-                                    color: Color(0xFFADB5BD),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
+                      barTouchData:
+                          BarTouchData(enabled: false), // Handled by LineChart
                       titlesData: FlTitlesData(
                         show: true,
                         bottomTitles: AxisTitles(
@@ -711,9 +723,7 @@ class _StatisticsView extends StatelessWidget {
                               borderRadius: const BorderRadius.vertical(
                                   top: Radius.circular(6)),
                               backDrawRodData: BackgroundBarChartRodData(
-                                show: true,
-                                toY: maxY,
-                                color: const Color(0xFFF8F9FA),
+                                show: false,
                               ),
                             ),
                           ],
@@ -722,7 +732,7 @@ class _StatisticsView extends StatelessWidget {
                     ),
                   ),
 
-                  // Layer 2: Line Chart (Previous Period - Dots Only)
+                  // Layer 2: Line Chart (Interaction Layer + Previous Dots)
                   LineChart(
                     LineChartData(
                       minX: -0.5,
@@ -755,11 +765,35 @@ class _StatisticsView extends StatelessWidget {
                         enabled: true,
                         touchTooltipData: LineTouchTooltipData(
                           tooltipRoundedRadius: 8,
+                          tooltipMargin: -60,
                           tooltipPadding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 8),
-                          tooltipBgColor: const Color(0xFF2E2E2E),
+                          tooltipBgColor: Colors.black.withOpacity(0.7),
                           getTooltipItems: (touchedSpots) {
                             return touchedSpots.map((touchedSpot) {
+                              // Only show tooltip for the Max Line (which triggers interaction)
+                              // We assume the Max Line is the LAST one added.
+                              // But properly, we should check barIndex or properties.
+                              // Actually, if we touch, we might hit both red dot and max line.
+                              // We only want ONE tooltip item.
+
+                              // Logic: Find the spot that corresponds to the max line (y ~= maxY)
+                              // OR just use the index from any touched spot to lookup data.
+
+                              // Let's filter: only return an item if it's the Max Line (assumed index 1)
+                              // Or simply ignore the specific spot data and return the content based on X index.
+
+                              // IMPORTANT: If we return multiple items, they stack. We want one.
+                              // So loop through spots, if we find one, generate content and return it,
+                              // for others return null.
+
+                              // Simplified: Always return ONE tooltip item per X index.
+                              // Filter touchedSpots to find the one with the highest Y (which implies MaxLine)?
+                              // Or if barIndex == 1.
+
+                              if (touchedSpot.barIndex == 0)
+                                return null; // Hide tooltip for red dots
+
                               final index = touchedSpot.x.toInt();
                               if (index < 0 || index >= chartData.length)
                                 return null;
@@ -802,6 +836,7 @@ class _StatisticsView extends StatelessWidget {
                         ),
                       ),
                       lineBarsData: [
+                        // Line 0: Previous Value (Red Dots)
                         LineChartBarData(
                           spots: List.generate(chartData.length, (index) {
                             final prevVal =
@@ -829,6 +864,15 @@ class _StatisticsView extends StatelessWidget {
                             },
                           ),
                           belowBarData: BarAreaData(show: false),
+                        ),
+                        // Line 1: Invisible Max Height Line for Interaction
+                        LineChartBarData(
+                          spots: List.generate(chartData.length, (index) {
+                            return FlSpot(index.toDouble(), maxY);
+                          }),
+                          color: Colors.transparent,
+                          barWidth: 0,
+                          dotData: FlDotData(show: false),
                         ),
                       ],
                     ),
