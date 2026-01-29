@@ -615,16 +615,38 @@ class _WaitingView extends StatelessWidget {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  vm.updateWaitingStatus(ctx, item.waitingId, 'completed');
-                  Navigator.of(ctx).pop();
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentPrimary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: const Text('入店完了'),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _showCancelConfirmationDialog(context, item);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: AppColors.error,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('待機取消'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        vm.updateWaitingStatus(
+                            ctx, item.waitingId, 'completed');
+                        Navigator.of(ctx).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentPrimary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16)),
+                      child: const Text('入店完了'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
