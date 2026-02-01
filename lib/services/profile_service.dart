@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
 import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'api_exception.dart';
@@ -232,7 +233,18 @@ class ProviderProfileService {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(utf8.decode(response.bodyBytes));
+      final responseData = jsonDecode(utf8.decode(response.bodyBytes));
+      // Save Login Token
+      if (responseData.containsKey('user') &&
+          responseData['user']['login_token'] != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+            'login_token', responseData['user']['login_token']);
+      } else if (responseData.containsKey('login_token')) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('login_token', responseData['login_token']);
+      }
+      return responseData;
     } else {
       throw ApiException(
           'Failed to sign up. Status: ${response.statusCode}, Body: ${response.body}');
