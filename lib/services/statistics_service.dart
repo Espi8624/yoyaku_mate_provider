@@ -9,15 +9,22 @@ class StatisticsService {
   StatisticsService({required this.baseUrl});
 
   Future<Map<String, dynamic>> fetchStatistics(String storeId,
-      {String period = 'auto'}) async {
+      {String period = 'auto', DateTime? date}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
 
     final idToken = await user.getIdToken();
-    final url =
-        Uri.parse('$baseUrl/api/statistics?store_id=$storeId&period=$period');
+    var queryParams = 'store_id=$storeId&period=$period';
+    if (date != null) {
+      // Format DateTime as YYYY-MM-DD
+      final dateStr =
+          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+      queryParams += '&date=$dateStr';
+    }
+
+    final url = Uri.parse('$baseUrl/api/statistics?$queryParams');
 
     final response = await http.get(
       url,

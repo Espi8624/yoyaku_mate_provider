@@ -119,7 +119,7 @@ class _StatisticsView extends StatelessWidget {
       backgroundColor: const Color(0xFFF5F7FA), // Softer background
       appBar: AppBar(
         title: const Text(
-          '統計ダッシュボード',
+          '統計',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         backgroundColor: Colors.transparent,
@@ -162,6 +162,7 @@ class _StatisticsView extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 32),
+
               _buildSectionTitle('統計トレンド'),
               const SizedBox(height: 12),
               // Metric Selector Tabs (High Level)
@@ -287,7 +288,45 @@ class _StatisticsView extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
+
+              // Date Navigator (Visible only when not 'auto')
+              if (viewModel.selectedPeriod != 'auto') ...[
+                Container(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        onPressed: viewModel.previousPeriod,
+                        icon: const Icon(Icons.chevron_left_rounded, size: 32),
+                        color: Colors.black54,
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        viewModel.formattedDate,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      IconButton(
+                        // 未来への移動は isCurrentPeriod で制御
+                        onPressed: viewModel.isCurrentPeriod
+                            ? null
+                            : viewModel.nextPeriod,
+                        icon: const Icon(Icons.chevron_right_rounded, size: 32),
+                        color: viewModel.isCurrentPeriod
+                            ? Colors.black12
+                            : Colors.black54,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 4),
 
               // Chart Display
               if (viewModel.isLoading)
@@ -308,7 +347,13 @@ class _StatisticsView extends StatelessWidget {
                 )
               else if (viewModel.selectedMetric == 'visitor')
                 if (viewModel.selectedPeriod == 'auto')
-                  _buildHourlyChartCard(hourlyCongestion)
+                  _buildDynamicChartCard(hourlyCongestion.map((e) {
+                    return {
+                      'label': e['hour'].toString(),
+                      'value': e['count'],
+                      'prev_value': e['prev_count'] ?? 0,
+                    };
+                  }).toList())
                 else
                   _buildDynamicChartCard(data['chart_data'] as List<dynamic>?)
               else if (viewModel.selectedMetric == 'cancelled')
@@ -474,195 +519,6 @@ class _StatisticsView extends StatelessWidget {
     );
   }
 
-  Widget _buildHourlyChartCard(List<dynamic> hourlyData) {
-    // Find max Y for better scaling
-    final maxDataValue = hourlyData.isEmpty
-        ? 0.0
-        : hourlyData
-            .map((e) => (e['count'] as num).toDouble())
-            .reduce((curr, next) => curr > next ? curr : next);
-    // Ensure minimum height of 10 and add 20% padding
-    final maxY = (maxDataValue < 10.0 ? 10.0 : maxDataValue) * 1.2;
-
-    return Container(
-      height: 280,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            offset: const Offset(0, 4),
-            blurRadius: 16,
-          ),
-        ],
-        border: Border.all(color: Colors.grey.withOpacity(0.05)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
-        child: Column(
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  // Layer 1: Bar Chart (Visuals Only)
-                  BarChart(
-                    BarChartData(
-                      alignment: BarChartAlignment.spaceBetween,
-                      maxY: maxY,
-                      barTouchData:
-                          BarTouchData(enabled: false), // Handled by LineChart
-                      titlesData: FlTitlesData(
-                        show: true,
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (value, meta) {
-                              if (value % 4 == 0) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    '${value.toInt()}',
-                                    style: const TextStyle(
-                                      color: Color(0xFFADB5BD),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            },
-                          ),
-                        ),
-                        leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                      ),
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        horizontalInterval: 5,
-                        getDrawingHorizontalLine: (value) => FlLine(
-                          color: Colors.grey.withOpacity(0.1),
-                          strokeWidth: 1,
-                          dashArray: [5, 5],
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      barGroups: hourlyData.map((data) {
-                        final hour = (data['hour'] as num).toInt();
-                        final count = (data['count'] as num).toDouble();
-                        return BarChartGroupData(
-                          x: hour,
-                          barRods: [
-                            BarChartRodData(
-                              toY: count,
-                              color: AppColors.accentPrimary,
-                              width: 12,
-                              borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(6)),
-                              backDrawRodData: BackgroundBarChartRodData(
-                                show: false,
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  // Layer 2: Line Chart (Interaction Layer)
-                  LineChart(
-                    LineChartData(
-                      minX: 0,
-                      maxX: 23,
-                      minY: 0,
-                      maxY: maxY,
-                      titlesData: FlTitlesData(
-                        show: true,
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize:
-                                40, // Match BarChart to ensure alignment
-                            getTitlesWidget: (value, meta) =>
-                                const SizedBox.shrink(),
-                          ),
-                        ),
-                        leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                      ),
-                      gridData: FlGridData(show: false),
-                      borderData: FlBorderData(show: false),
-                      lineTouchData: LineTouchData(
-                        enabled: true,
-                        touchTooltipData: LineTouchTooltipData(
-                          tooltipRoundedRadius: 8,
-                          tooltipMargin: -50,
-                          tooltipPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          tooltipBgColor: Colors.black.withOpacity(0.7),
-                          getTooltipItems: (touchedSpots) {
-                            return touchedSpots.map((spot) {
-                              final hour = spot.x.toInt();
-                              final data = hourlyData.firstWhere(
-                                (element) =>
-                                    (element['hour'] as num).toInt() == hour,
-                                orElse: () => {'count': 0},
-                              );
-                              final count = (data['count'] as num).toInt();
-
-                              return LineTooltipItem(
-                                '$hour時\n',
-                                const TextStyle(
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: '$count人',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }).toList();
-                          },
-                        ),
-                      ),
-                      lineBarsData: [
-                        // Invisible line at maxY for touch detection
-                        LineChartBarData(
-                          spots: List.generate(24, (index) {
-                            return FlSpot(index.toDouble(), maxY);
-                          }),
-                          color: Colors.transparent,
-                          barWidth: 0,
-                          dotData: FlDotData(show: false),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildPeriodButton(
       StatisticsViewModel viewModel, String period, String label,
@@ -735,13 +591,31 @@ class _StatisticsView extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
         child: Column(
           children: [
+            // Legend
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _buildLegendItem(
+                  color: const Color(0xFF212529),
+                  label: '今回',
+                  isCircle: false,
+                ),
+                const SizedBox(width: 16),
+                _buildLegendItem(
+                  color: const Color(0xFFFF6B6B),
+                  label: '前回',
+                  isCircle: true,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             Expanded(
               child: Stack(
                 children: [
                   // Layer 1: Bar Chart (Current Period - Visuals Only)
                   BarChart(
                     BarChartData(
-                      alignment: BarChartAlignment.spaceAround,
+                      alignment: BarChartAlignment.spaceBetween,
                       maxY: maxY,
                       minY: 0,
                       barTouchData:
@@ -801,7 +675,7 @@ class _StatisticsView extends StatelessWidget {
                             BarChartRodData(
                               toY: val,
                               color: const Color(0xFF212529),
-                              width: 12,
+                              width: 8,
                               borderRadius: const BorderRadius.vertical(
                                   top: Radius.circular(6)),
                               backDrawRodData: BackgroundBarChartRodData(
@@ -937,10 +811,10 @@ class _StatisticsView extends StatelessWidget {
                             },
                             getDotPainter: (spot, percent, barData, index) {
                               return FlDotCirclePainter(
-                                radius: 3.0,
+                                radius: 2.0,
                                 color: const Color(
                                     0xFFFF6B6B), // Reddish-orange from image
-                                strokeWidth: 1.5,
+                                strokeWidth: 1.0,
                                 strokeColor: const Color(0xFFFF6B6B),
                               );
                             },
@@ -1015,6 +889,35 @@ class _StatisticsView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLegendItem({
+    required Color color,
+    required String label,
+    required bool isCircle,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: isCircle ? 8 : 12,
+          height: isCircle ? 8 : 4,
+          decoration: BoxDecoration(
+            color: color,
+            shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+            borderRadius: isCircle ? null : BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.black54,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
