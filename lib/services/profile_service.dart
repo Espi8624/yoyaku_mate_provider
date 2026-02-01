@@ -38,7 +38,33 @@ class ProviderProfileService {
     );
 
     if (response.statusCode == 200) {
-      return json.decode(utf8.decode(response.bodyBytes));
+      final responseData = json.decode(utf8.decode(response.bodyBytes));
+      // print('--- [ProfileService] fetchUserProfile Response ---');
+      // print(responseData.keys.toList());
+
+      // Save Login Token from Profile Fetch
+      // Response is wrapped in { "status": "success", "data": { ... } }
+      if (responseData.containsKey('data') && responseData['data'] is Map) {
+        final data = responseData['data'];
+        if (data.containsKey('login_token')) {
+          final token = data['login_token'];
+          if (token != null && token.toString().isNotEmpty) {
+            print(
+                '--- [ProfileService] Saving Login Token: ${token.substring(0, 5)}... ---');
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('login_token', token);
+          } else {
+            print('--- [ProfileService] Login Token is empty/null! ---');
+          }
+        } else {
+          print(
+              '--- [ProfileService] Response data missing login_token key! ---');
+        }
+      } else {
+        print('--- [ProfileService] Response missing data key! ---');
+      }
+
+      return responseData;
     } else {
       throw ApiException(
           'Failed to load user profile. Status: ${response.statusCode}, Body: ${response.body}');

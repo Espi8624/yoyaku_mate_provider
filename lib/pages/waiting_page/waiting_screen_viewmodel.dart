@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -441,16 +442,9 @@ class WaitingScreenViewModel extends ChangeNotifier
                   await FirebaseAuth.instance.signOut();
 
                   if (context.mounted) {
-                    // Navigate to Login Page using Navigator
-                    // GoRouter redirect logic in main.dart might also kick in due to auth state change,
-                    // but explicit navigation ensures immediate visual feedback.
-                    // Using pushNamedAndRemoveUntil to clear stack
-                    // Assuming GoRouter is compatible with clear stack via go_router path
-                    // Actually, if using GoRouter, context.go('/login') is best.
-                    // But I don't want to add GoRouter import if I can avoid it (it is in main.dart/routes.dart).
-                    // Let's use Navigator with named route which GoRouter supports.
-                    Navigator.of(context)
-                        .pushNamedAndRemoveUntil('/login', (route) => false);
+                    // Use GoRouter to navigate to login page
+                    // This is the correct way when using MaterialApp.router with GoRouter
+                    context.go('/login');
                   }
                 },
                 child: const Text("OK"),

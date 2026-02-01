@@ -16,16 +16,21 @@ Future<void> loginAndFetchUserInfo(String email, String password,
   // user_info 取得
   final response = await http.get(
     Uri.parse(
-        'https://saboten-server.fly.dev/api/provider_user/firebase_uid?uid=$uid'),
+        'https://saboten-server.fly.dev/api/provider_user/firebase_uid?uid=$uid&regenerate_token=true'),
     headers: {'Authorization': 'Bearer $idToken'},
   );
   if (response.statusCode == 200) {
     final userInfo = jsonDecode(response.body);
 
     // Save Login Token
-    if (userInfo.containsKey('login_token')) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('login_token', userInfo['login_token']);
+    // Response is wrapped in { "status": "success", "data": { ... } }
+    if (userInfo.containsKey('data') && userInfo['data'] is Map) {
+      final data = userInfo['data'];
+      if (data.containsKey('login_token')) {
+        final token = data['login_token'];
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('login_token', token);
+      }
     }
 
     onUserInfoLoaded(userInfo);
