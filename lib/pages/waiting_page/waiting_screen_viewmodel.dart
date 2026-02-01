@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
@@ -252,6 +253,8 @@ class WaitingScreenViewModel extends ChangeNotifier
         ToastWidget.show(context, '待機が正常に追加されました', type: ToastType.success);
       }
     } catch (e) {
+      if (await _handleDuplicateLogin(context, e)) return;
+
       if (context.mounted) {
         String errorMessage = e.toString();
 
@@ -303,12 +306,13 @@ class WaitingScreenViewModel extends ChangeNotifier
       if (newStatus == 'completed') message = '入店処理が完了しました';
       if (newStatus == 'cancelled') message = '待機を取り消しました';
       if (context.mounted) {
-        // messageが空でなければ表示 (一応空チェックを入れるか、ToastWidget側で空なら表示しないかだが、ここでは空なら表示しないようにガードする方が丁寧かも)
+        // messageが空でなければ表示
         if (message.isNotEmpty) {
           ToastWidget.show(context, message, type: ToastType.success);
         }
       }
     } on ApiException catch (e) {
+      if (await _handleDuplicateLogin(context, e)) return;
       if (context.mounted) {
         ToastWidget.show(context, 'ステータスアップデート失敗: ${e.message}',
             type: ToastType.error);
@@ -339,6 +343,7 @@ class WaitingScreenViewModel extends ChangeNotifier
         ToastWidget.show(context, '待機目録を初期化しました', type: ToastType.success);
       }
     } on ApiException catch (e) {
+      if (await _handleDuplicateLogin(context, e)) return;
       if (context.mounted) {
         ToastWidget.show(context, '初期化失敗: ${e.message}', type: ToastType.error);
       }
@@ -417,6 +422,46 @@ class WaitingScreenViewModel extends ChangeNotifier
             type: ToastType.error);
       }
     }
+  }
+
+  Future<bool> _handleDuplicateLogin(
+      BuildContext context, dynamic error) async {
+    if (error.toString().contains("DUPLICATE_LOGIN")) {
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text("ログアウト通知"),
+            content: const Text("他の端末でログインされたため、ログアウトします。"),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  // Sign out from Firebase
+                  await FirebaseAuth.instance.signOut();
+
+                  if (context.mounted) {
+                    // Navigate to Login Page using Navigator
+                    // GoRouter redirect logic in main.dart might also kick in due to auth state change,
+                    // but explicit navigation ensures immediate visual feedback.
+                    // Using pushNamedAndRemoveUntil to clear stack
+                    // Assuming GoRouter is compatible with clear stack via go_router path
+                    // Actually, if using GoRouter, context.go('/login') is best.
+                    // But I don't want to add GoRouter import if I can avoid it (it is in main.dart/routes.dart).
+                    // Let's use Navigator with named route which GoRouter supports.
+                    Navigator.of(context)
+                        .pushNamedAndRemoveUntil('/login', (route) => false);
+                  }
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+      }
+      return true;
+    }
+    return false;
   }
 
   @override

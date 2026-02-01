@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ログイン
 Future<void> loginAndFetchUserInfo(String email, String password,
@@ -20,6 +21,13 @@ Future<void> loginAndFetchUserInfo(String email, String password,
   );
   if (response.statusCode == 200) {
     final userInfo = jsonDecode(response.body);
+
+    // Save Login Token
+    if (userInfo.containsKey('login_token')) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('login_token', userInfo['login_token']);
+    }
+
     onUserInfoLoaded(userInfo);
   } else {
     throw Exception('Failed to fetch user info');
