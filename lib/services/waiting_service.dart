@@ -168,7 +168,10 @@ class WaitingService {
   // Helper to get Login Token
   Future<String?> _getLoginToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('login_token');
+    final token = prefs.getString('login_token');
+    print(
+        '--- [WaitingService] Read Token: ${token != null ? token.substring(0, 5) + "..." : "NULL"} ---');
+    return token;
   }
 
   // 新規待機追加
@@ -259,7 +262,8 @@ class WaitingService {
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to update status: ${response.statusCode}');
+        throw Exception(
+            'Failed to update status: ${response.statusCode}, Body: ${response.body}');
       }
       // ポーリング再開不要、SSEが更新を処理
     } catch (e) {
@@ -288,7 +292,8 @@ class WaitingService {
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to clear waiting list: ${response.statusCode}');
+        throw Exception(
+            'Failed to clear waiting list: ${response.statusCode}, Body: ${response.body}');
       }
       // ポーリング再開不要
     } catch (e) {
