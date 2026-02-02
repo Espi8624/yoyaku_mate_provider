@@ -143,8 +143,33 @@ class StatisticsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data = await _service.fetchStatistics(storeId,
-          period: _selectedPeriod, date: _currentDate);
+      DateTime? startDate;
+      DateTime? endDate;
+
+      // Calculate explicit start and end dates based on current view
+      if (_selectedPeriod == 'weekly') {
+        // End Date is _currentDate (displayed as "Jan 27 - Feb 2", so Feb 2 is end)
+        endDate = _currentDate;
+        startDate = _currentDate.subtract(const Duration(days: 6));
+      } else if (_selectedPeriod == 'monthly') {
+        startDate = DateTime(_currentDate.year, _currentDate.month, 1);
+        endDate = DateTime(_currentDate.year, _currentDate.month + 1, 0);
+      } else if (_selectedPeriod == 'yearly') {
+        startDate = DateTime(_currentDate.year, 1, 1);
+        endDate = DateTime(_currentDate.year, 12, 31);
+      } else {
+        // Auto / Daily
+        startDate = _currentDate;
+        endDate = _currentDate;
+      }
+
+      final data = await _service.fetchStatistics(
+        storeId,
+        period: _selectedPeriod,
+        date: _currentDate,
+        startDate: startDate,
+        endDate: endDate,
+      );
       _statisticsData = data;
     } catch (e) {
       _errorMessage = e.toString();
