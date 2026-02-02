@@ -22,7 +22,7 @@ class TranslationService {
         throw Exception('API Key is not set.');
       }
       _model = GenerativeModel(
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.0-flash',
         apiKey: ApiKeys.geminiApiKey,
         httpClient: _CustomHttpClient(),
       );
