@@ -11,7 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/panels/action_button_panel_mobile.dart';
 import '../../models/menu_list.dart';
 import '../../services/menu_service.dart';
-import '../../services/translation_service.dart';
+
 import '../../widgets/common_dialogs/confirmation_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../widgets/common_widgets/loading_indicator.dart';
@@ -304,16 +304,19 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                       'English': '英語',
                       'Korean': '韓国語',
                       'Chinese': '中国語',
+                      'Traditional Chinese': '中国語 (台湾)',
                       'Spanish': 'スペイン語',
                       'French': 'フランス語',
                       'German': 'ドイツ語',
                       'Italian': 'イタリア語',
+                      'Russian': 'ロシア語',
+                      'Portuguese': 'ポルトガル語',
                       'Arabic': 'アラビア語',
                     }.entries.toList().asMap().entries.map((entry) {
                       final index = entry.key;
                       final e = entry.value;
                       // Dynamic check for last item
-                      final isLast = index == 7; // Total 8 items (0-7)
+                      final isLast = index == 10; // Total 11 items (0-10)
 
                       return Column(
                         children: [
@@ -364,91 +367,49 @@ class _MenuManagementViewState extends State<_MenuManagementView>
   }
 
   Future<void> _translateAndPrint(String targetLang) async {
-    // If Japanese is selected, skip translation and print directly
+    // If Japanese is selected, use original text
     if (targetLang == 'Japanese') {
       await _printMenu(
           titleTranslations: {}, descTranslations: {}, targetLang: targetLang);
       return;
     }
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: LoadingIndicator()),
-    );
+    // Prepare translation maps using STORED data only
+    final titleTranslations = <String, String>{};
+    final descTranslations = <String, String>{};
 
-    try {
-      final titleTranslations = <String, String>{};
-      final descTranslations = <String, String>{};
-      final titleAndCategories = <String>{};
-      final descriptions = <String>{};
+    for (final cat in _viewModel.categories) {
+      // Categories don't have stored translations in this model, so use original
+      // Use original text for category (or implement category translation storage later)
+      titleTranslations[cat] = cat;
 
-      for (final cat in _viewModel.categories) {
-        titleAndCategories.add(cat);
-        final menus = _viewModel.categorizedMenu[cat] ?? [];
-        for (final menu in menus) {
-          titleAndCategories.add(menu.title);
-          if (menu.description.isNotEmpty) {
-            descriptions.add(menu.description);
+      final menus = _viewModel.categorizedMenu[cat] ?? [];
+      for (final menu in menus) {
+        // Title
+        if (menu.titleTranslations.containsKey(targetLang)) {
+          titleTranslations[menu.title] = menu.titleTranslations[targetLang]!;
+        } else {
+          // Fallback to original
+          titleTranslations[menu.title] = menu.title;
+        }
+
+        // Description
+        if (menu.description.isNotEmpty) {
+          if (menu.descriptionTranslations.containsKey(targetLang)) {
+            descTranslations[menu.description] =
+                menu.descriptionTranslations[targetLang]!;
+          } else {
+            // Fallback to original
+            descTranslations[menu.description] = menu.description;
           }
         }
       }
-
-      // Prepare inputs
-      final titleMap = <String, String>{};
-      final titleList = titleAndCategories.toList();
-      for (int i = 0; i < titleList.length; i++) {
-        titleMap['t_$i'] = titleList[i];
-      }
-
-      final descMap = <String, String>{};
-      final descList = descriptions.toList();
-      for (int i = 0; i < descList.length; i++) {
-        descMap['d_$i'] = descList[i];
-      }
-
-      // Merge maps for single optimization call
-      final allMap = <String, String>{...titleMap, ...descMap};
-
-      final result = await TranslationService().translateBatch(
-        allMap,
-        targetLang: targetLang,
-        smartMenuMode: true, // Use smart mode for selective Romaji
-      );
-
-      // Process Title Results
-      for (int i = 0; i < titleList.length; i++) {
-        final key = 't_$i';
-        if (result.containsKey(key)) {
-          titleTranslations[titleList[i]] = result[key]!;
-        } else {
-          titleTranslations[titleList[i]] = titleList[i];
-        }
-      }
-
-      // Process Description Results
-      for (int i = 0; i < descList.length; i++) {
-        final key = 'd_$i';
-        if (result.containsKey(key)) {
-          descTranslations[descList[i]] = result[key]!;
-        } else {
-          descTranslations[descList[i]] = descList[i];
-        }
-      }
-
-      if (mounted) {
-        Navigator.pop(context);
-        _printMenu(
-            titleTranslations: titleTranslations,
-            descTranslations: descTranslations,
-            targetLang: targetLang);
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        ToastWidget.show(context, '翻訳に失敗しました: $e', type: ToastType.error);
-      }
     }
+
+    await _printMenu(
+        titleTranslations: titleTranslations,
+        descTranslations: descTranslations,
+        targetLang: targetLang);
   }
 
   Future<void> _printMenu(
@@ -469,6 +430,15 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         case 'Chinese':
           fontUrl =
               'https://fonts.gstatic.com/s/notosanssc/v40/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnYw.ttf';
+          break;
+        case 'Traditional Chinese':
+          fontUrl =
+              'https://fonts.gstatic.com/s/notosanstc/v39/-nFuOG829Oofr2wohFbTp9ifNAn722rq0MXz76Cy_Co.ttf';
+          break;
+        case 'Russian':
+        case 'Portuguese':
+          fontUrl =
+              'https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9A99d.ttf';
           break;
         case 'Arabic':
           fontUrl =
@@ -596,9 +566,12 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                         'Japanese' => 'メニュー',
                         'Korean' => '메뉴',
                         'Chinese' => '菜单',
+                        'Traditional Chinese' => '菜單',
+                        'Russian' => 'Меню',
                         'Spanish' => 'Menú',
                         'German' => 'Menü',
                         'Italian' => 'Menù',
+                        'Portuguese' => 'Menu',
                         'Arabic' => 'قائمة الطعام',
                         _ => 'Menu', // English, French fallback
                       },
