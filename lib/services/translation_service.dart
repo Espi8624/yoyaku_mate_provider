@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:http/http.dart' as http;
@@ -142,6 +143,90 @@ $promptLines
       return result;
     } catch (e) {
       debugPrint('Translation Batch Error: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, Map<String, String>>> translateToMultipleLanguages(
+      Map<String, String> texts, List<String> targetLanguages,
+      {bool smartMenuMode = false}) async {
+    try {
+      _initModel();
+    } catch (e) {
+      debugPrint('Multi-Translation Init Error: $e');
+      return {};
+    }
+
+    if (_model == null || texts.isEmpty || targetLanguages.isEmpty) return {};
+
+    final promptLines =
+        texts.entries.map((e) => '${e.key}: ${e.value}').join('\n');
+    final languagesList = targetLanguages.join(', ');
+
+    String instruction = '''
+You are a professional menu translator. Translate the following lines into the following languages: $languagesList.
+The input lines are in "id: text" format.
+Return a SINGLE JSON object where:
+- Keys are the Language names (exactly as requested).
+- Values are objects mapping "id" to "translated_text".
+
+Rules:
+1. Translate naturally and accurately for a restaurant menu.
+''';
+
+    if (smartMenuMode) {
+      instruction += '''
+2. If the input Key starts with "t_" (Title), you MUST append the Japanese pronunciation in Romaji separated by " / ". 
+   Format: "Translated Text / Romaji". Example: "Fried Chicken / Karaage".
+3. If the input Key starts with "d_" (Description), do NOT append Romaji.
+''';
+    }
+
+    instruction += '''
+4. Return ONLY the JSON object. No markdown formatting, no code blocks, no intro text.
+''';
+
+    final prompt = '''
+$instruction
+
+Input Data:
+$promptLines
+''';
+
+    try {
+      final content = [Content.text(prompt)];
+      final response = await _model!.generateContent(content);
+      final responseText = response.text;
+
+      if (responseText == null) {
+        debugPrint('Multi-Translation Error: Empty response');
+        return {};
+      }
+
+      // Cleanup JSON string if it contains markdown code blocks
+      String cleanJson = responseText.trim();
+      if (cleanJson.startsWith('```json')) {
+        cleanJson = cleanJson.substring(7);
+      }
+      if (cleanJson.startsWith('```')) {
+        cleanJson = cleanJson.substring(3);
+      }
+      if (cleanJson.endsWith('```')) {
+        cleanJson = cleanJson.substring(0, cleanJson.length - 3);
+      }
+
+      final deepMap = jsonDecode(cleanJson) as Map<String, dynamic>;
+      final result = <String, Map<String, String>>{};
+
+      deepMap.forEach((lang, transMap) {
+        if (transMap is Map) {
+          result[lang] = Map<String, String>.from(
+              transMap.map((k, v) => MapEntry(k.toString(), v.toString())));
+        }
+      });
+      return result;
+    } catch (e) {
+      debugPrint('Multi-Translation Error: $e');
       rethrow;
     }
   }
