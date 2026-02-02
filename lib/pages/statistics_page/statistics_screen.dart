@@ -1,10 +1,10 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/pages/statistics_page/statistics_viewmodel.dart';
 import 'package:yoyaku_mate_provider/services/statistics_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'widgets/dynamic_chart_card.dart';
 
 class StatisticsScreen extends StatelessWidget {
   final String storeId;
@@ -114,6 +114,26 @@ class _StatisticsView extends StatelessWidget {
     final hourlyCongestion = data['hourly_congestion'] as List<dynamic>;
     final avgWaitTime = data['average_wait_time'] as String;
     final noShowRate = (data['no_show_rate'] as num).toDouble();
+    final totalCancelled = (data['total_cancelled'] as num?)?.toInt() ?? 0;
+    final totalNoShow = (data['total_no_show'] as num?)?.toInt() ?? 0;
+
+    // Determine Highlight Data based on Selection
+    String highlightTitle = '来店数';
+    int highlightValue = visitorStats['today'];
+    Color highlightColor = const Color(0xFF212529);
+    IconData? highlightIcon;
+
+    if (viewModel.selectedMetric == 'cancelled') {
+      highlightTitle = 'キャンセル数';
+      highlightValue = totalCancelled;
+      highlightColor = const Color(0xFFFA5252);
+      highlightIcon = Icons.cancel_outlined;
+    } else if (viewModel.selectedMetric == 'no_show') {
+      highlightTitle = 'No-Show数';
+      highlightValue = totalNoShow;
+      highlightColor = const Color(0xFFFF6B6B);
+      highlightIcon = Icons.person_off_outlined;
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA), // Softer background
@@ -134,9 +154,21 @@ class _StatisticsView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildSectionTitle('本日のハイライト'),
+              _buildSectionTitle(
+                viewModel.selectedPeriod == 'weekly'
+                    ? '週間ハイライト'
+                    : viewModel.selectedPeriod == 'monthly'
+                        ? '月間ハイライト'
+                        : viewModel.selectedPeriod == 'yearly'
+                            ? '年間ハイライト'
+                            : '本日のハイライト',
+              ),
               const SizedBox(height: 12),
-              _buildVisitorCard(visitorStats),
+              _buildVisitorCard(visitorStats,
+                  overrideTitle: highlightTitle,
+                  overrideValue: highlightValue,
+                  overrideColor: highlightColor,
+                  overrideIcon: highlightIcon),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -347,7 +379,8 @@ class _StatisticsView extends StatelessWidget {
                 )
               else if (viewModel.selectedMetric == 'visitor')
                 if (viewModel.selectedPeriod == 'auto')
-                  _buildDynamicChartCard(hourlyCongestion.map((e) {
+                  DynamicChartCard(
+                      chartData: hourlyCongestion.map((e) {
                     return {
                       'label': e['hour'].toString(),
                       'value': e['count'],
@@ -355,13 +388,14 @@ class _StatisticsView extends StatelessWidget {
                     };
                   }).toList())
                 else
-                  _buildDynamicChartCard(data['chart_data'] as List<dynamic>?)
+                  DynamicChartCard(
+                      chartData: data['chart_data'] as List<dynamic>?)
               else if (viewModel.selectedMetric == 'cancelled')
-                _buildDynamicChartCard(
-                    data['cancelled_chart_data'] as List<dynamic>?)
+                DynamicChartCard(
+                    chartData: data['cancelled_chart_data'] as List<dynamic>?)
               else
-                _buildDynamicChartCard(
-                    data['no_show_chart_data'] as List<dynamic>?),
+                DynamicChartCard(
+                    chartData: data['no_show_chart_data'] as List<dynamic>?),
 
               const SizedBox(height: 40),
             ],
@@ -382,25 +416,39 @@ class _StatisticsView extends StatelessWidget {
     );
   }
 
-  Widget _buildVisitorCard(Map<String, dynamic> stats) {
-    final today = stats['today'] as int;
+  Widget _buildVisitorCard(Map<String, dynamic> stats,
+      {String? overrideTitle,
+      int? overrideValue,
+      Color? overrideColor,
+      IconData? overrideIcon}) {
+    final value = overrideValue ?? (stats['today'] as int);
+    final title = overrideTitle ?? '総来店者数';
+
     final wowRate = (stats['wow_growth_rate'] as num).toDouble();
     final isPositive = wowRate >= 0;
+
+    // Only show growth rate (comparison) if showing Visitor Stats (default)
+    final showGrowth = overrideValue == null;
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF2E2E2E), // Dark Gray
-            Color(0xFF1A1A1A), // Black
-          ],
+          colors: overrideColor != null
+              ? [
+                  overrideColor,
+                  overrideColor.withOpacity(0.8),
+                ]
+              : [
+                  const Color(0xFF2E2E2E), // Dark Gray
+                  const Color(0xFF1A1A1A), // Black
+                ],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: (overrideColor ?? Colors.black).withOpacity(0.15),
             offset: const Offset(0, 8),
             blurRadius: 20,
           ),
@@ -429,54 +477,70 @@ class _StatisticsView extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      '総来店者数',
-                      style: TextStyle(
+                    Text(
+                      title,
+                      style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isPositive
-                            ? const Color(0xFF1B4D3E) // Dark Green bg
-                            : const Color(0xFF4A1B1B), // Dark Red bg
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
+                    if (showGrowth)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
                           color: isPositive
-                              ? const Color(0xFF4CD964)
-                              : const Color(0xFFFF3B30),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isPositive
-                                ? Icons.arrow_upward_rounded
-                                : Icons.arrow_downward_rounded,
-                            size: 14,
+                              ? const Color(0xFF1B4D3E) // Dark Green bg
+                              : const Color(0xFF4A1B1B), // Dark Red bg
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
                             color: isPositive
                                 ? const Color(0xFF4CD964)
                                 : const Color(0xFFFF3B30),
+                            width: 1,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${wowRate.abs().toStringAsFixed(1)}%',
-                            style: TextStyle(
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isPositive
+                                  ? Icons.arrow_upward_rounded
+                                  : Icons.arrow_downward_rounded,
+                              size: 14,
                               color: isPositive
                                   ? const Color(0xFF4CD964)
                                   : const Color(0xFFFF3B30),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Text(
+                              '${wowRate.abs().toStringAsFixed(1)}%',
+                              style: TextStyle(
+                                color: isPositive
+                                    ? const Color(0xFF4CD964)
+                                    : const Color(0xFFFF3B30),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      // Optional: Add icon for Cancel/No-Show if desired, or nothing.
+                      // Let's add an icon to make it look balanced.
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          overrideIcon ?? Icons.people_outline,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -484,7 +548,7 @@ class _StatisticsView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '$today',
+                      '$value',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 48,
@@ -496,7 +560,7 @@ class _StatisticsView extends StatelessWidget {
                     const Padding(
                       padding: EdgeInsets.only(bottom: 8.0),
                       child: Text(
-                        '人',
+                        '人', // Could make this dynamic '件' if needed, but '人' is safer default
                         style: TextStyle(
                           color: Colors.white60,
                           fontSize: 16,
@@ -507,10 +571,16 @@ class _StatisticsView extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  '先週の同曜日と比較',
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
-                ),
+                if (showGrowth)
+                  const Text(
+                    '先週の同曜日と比較',
+                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                  )
+                else
+                  Text(
+                    '選択期間の合計',
+                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                  ),
               ],
             ),
           ),
@@ -519,6 +589,16 @@ class _StatisticsView extends StatelessWidget {
     );
   }
 
+  IconData outlineIconForMetric(String metric) {
+    switch (metric) {
+      case 'cancelled':
+        return Icons.cancel_outlined;
+      case 'no_show':
+        return Icons.person_off_outlined;
+      default:
+        return Icons.people_outline;
+    }
+  }
 
   Widget _buildPeriodButton(
       StatisticsViewModel viewModel, String period, String label,
@@ -545,298 +625,6 @@ class _StatisticsView extends StatelessWidget {
                 : (isSelected ? Colors.white : Colors.black54),
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDynamicChartCard(List<dynamic>? chartData) {
-    if (chartData == null || chartData.isEmpty) {
-      return Container(
-        height: 200,
-        alignment: Alignment.center,
-        child: const Text('データがありません'),
-      );
-    }
-
-    // Determine max Y including both current and previous values
-    double maxY = 10.0;
-    if (chartData.isNotEmpty) {
-      final maxVal = chartData
-          .map((e) => (e['value'] as num).toDouble())
-          .reduce((curr, next) => curr > next ? curr : next);
-      final maxPrev = chartData
-          .map((e) => (e['prev_value'] as num?)?.toDouble() ?? 0.0)
-          .reduce((curr, next) => curr > next ? curr : next);
-      final absoluteMax = maxVal > maxPrev ? maxVal : maxPrev;
-      // Ensure minimum height of 10 and add 20% padding
-      maxY = (absoluteMax < 10.0 ? 10.0 : absoluteMax) * 1.2;
-    }
-
-    return Container(
-      height: 280,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            offset: const Offset(0, 4),
-            blurRadius: 16,
-          ),
-        ],
-        border: Border.all(color: Colors.grey.withOpacity(0.05)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
-        child: Column(
-          children: [
-            // Legend
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                _buildLegendItem(
-                  color: const Color(0xFF212529),
-                  label: '今回',
-                  isCircle: false,
-                ),
-                const SizedBox(width: 16),
-                _buildLegendItem(
-                  color: const Color(0xFFFF6B6B),
-                  label: '前回',
-                  isCircle: true,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: Stack(
-                children: [
-                  // Layer 1: Bar Chart (Current Period - Visuals Only)
-                  BarChart(
-                    BarChartData(
-                      alignment: BarChartAlignment.spaceBetween,
-                      maxY: maxY,
-                      minY: 0,
-                      barTouchData:
-                          BarTouchData(enabled: false), // Handled by LineChart
-                      titlesData: FlTitlesData(
-                        show: true,
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (value, meta) {
-                              final index = value.toInt();
-                              if (index >= 0 && index < chartData.length) {
-                                if (chartData.length > 10 && index % 2 != 0) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    chartData[index]['label'].toString(),
-                                    style: const TextStyle(
-                                      color: Color(0xFFADB5BD),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            },
-                          ),
-                        ),
-                        leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                      ),
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        horizontalInterval: 5,
-                        getDrawingHorizontalLine: (value) => FlLine(
-                          color: Colors.grey.withOpacity(0.1),
-                          strokeWidth: 1,
-                          dashArray: [5, 5],
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      barGroups: List.generate(chartData.length, (index) {
-                        final val =
-                            (chartData[index]['value'] as num).toDouble();
-                        return BarChartGroupData(
-                          x: index,
-                          barRods: [
-                            BarChartRodData(
-                              toY: val,
-                              color: const Color(0xFF212529),
-                              width: 8,
-                              borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(6)),
-                              backDrawRodData: BackgroundBarChartRodData(
-                                show: false,
-                              ),
-                            ),
-                          ],
-                        );
-                      }),
-                    ),
-                  ),
-
-                  // Layer 2: Line Chart (Interaction Layer + Previous Dots)
-                  LineChart(
-                    LineChartData(
-                      minX: -0.5,
-                      maxX: chartData.length.toDouble() - 0.5,
-                      minY: 0,
-                      maxY: maxY,
-                      titlesData: FlTitlesData(
-                        show: true, // Enable titles to reserve space
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize:
-                                40, // Match BarChart reserved size exactly
-                            getTitlesWidget: (value, meta) {
-                              return const SizedBox
-                                  .shrink(); // Don't draw text, just reserve space
-                            },
-                          ),
-                        ),
-                        leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                      ),
-                      gridData: FlGridData(show: false),
-                      borderData: FlBorderData(show: false),
-                      lineTouchData: LineTouchData(
-                        enabled: true,
-                        touchTooltipData: LineTouchTooltipData(
-                          tooltipRoundedRadius: 8,
-                          tooltipMargin: -60,
-                          tooltipPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          tooltipBgColor: Colors.black.withOpacity(0.7),
-                          getTooltipItems: (touchedSpots) {
-                            return touchedSpots.map((touchedSpot) {
-                              // Only show tooltip for the Max Line (which triggers interaction)
-                              // We assume the Max Line is the LAST one added.
-                              // But properly, we should check barIndex or properties.
-                              // Actually, if we touch, we might hit both red dot and max line.
-                              // We only want ONE tooltip item.
-
-                              // Logic: Find the spot that corresponds to the max line (y ~= maxY)
-                              // OR just use the index from any touched spot to lookup data.
-
-                              // Let's filter: only return an item if it's the Max Line (assumed index 1)
-                              // Or simply ignore the specific spot data and return the content based on X index.
-
-                              // IMPORTANT: If we return multiple items, they stack. We want one.
-                              // So loop through spots, if we find one, generate content and return it,
-                              // for others return null.
-
-                              // Simplified: Always return ONE tooltip item per X index.
-                              // Filter touchedSpots to find the one with the highest Y (which implies MaxLine)?
-                              // Or if barIndex == 1.
-
-                              if (touchedSpot.barIndex == 0)
-                                return null; // Hide tooltip for red dots
-
-                              final index = touchedSpot.x.toInt();
-                              if (index < 0 || index >= chartData.length)
-                                return null;
-
-                              final dataItem = chartData[index];
-                              final label = dataItem['label'];
-                              final currentVal =
-                                  (dataItem['value'] as num).toDouble();
-                              final prevVal = (dataItem['prev_value'] as num?)
-                                      ?.toDouble() ??
-                                  0.0;
-
-                              return LineTooltipItem(
-                                '$label\n',
-                                const TextStyle(
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: '今回: ${currentVal.toInt()}人\n',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: '前回: ${prevVal.toInt()}人',
-                                    style: const TextStyle(
-                                      color: Color(0xFFADB5BD),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }).toList();
-                          },
-                        ),
-                      ),
-                      lineBarsData: [
-                        // Line 0: Previous Value (Red Dots)
-                        LineChartBarData(
-                          spots: List.generate(chartData.length, (index) {
-                            final prevVal =
-                                (chartData[index]['prev_value'] as num?)
-                                        ?.toDouble() ??
-                                    0.0;
-                            return FlSpot(index.toDouble(), prevVal);
-                          }),
-                          isCurved: false,
-                          color: Colors.transparent, // Invisible line
-                          barWidth: 0,
-                          dotData: FlDotData(
-                            show: true,
-                            checkToShowDot: (spot, barData) {
-                              return spot.y != 0; // Hide dots if value is 0
-                            },
-                            getDotPainter: (spot, percent, barData, index) {
-                              return FlDotCirclePainter(
-                                radius: 2.0,
-                                color: const Color(
-                                    0xFFFF6B6B), // Reddish-orange from image
-                                strokeWidth: 1.0,
-                                strokeColor: const Color(0xFFFF6B6B),
-                              );
-                            },
-                          ),
-                          belowBarData: BarAreaData(show: false),
-                        ),
-                        // Line 1: Invisible Max Height Line for Interaction
-                        LineChartBarData(
-                          spots: List.generate(chartData.length, (index) {
-                            return FlSpot(index.toDouble(), maxY);
-                          }),
-                          color: Colors.transparent,
-                          barWidth: 0,
-                          dotData: FlDotData(show: false),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -889,35 +677,6 @@ class _StatisticsView extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildLegendItem({
-    required Color color,
-    required String label,
-    required bool isCircle,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: isCircle ? 8 : 12,
-          height: isCircle ? 8 : 4,
-          decoration: BoxDecoration(
-            color: color,
-            shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
-            borderRadius: isCircle ? null : BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.black54,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }
