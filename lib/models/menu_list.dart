@@ -14,6 +14,8 @@ class MenuListItem extends Equatable {
   final DateTime updatedAt;
   final String menuStatus;
   final bool isPreOrderAvailable;
+  final Map<String, String> titleTranslations;
+  final Map<String, String> descriptionTranslations;
   final Uint8List? tempImageBytes;
 
   const MenuListItem({
@@ -29,6 +31,8 @@ class MenuListItem extends Equatable {
     required this.updatedAt,
     required this.menuStatus,
     this.isPreOrderAvailable = false,
+    this.titleTranslations = const {},
+    this.descriptionTranslations = const {},
     this.tempImageBytes,
   });
 
@@ -47,6 +51,8 @@ class MenuListItem extends Equatable {
         updatedAt,
         menuStatus,
         isPreOrderAvailable,
+        titleTranslations,
+        descriptionTranslations,
       ];
 
   MenuListItem copyWith({
@@ -62,6 +68,8 @@ class MenuListItem extends Equatable {
     DateTime? updatedAt,
     String? menuStatus,
     bool? isPreOrderAvailable,
+    Map<String, String>? titleTranslations,
+    Map<String, String>? descriptionTranslations,
     Uint8List? tempImageBytes,
     bool clearTempImage = false,
   }) {
@@ -78,6 +86,9 @@ class MenuListItem extends Equatable {
       updatedAt: updatedAt ?? this.updatedAt,
       menuStatus: menuStatus ?? this.menuStatus,
       isPreOrderAvailable: isPreOrderAvailable ?? this.isPreOrderAvailable,
+      titleTranslations: titleTranslations ?? this.titleTranslations,
+      descriptionTranslations:
+          descriptionTranslations ?? this.descriptionTranslations,
       tempImageBytes:
           clearTempImage ? null : tempImageBytes ?? this.tempImageBytes,
     );
@@ -101,6 +112,10 @@ class MenuListItem extends Equatable {
           : DateTime.now(),
       menuStatus: json['menu_status']?.toString() ?? 'available',
       isPreOrderAvailable: json['is_pre_order_available'] ?? false,
+      titleTranslations:
+          Map<String, String>.from(json['title_translations'] ?? {}),
+      descriptionTranslations:
+          Map<String, String>.from(json['description_translations'] ?? {}),
       tempImageBytes: null,
     );
   }
@@ -119,6 +134,8 @@ class MenuListItem extends Equatable {
       'menu_status': menuStatus,
       'is_pre_order_available': isPreOrderAvailable,
       'menu_image_url': menuImageUrl,
+      'title_translations': titleTranslations,
+      'description_translations': descriptionTranslations,
     };
 
     // menu_image_urlが空でない場合のみ追加
