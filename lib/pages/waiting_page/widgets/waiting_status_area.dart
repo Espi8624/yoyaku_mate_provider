@@ -103,7 +103,8 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
   // desktop拡張UI
   Widget _buildDesktopExpandedContent(WaitingScreenViewModel vm) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      height: double.infinity,
+      // Padding removed from here to allow different widths
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
@@ -114,25 +115,34 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
               offset: const Offset(2, 2))
         ],
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("現状ウェイティング状況",
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary)),
-            const SizedBox(height: 16),
-            _StatusInfo(label: "直前入場時間", value: vm.lastEntryTimeFormatted),
-            const SizedBox(height: 8),
-            _StatusInfo(
-                label: "予想待機時間", value: vm.totalEstimatedWaitTimeFormatted),
-            const SizedBox(height: 16),
-            _buildBottomInfo(vm),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.max, // Changed to max to fill height
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text("現状ウェイティング状況",
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary)),
+                const SizedBox(height: 16),
+                _StatusInfo(label: "直前入場時間", value: vm.lastEntryTimeFormatted),
+                const SizedBox(height: 8),
+                _StatusInfo(
+                    label: "予想待機時間", value: vm.totalEstimatedWaitTimeFormatted),
+              ],
+            ),
+          ),
+          const Spacer(), // Pushes the bottom info to the bottom
+          Padding(
+            padding: const EdgeInsets.all(12), // Reduced padding for wider card
+            child: _buildBottomInfo(vm),
+          ),
+        ],
       ),
     );
   }

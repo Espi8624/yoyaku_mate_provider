@@ -144,262 +144,304 @@ class _StatisticsView extends StatelessWidget {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
       ),
       body: RefreshIndicator(
         onRefresh: viewModel.refresh,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildSectionTitle(
-                viewModel.selectedPeriod == 'weekly'
-                    ? '週間ハイライト'
-                    : viewModel.selectedPeriod == 'monthly'
-                        ? '月間ハイライト'
-                        : viewModel.selectedPeriod == 'yearly'
-                            ? '年間ハイライト'
-                            : '本日のハイライト',
-              ),
-              const SizedBox(height: 12),
-              _buildVisitorCard(visitorStats,
-                  overrideTitle: highlightTitle,
-                  overrideValue: highlightValue,
-                  overrideColor: highlightColor,
-                  overrideIcon: highlightIcon),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildInfoCard(
-                      '平均待ち時間',
-                      avgWaitTime,
-                      Icons.timer_outlined,
-                      const Color(0xFF4C6EF5), // Indigo
-                      const Color(0xFFE7F5FF),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildInfoCard(
-                      'No-Show率',
-                      '${noShowRate.toStringAsFixed(1)}%',
-                      Icons.person_off_outlined,
-                      const Color(0xFFFA5252), // Red
-                      const Color(0xFFFFF5F5),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              _buildSectionTitle('統計トレンド'),
-              const SizedBox(height: 12),
-              // Metric Selector Tabs (High Level)
-              Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                height: 48,
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF0F3),
-                  borderRadius: BorderRadius.circular(32),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+          child: Builder(builder: (context) {
+            // --- 1. Define Highlight Section ---
+            final highlightSection = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildSectionTitle(
+                  viewModel.selectedPeriod == 'weekly'
+                      ? '週間ハイライト'
+                      : viewModel.selectedPeriod == 'monthly'
+                          ? '月間ハイライト'
+                          : viewModel.selectedPeriod == 'yearly'
+                              ? '年間ハイライト'
+                              : '本日のハイライト',
                 ),
-                child: Stack(
+                const SizedBox(height: 12),
+                _buildVisitorCard(visitorStats,
+                    overrideTitle: highlightTitle,
+                    overrideValue: highlightValue,
+                    overrideColor: highlightColor,
+                    overrideIcon: highlightIcon),
+                const SizedBox(height: 16),
+                Row(
                   children: [
-                    // Sliding Background Indicator
-                    AnimatedAlign(
-                      alignment: viewModel.selectedMetric == 'visitor'
-                          ? Alignment.centerLeft
-                          : (viewModel.selectedMetric == 'cancelled'
-                              ? Alignment.center
-                              : Alignment.centerRight),
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeInOut,
-                      child: FractionallySizedBox(
-                        widthFactor: 0.33,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                offset: const Offset(0, 2),
-                                blurRadius: 8,
-                              ),
-                            ],
+                    Expanded(
+                      child: _buildInfoCard(
+                        '平均待ち時間',
+                        avgWaitTime,
+                        Icons.timer_outlined,
+                        const Color(0xFF4C6EF5), // Indigo
+                        const Color(0xFFE7F5FF),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildInfoCard(
+                        'No-Show率',
+                        '${noShowRate.toStringAsFixed(1)}%',
+                        Icons.person_off_outlined,
+                        const Color(0xFFFA5252), // Red
+                        const Color(0xFFFFF5F5),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+
+            // --- 2. Define Chart Section ---
+            final chartSection = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildSectionTitle('統計トレンド'),
+                const SizedBox(height: 12),
+                // Metric Selector Tabs (High Level)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  height: 48,
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF0F3),
+                    borderRadius: BorderRadius.circular(32),
+                  ),
+                  child: Stack(
+                    children: [
+                      // Sliding Background Indicator
+                      AnimatedAlign(
+                        alignment: viewModel.selectedMetric == 'visitor'
+                            ? Alignment.centerLeft
+                            : (viewModel.selectedMetric == 'cancelled'
+                                ? Alignment.center
+                                : Alignment.centerRight),
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeInOut,
+                        child: FractionallySizedBox(
+                          widthFactor: 0.33,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  offset: const Offset(0, 2),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    // Tab Labels
-                    Row(
+                      // Tab Labels
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => viewModel.setMetric('visitor'),
+                              behavior: HitTestBehavior.translucent,
+                              child: Center(
+                                child: Text(
+                                  '来店数',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: viewModel.selectedMetric == 'visitor'
+                                        ? const Color(0xFF212529)
+                                        : const Color(0xFF868E96),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => viewModel.setMetric('cancelled'),
+                              behavior: HitTestBehavior.translucent,
+                              child: Center(
+                                child: Text(
+                                  'キャンセル',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight:
+                                        viewModel.selectedMetric == 'cancelled'
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
+                                    color:
+                                        viewModel.selectedMetric == 'cancelled'
+                                            ? const Color(0xFF212529)
+                                            : const Color(0xFF868E96),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => viewModel.setMetric('no_show'),
+                              behavior: HitTestBehavior.translucent,
+                              child: Center(
+                                child: Text(
+                                  'No-Show',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight:
+                                        viewModel.selectedMetric == 'no_show'
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
+                                    color: viewModel.selectedMetric == 'no_show'
+                                        ? const Color(0xFF212529)
+                                        : const Color(0xFF868E96),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Period Selector
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildPeriodButton(viewModel, 'auto', '今日',
+                          isDisabled: viewModel.selectedMetric == 'no_show' ||
+                              viewModel.selectedMetric == 'cancelled'),
+                      const SizedBox(width: 8),
+                      _buildPeriodButton(viewModel, 'weekly', '週間'),
+                      const SizedBox(width: 8),
+                      _buildPeriodButton(viewModel, 'monthly', '月間'),
+                      const SizedBox(width: 8),
+                      _buildPeriodButton(viewModel, 'yearly', '年間'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Date Navigator (Visible only when not 'auto')
+                if (viewModel.selectedPeriod != 'auto') ...[
+                  Container(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => viewModel.setMetric('visitor'),
-                            behavior: HitTestBehavior.translucent,
-                            child: Center(
-                              child: Text(
-                                '来店数',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: viewModel.selectedMetric == 'visitor'
-                                      ? const Color(0xFF212529)
-                                      : const Color(0xFF868E96),
-                                ),
-                              ),
-                            ),
+                        IconButton(
+                          onPressed: viewModel.previousPeriod,
+                          icon:
+                              const Icon(Icons.chevron_left_rounded, size: 32),
+                          color: Colors.black54,
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          viewModel.formattedDate,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
                         ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => viewModel.setMetric('cancelled'),
-                            behavior: HitTestBehavior.translucent,
-                            child: Center(
-                              child: Text(
-                                'キャンセル',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight:
-                                      viewModel.selectedMetric == 'cancelled'
-                                          ? FontWeight.w600
-                                          : FontWeight.w500,
-                                  color: viewModel.selectedMetric == 'cancelled'
-                                      ? const Color(0xFF212529)
-                                      : const Color(0xFF868E96),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => viewModel.setMetric('no_show'),
-                            behavior: HitTestBehavior.translucent,
-                            child: Center(
-                              child: Text(
-                                'No-Show',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight:
-                                      viewModel.selectedMetric == 'no_show'
-                                          ? FontWeight.w600
-                                          : FontWeight.w500,
-                                  color: viewModel.selectedMetric == 'no_show'
-                                      ? const Color(0xFF212529)
-                                      : const Color(0xFF868E96),
-                                ),
-                              ),
-                            ),
-                          ),
+                        const SizedBox(width: 16),
+                        IconButton(
+                          // 未来への移動は isCurrentPeriod で制御
+                          onPressed: viewModel.isCurrentPeriod
+                              ? null
+                              : viewModel.nextPeriod,
+                          icon:
+                              const Icon(Icons.chevron_right_rounded, size: 32),
+                          color: viewModel.isCurrentPeriod
+                              ? Colors.black12
+                              : Colors.black54,
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                ],
+                const SizedBox(height: 4),
 
-              // Period Selector
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildPeriodButton(viewModel, 'auto', '今日',
-                        isDisabled: viewModel.selectedMetric == 'no_show' ||
-                            viewModel.selectedMetric == 'cancelled'),
-                    const SizedBox(width: 8),
-                    _buildPeriodButton(viewModel, 'weekly', '週間'),
-                    const SizedBox(width: 8),
-                    _buildPeriodButton(viewModel, 'monthly', '月間'),
-                    const SizedBox(width: 8),
-                    _buildPeriodButton(viewModel, 'yearly', '年間'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Date Navigator (Visible only when not 'auto')
-              if (viewModel.selectedPeriod != 'auto') ...[
-                Container(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed: viewModel.previousPeriod,
-                        icon: const Icon(Icons.chevron_left_rounded, size: 32),
-                        color: Colors.black54,
-                      ),
-                      const SizedBox(width: 16),
-                      Text(
-                        viewModel.formattedDate,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                // Chart Display
+                if (viewModel.isLoading)
+                  Container(
+                    height: 280,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.08),
+                          offset: const Offset(0, 4),
+                          blurRadius: 16,
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      IconButton(
-                        // 未来への移動は isCurrentPeriod で制御
-                        onPressed: viewModel.isCurrentPeriod
-                            ? null
-                            : viewModel.nextPeriod,
-                        icon: const Icon(Icons.chevron_right_rounded, size: 32),
-                        color: viewModel.isCurrentPeriod
-                            ? Colors.black12
-                            : Colors.black54,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 4),
-
-              // Chart Display
-              if (viewModel.isLoading)
-                Container(
-                  height: 280,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.08),
-                        offset: const Offset(0, 4),
-                        blurRadius: 16,
-                      ),
-                    ],
-                  ),
-                  child: const Center(child: CircularProgressIndicator()),
-                )
-              else if (viewModel.selectedMetric == 'visitor')
-                if (viewModel.selectedPeriod == 'auto')
+                      ],
+                    ),
+                    child: const Center(child: CircularProgressIndicator()),
+                  )
+                else if (viewModel.selectedMetric == 'visitor')
+                  if (viewModel.selectedPeriod == 'auto')
+                    DynamicChartCard(
+                        chartData: hourlyCongestion.map((e) {
+                      return {
+                        'label': e['hour'].toString(),
+                        'value': e['count'],
+                        'prev_value': e['prev_count'] ?? 0,
+                      };
+                    }).toList())
+                  else
+                    DynamicChartCard(
+                        chartData: data['chart_data'] as List<dynamic>?)
+                else if (viewModel.selectedMetric == 'cancelled')
                   DynamicChartCard(
-                      chartData: hourlyCongestion.map((e) {
-                    return {
-                      'label': e['hour'].toString(),
-                      'value': e['count'],
-                      'prev_value': e['prev_count'] ?? 0,
-                    };
-                  }).toList())
+                      chartData: data['cancelled_chart_data'] as List<dynamic>?)
                 else
                   DynamicChartCard(
-                      chartData: data['chart_data'] as List<dynamic>?)
-              else if (viewModel.selectedMetric == 'cancelled')
-                DynamicChartCard(
-                    chartData: data['cancelled_chart_data'] as List<dynamic>?)
-              else
-                DynamicChartCard(
-                    chartData: data['no_show_chart_data'] as List<dynamic>?),
+                      chartData: data['no_show_chart_data'] as List<dynamic>?),
+              ],
+            );
 
-              const SizedBox(height: 40),
-            ],
-          ),
+            // --- 3. Return Responsive Layout ---
+            return OrientationBuilder(
+              builder: (context, orientation) {
+                if (orientation == Orientation.portrait) {
+                  return Column(
+                    children: [
+                      highlightSection,
+                      const SizedBox(height: 32),
+                      chartSection,
+                      const SizedBox(height: 40),
+                    ],
+                  );
+                } else {
+                  // Landscape Layout (Side-by-Side)
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 4,
+                        child: highlightSection,
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        flex: 6,
+                        child: chartSection,
+                      ),
+                    ],
+                  );
+                }
+              },
+            );
+          }),
         ),
       ),
     );

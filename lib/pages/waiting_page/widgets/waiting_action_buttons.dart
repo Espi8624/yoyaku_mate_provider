@@ -23,8 +23,8 @@ class WaitingActionButtons extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.textPrimary,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.all(16),
-              minimumSize: Size.zero,
+              padding: const EdgeInsets.all(12),
+              minimumSize: const Size(48, 48),
             ),
             child: const Icon(Icons.person_add_alt_1, color: Colors.white),
           ),
@@ -37,8 +37,8 @@ class WaitingActionButtons extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.textPrimary, // 削除の赤色から通常色へ変更
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.all(16),
-              minimumSize: Size.zero,
+              padding: const EdgeInsets.all(12),
+              minimumSize: const Size(48, 48),
             ),
             child: const Icon(Icons.monitor, color: Colors.white),
           ),

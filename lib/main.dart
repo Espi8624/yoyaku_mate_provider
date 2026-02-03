@@ -107,16 +107,18 @@ class MyApp extends StatelessWidget {
                 top: 0,
                 left: 0,
                 right: 0,
-                child: Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withOpacity(0.08),
-                        Colors.transparent,
-                      ],
+                child: IgnorePointer(
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.08),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -241,38 +243,54 @@ class _HomeScreenState extends State<HomeScreen> {
           } else {
             // desktop layout
             return Scaffold(
-              body: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    SideNavigationBar(
-                      isExpanded: _isExpanded,
-                      selectedIndex: _selectedIndex,
-                      onItemTapped: _onItemTapped,
-                      onToggle: _toggleSidebar,
-                      onLogout: () async {
-                        await FirebaseAuth.instance.signOut();
-                      },
-                    ),
-                    const SizedBox(
-                      width: 12.0,
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          if (_isExpanded) _toggleSidebar();
+              // Remove outer SafeArea to control bottom padding manually
+              body: Row(
+                children: [
+                  // Sidebar: Use standard SafeArea (spaces out both sides if needed)
+                  SafeArea(
+                    right: false,
+                    bottom: false,
+                    left: true,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+                      child: SideNavigationBar(
+                        isExpanded: _isExpanded,
+                        selectedIndex: _selectedIndex,
+                        onItemTapped: _onItemTapped,
+                        onToggle: _toggleSidebar,
+                        onLogout: () async {
+                          await FirebaseAuth.instance.signOut();
                         },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).canvasColor,
-                            borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                    width: 4.0,
+                  ),
+                  // Content: Respect bottom safe area
+                  Expanded(
+                    child: SafeArea(
+                      left: false,
+                      bottom: false,
+                      // Content needs bottom safe area
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+                        child: GestureDetector(
+                          onTap: () {
+                            if (_isExpanded) _toggleSidebar();
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).canvasColor,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: pages[_selectedIndex],
                           ),
-                          child: pages[_selectedIndex],
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           }

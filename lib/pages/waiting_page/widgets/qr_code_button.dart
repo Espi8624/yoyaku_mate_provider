@@ -101,8 +101,8 @@ class QRCodeButton extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.textPrimary,
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.all(16),
-            minimumSize: Size.zero,
+            padding: const EdgeInsets.all(12),
+            minimumSize: const Size(48, 48),
           ),
           child: const Icon(Icons.qr_code_rounded, color: Colors.white),
         ),

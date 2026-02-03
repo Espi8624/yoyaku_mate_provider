@@ -181,8 +181,8 @@ class _WaitingView extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.textPrimary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(16),
-                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.all(12),
+                      minimumSize: const Size(48, 48),
                     ),
                     child: const Icon(Icons.refresh, color: Colors.white),
                   ),
@@ -202,9 +202,9 @@ class _WaitingView extends StatelessWidget {
               children: [
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    padding: const EdgeInsets.only(left: 24.0),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(
                           flex: 2,
