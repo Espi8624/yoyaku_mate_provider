@@ -169,8 +169,8 @@ class WaitingService {
   Future<String?> _getLoginToken() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('login_token');
-    print(
-        '--- [WaitingService] Read Token: ${token != null ? token.substring(0, 5) + "..." : "NULL"} ---');
+    // print(
+    //     '--- [WaitingService] Read Token: ${token != null ? token.substring(0, 5) + "..." : "NULL"} ---');
     return token;
   }
 

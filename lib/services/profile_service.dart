@@ -49,19 +49,19 @@ class ProviderProfileService {
         if (data.containsKey('login_token')) {
           final token = data['login_token'];
           if (token != null && token.toString().isNotEmpty) {
-            print(
-                '--- [ProfileService] Saving Login Token: ${token.substring(0, 5)}... ---');
+            // print(
+            //     '--- [ProfileService] Saving Login Token: ${token.substring(0, 5)}... ---');
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString('login_token', token);
           } else {
-            print('--- [ProfileService] Login Token is empty/null! ---');
+            // print('--- [ProfileService] Login Token is empty/null! ---');
           }
         } else {
-          print(
-              '--- [ProfileService] Response data missing login_token key! ---');
+          // print(
+          //     '--- [ProfileService] Response data missing login_token key! ---');
         }
       } else {
-        print('--- [ProfileService] Response missing data key! ---');
+        // print('--- [ProfileService] Response missing data key! ---');
       }
 
       return responseData;
