@@ -186,6 +186,8 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
         description: menuData.description,
         price: menuData.price,
         category: menuData.category,
+        titleTranslations: menuData.titleTranslations,
+        descriptionTranslations: menuData.descriptionTranslations,
       );
 
       // ローカルステータス更新

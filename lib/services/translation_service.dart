@@ -22,7 +22,7 @@ class TranslationService {
         throw Exception('API Key is not set.');
       }
       _model = GenerativeModel(
-        model: 'gemini-3.0-flash',
+        model: 'gemini-2.5-flash',
         apiKey: ApiKeys.geminiApiKey,
         httpClient: _CustomHttpClient(),
       );
@@ -147,6 +147,49 @@ $promptLines
     }
   }
 
+  static String normalizeLanguageCode(String code) {
+    final lowerCode = code.toLowerCase();
+    if (lowerCode.contains('english') ||
+        lowerCode == 'en-us' ||
+        lowerCode == 'en') {
+      return 'en';
+    } else if (lowerCode.contains('korean') || lowerCode == 'ko') {
+      return 'ko';
+    } else if (lowerCode.contains('traditional chinese') ||
+        lowerCode.contains('hant') ||
+        lowerCode == 'zh-tw') {
+      return 'zh-TW';
+    } else if (lowerCode.contains('chinese') ||
+        lowerCode.contains('hans') ||
+        lowerCode == 'zh-cn' ||
+        lowerCode == 'zh') {
+      return 'zh';
+    } else if (lowerCode.contains('japanese') || lowerCode == 'ja') {
+      return 'ja';
+    } else if (lowerCode.contains('spanish') || lowerCode == 'es') {
+      return 'es';
+    } else if (lowerCode.contains('french') || lowerCode == 'fr') {
+      return 'fr';
+    } else if (lowerCode.contains('german') || lowerCode == 'de') {
+      return 'de';
+    } else if (lowerCode.contains('italian') || lowerCode == 'it') {
+      return 'it';
+    } else if (lowerCode.contains('arabic') || lowerCode == 'ar') {
+      return 'ar';
+    } else if (lowerCode.contains('russian') || lowerCode == 'ru') {
+      return 'ru';
+    } else if (lowerCode.contains('portuguese') || lowerCode == 'pt') {
+      return 'pt';
+    } else if (lowerCode.contains('thai') || lowerCode == 'th') {
+      return 'th';
+    } else if (lowerCode.contains('vietnamese') || lowerCode == 'vi') {
+      return 'vi';
+    } else if (lowerCode.contains('indonesian') || lowerCode == 'id') {
+      return 'id';
+    }
+    return code;
+  }
+
   Future<Map<String, Map<String, String>>> translateToMultipleLanguages(
       Map<String, String> texts, List<String> targetLanguages,
       {bool smartMenuMode = false}) async {
@@ -159,17 +202,38 @@ $promptLines
 
     if (_model == null || texts.isEmpty || targetLanguages.isEmpty) return {};
 
+    // Map ISO codes to descriptive names for better translation quality
+    final languageNames = {
+      'en': 'English',
+      'ko': 'Korean',
+      'zh': 'Chinese (Simplified)',
+      'zh-TW': 'Traditional Chinese (Taiwan)',
+      'es': 'Spanish',
+      'fr': 'French',
+      'de': 'German',
+      'it': 'Italian',
+      'ar': 'Arabic',
+      'ru': 'Russian',
+      'pt': 'Portuguese',
+      'th': 'Thai',
+      'vi': 'Vietnamese',
+      'id': 'Indonesian',
+    };
+
+    // Use full names for the prompt instructions
+    final promptLanguages =
+        targetLanguages.map((code) => languageNames[code] ?? code).join(', ');
+
     final promptLines =
         texts.entries.map((e) => '${e.key}: ${e.value}').join('\n');
-    final languagesList = targetLanguages.join(', ');
 
     String instruction = '''
-You are a professional menu translator. Translate the following lines into the following languages: $languagesList.
+You are a professional menu translator. Translate the following lines into the following languages: $promptLanguages.
 The input lines are in "id: text" format.
 Return a SINGLE JSON object where:
-- Keys are the Language names (exactly as requested).
+- Keys are the EXACT Language Codes provided: $targetLanguages.
+- For Chinese, use "zh" for Simplified and "zh-TW" for Traditional Chinese.
 - Values are objects mapping "id" to "translated_text".
-
 Rules:
 1. Translate naturally and accurately for a restaurant menu.
 ''';
@@ -220,8 +284,13 @@ $promptLines
 
       deepMap.forEach((lang, transMap) {
         if (transMap is Map) {
-          result[lang] = Map<String, String>.from(
-              transMap.map((k, v) => MapEntry(k.toString(), v.toString())));
+          final normalizedKey = normalizeLanguageCode(lang);
+
+          // Only keep if it's one of the requested languages (or was mapped to one)
+          if (targetLanguages.contains(normalizedKey)) {
+            result[normalizedKey] = Map<String, String>.from(
+                transMap.map((k, v) => MapEntry(k.toString(), v.toString())));
+          }
         }
       });
       return result;

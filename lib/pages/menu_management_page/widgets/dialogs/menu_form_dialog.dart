@@ -39,17 +39,17 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
   bool get _isEditing => widget.menuItem != null;
 
   static const List<String> _targetLanguages = [
-    'English',
-    'Korean',
-    'Chinese', // Simplified
-    'Traditional Chinese', // Taiwan
-    'Spanish',
-    'French',
-    'German',
-    'Italian',
-    'Arabic',
-    'Russian',
-    'Portuguese',
+    'en', // English
+    'ko', // Korean
+    'zh', // Chinese (Simplified)
+    'zh-TW', // Traditional Chinese
+    'es', // Spanish
+    'fr', // French
+    'de', // German
+    'it', // Italian
+    'ar', // Arabic
+    'ru', // Russian
+    'pt', // Portuguese
   ];
 
   @override
@@ -64,9 +64,25 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
     _isPreOrderAvailable = item?.isPreOrderAvailable ?? false;
 
     if (item != null) {
-      _titleTranslations = Map.from(item.titleTranslations);
-      _descTranslations = Map.from(item.descriptionTranslations);
+      _titleTranslations = _sanitizeTranslations(item.titleTranslations);
+      _descTranslations = _sanitizeTranslations(item.descriptionTranslations);
     }
+  }
+
+  Map<String, String> _sanitizeTranslations(Map<String, String> original) {
+    final sanitized = <String, String>{};
+    original.forEach((key, value) {
+      final normalizedKey = TranslationService.normalizeLanguageCode(key);
+      // Only keep if it's one of our target languages
+      if (_targetLanguages.contains(normalizedKey)) {
+        // If multiple keys normalize to same ISO code (e.g. "English" and "en"),
+        // the last one wins, but prefer existing ISO code if both present.
+        if (!sanitized.containsKey(normalizedKey) || key == normalizedKey) {
+          sanitized[normalizedKey] = value;
+        }
+      }
+    });
+    return sanitized;
   }
 
   @override
@@ -128,13 +144,20 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
 
     // Apply results
     result.forEach((lang, transMap) {
-      if (inputMap.containsKey('t_0') && transMap.containsKey('t_0')) {
-        _titleTranslations[lang] = transMap['t_0']!;
-      }
-      if (inputMap.containsKey('d_0') && transMap.containsKey('d_0')) {
-        _descTranslations[lang] = transMap['d_0']!;
+      final normalizedLang = TranslationService.normalizeLanguageCode(lang);
+      if (_targetLanguages.contains(normalizedLang)) {
+        if (inputMap.containsKey('t_0') && transMap.containsKey('t_0')) {
+          _titleTranslations[normalizedLang] = transMap['t_0']!;
+        }
+        if (inputMap.containsKey('d_0') && transMap.containsKey('d_0')) {
+          _descTranslations[normalizedLang] = transMap['d_0']!;
+        }
       }
     });
+
+    // Sanitize one last time to be sure
+    _titleTranslations = _sanitizeTranslations(_titleTranslations);
+    _descTranslations = _sanitizeTranslations(_descTranslations);
 
     // Final cleanup
     if (desc.isEmpty) {

@@ -301,17 +301,17 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                 child: Column(
                   children: [
                     ...{
-                      'English': '英語',
-                      'Korean': '韓国語',
-                      'Chinese': '中国語',
-                      'Traditional Chinese': '中国語 (台湾)',
-                      'Spanish': 'スペイン語',
-                      'French': 'フランス語',
-                      'German': 'ドイツ語',
-                      'Italian': 'イタリア語',
-                      'Russian': 'ロシア語',
-                      'Portuguese': 'ポルトガル語',
-                      'Arabic': 'アラビア語',
+                      'en': '英語',
+                      'ko': '韓国語',
+                      'zh': '中国語',
+                      'zh-TW': '中国語 (台湾)',
+                      'es': 'スペイン語',
+                      'fr': 'フランス語',
+                      'de': 'ドイツ語',
+                      'it': 'イタリア語',
+                      'ru': 'ロシア語',
+                      'pt': 'ポルトガル語',
+                      'ar': 'アラビア語',
                     }.entries.toList().asMap().entries.map((entry) {
                       final index = entry.key;
                       final e = entry.value;
@@ -423,33 +423,33 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     try {
       String fontUrl;
       switch (targetLang) {
-        case 'Korean':
+        case 'ko':
           fontUrl =
               'https://fonts.gstatic.com/s/notosanskr/v39/PbyxFmXiEBPT4ITbgNA5Cgms3VYcOA-vvnIzzuoyeLQ.ttf';
           break;
-        case 'Chinese':
+        case 'zh':
           fontUrl =
               'https://fonts.gstatic.com/s/notosanssc/v40/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnYw.ttf';
           break;
-        case 'Traditional Chinese':
+        case 'zh-TW':
           fontUrl =
               'https://fonts.gstatic.com/s/notosanstc/v39/-nFuOG829Oofr2wohFbTp9ifNAn722rq0MXz76Cy_Co.ttf';
           break;
-        case 'Russian':
-        case 'Portuguese':
+        case 'ru':
+        case 'pt':
           fontUrl =
               'https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9A99d.ttf';
           break;
-        case 'Arabic':
+        case 'ar':
           fontUrl =
               'https://fonts.gstatic.com/s/notosansarabic/v33/nwpxtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlhQ5l3sQWIHPqzCfyGyvuw.ttf';
           break;
-        case 'Japanese':
-        case 'English':
-        case 'French':
-        case 'Spanish':
-        case 'German':
-        case 'Italian':
+        case 'ja':
+        case 'en':
+        case 'fr':
+        case 'es':
+        case 'de':
+        case 'it':
         default:
           fontUrl =
               'https://fonts.gstatic.com/s/notosansjp/v52/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75s.ttf';
@@ -513,7 +513,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
           children: [
             pw.Text(
               parts[0],
-              textDirection: targetLang == 'Arabic'
+              textDirection: targetLang == 'ar'
                   ? pw.TextDirection.rtl
                   : pw.TextDirection.ltr,
               style: pw.TextStyle(
@@ -535,9 +535,8 @@ class _MenuManagementViewState extends State<_MenuManagementView>
       } else {
         return pw.Text(
           fullText,
-          textDirection: targetLang == 'Arabic'
-              ? pw.TextDirection.rtl
-              : pw.TextDirection.ltr,
+          textDirection:
+              targetLang == 'ar' ? pw.TextDirection.rtl : pw.TextDirection.ltr,
           style: pw.TextStyle(
             fontSize: fontSize,
             fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
@@ -563,17 +562,17 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                 children: [
                   pw.Text(
                       switch (targetLang) {
-                        'Japanese' => 'メニュー',
-                        'Korean' => '메뉴',
-                        'Chinese' => '菜单',
-                        'Traditional Chinese' => '菜單',
-                        'Russian' => 'Меню',
-                        'Spanish' => 'Menú',
-                        'German' => 'Menü',
-                        'Italian' => 'Menù',
-                        'Portuguese' => 'Menu',
-                        'Arabic' => 'قائمة الطعام',
-                        _ => 'Menu', // English, French fallback
+                        'ja' || 'Japanese' => 'メニュー',
+                        'ko' => '메뉴',
+                        'zh' => '菜单',
+                        'zh-TW' => '菜單',
+                        'ru' => 'Меню',
+                        'es' => 'Menú',
+                        'de' => 'Menü',
+                        'it' => 'Menù',
+                        'pt' => 'Menu',
+                        'ar' => 'قائمة الطعام',
+                        _ => 'Menu', // en fallback
                       },
                       style: pw.TextStyle(
                           fontSize: 24, fontWeight: pw.FontWeight.bold)),
@@ -666,7 +665,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                                 if (menu.description.isNotEmpty)
                                   pw.Text(
                                     getDescText(menu.description),
-                                    textDirection: targetLang == 'Arabic'
+                                    textDirection: targetLang == 'ar'
                                         ? pw.TextDirection.rtl
                                         : pw.TextDirection.ltr,
                                     style: const pw.TextStyle(
