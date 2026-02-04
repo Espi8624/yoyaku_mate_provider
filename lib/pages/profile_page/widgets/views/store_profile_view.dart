@@ -20,6 +20,7 @@ import 'store_license_status_view.dart';
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
 import '../sections/operation_settings_section.dart';
 import '../sections/waiting_settings_section.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 
 /// 店舗プロフィール表示・編集用ビュー
 ///
@@ -70,6 +71,21 @@ class StoreProfileView extends StatelessWidget {
 
     if (pickedFile != null) {
       final imageFile = File(pickedFile.path);
+
+      if (!context.mounted) return;
+
+      // 確認ダイアログを表示
+      final bool? confirm = await showConfirmationDialog(
+        context: context,
+        title: '確認',
+        content: '本当にこの許可証で申請しますか？',
+        confirmText: '申請する',
+        cancelText: null,
+        isDestructive: false,
+      );
+
+      if (confirm != true) return;
+
       final vm = context.read<ProfileScreenViewModel>();
       final success = await vm.uploadStoreLicense(imageFile);
 
@@ -269,7 +285,8 @@ class StoreProfileView extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
                       child: StoreLicenseStatusWidget(
-                          status: storeLicense.verificationStatus),
+                          status: storeLicense.verificationStatus,
+                          rejectReason: storeLicense.adminComment),
                     ),
                     if ((storeLicense.verificationStatus != 'APPROVED') &&
                         (storeLicense.verificationStatus !=

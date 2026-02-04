@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 import '../../constants/app_colors.dart';
 
 Future<bool?> showConfirmationDialog({
@@ -6,51 +7,85 @@ Future<bool?> showConfirmationDialog({
   required String title,
   required String content,
   String confirmText = '削除',
+  String? cancelText = 'キャンセル',
+  bool isDestructive = true,
 }) async {
   return showDialog<bool>(
     context: context,
     builder: (context) {
-      return AlertDialog(
-        backgroundColor: AppColors.cardBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close, color: AppColors.textSecondary),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              splashRadius: 20,
-              onPressed: () => Navigator.of(context).pop(false),
-            ),
-          ],
-        ),
-        
+      return BaseDialog(
+        title: title,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(content, style: const TextStyle(color: AppColors.textSecondary, height: 1.5)),
+            Text(
+              content,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
             const SizedBox(height: 24),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ButtonStyle(
-                overlayColor: WidgetStateProperty.all(Colors.transparent),
-                padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: 12)),
-                foregroundColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                  if (states.contains(WidgetState.hovered)) {
-                    return AppColors.error.withOpacity(0.8);
-                  }
-                  return AppColors.error; 
-                }),
-              ),
-              child: Text(
-                confirmText,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+            Row(
+              children: [
+                if (cancelText != null) ...[
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        foregroundColor: AppColors.textSecondary,
+                      ),
+                      child: Text(cancelText),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: isDestructive
+                      ? TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          style: ButtonStyle(
+                            overlayColor:
+                                WidgetStateProperty.all(Colors.transparent),
+                            padding: WidgetStateProperty.all(
+                                const EdgeInsets.symmetric(vertical: 16)),
+                            foregroundColor:
+                                WidgetStateProperty.resolveWith<Color>(
+                                    (Set<WidgetState> states) {
+                              if (states.contains(WidgetState.hovered)) {
+                                return AppColors.error.withOpacity(0.8);
+                              }
+                              return AppColors.error;
+                            }),
+                          ),
+                          child: Text(
+                            confirmText,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        )
+                      : ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accentPrimary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            confirmText,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                ),
+              ],
             ),
           ],
         ),

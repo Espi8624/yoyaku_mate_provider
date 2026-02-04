@@ -3,8 +3,13 @@ import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 
 class StoreLicenseStatusWidget extends StatelessWidget {
   final String status;
+  final String? rejectReason;
 
-  const StoreLicenseStatusWidget({super.key, required this.status});
+  const StoreLicenseStatusWidget({
+    super.key,
+    required this.status,
+    this.rejectReason,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -12,7 +17,7 @@ class StoreLicenseStatusWidget extends StatelessWidget {
     final Color backgroundColor;
     final Color iconColor;
     final String title;
-    final String subtitle;
+    String subtitle; // Make mutable to append reason
 
     switch (status) {
       case 'PENDING':
@@ -42,6 +47,9 @@ class StoreLicenseStatusWidget extends StatelessWidget {
         iconColor = AppColors.rejected;
         title = '承認が拒否されました';
         subtitle = '営業許可証が拒否されました。再度アップロードしてください。';
+        if (rejectReason != null && rejectReason!.isNotEmpty) {
+          subtitle += '\n\n次のような理由で拒否されました:\n$rejectReason';
+        }
         break;
       case 'NOT_SUBMITTED':
         iconData = Icons.upload_file;

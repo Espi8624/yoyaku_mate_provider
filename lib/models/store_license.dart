@@ -2,11 +2,13 @@ class StoreLicense {
   final String storeId;
   final String verificationStatus;
   final String? imageUrl;
+  final String? adminComment;
 
   StoreLicense({
     required this.storeId,
     required this.verificationStatus,
     this.imageUrl,
+    this.adminComment,
   });
 
   factory StoreLicense.fromJson(Map<String, dynamic> json) {
@@ -14,6 +16,7 @@ class StoreLicense {
       storeId: json['store_id'] ?? '',
       verificationStatus: json['verification_status'] ?? 'NOT_SUBMITTED',
       imageUrl: json['image_url'],
+      adminComment: json['admin_comment'],
     );
   }
 }
