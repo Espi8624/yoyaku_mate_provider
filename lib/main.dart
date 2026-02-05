@@ -27,7 +27,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await dotenv.load(fileName: ".env");
+  if (kReleaseMode) {
+    await dotenv.load(fileName: ".env.production");
+  } else {
+    await dotenv.load(fileName: ".env.development");
+  }
 
   // Crashlytics Configuration
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;

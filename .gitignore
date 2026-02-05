@@ -47,3 +47,5 @@ app.*.map.json
 # Security
 lib/constants/api_keys.dart
 .env
+.env.production
+.env.development
