@@ -45,7 +45,6 @@ app.*.map.json
 /android/app/release
 
 # Security
-lib/constants/api_keys.dart
 .env
 .env.production
 .env.development

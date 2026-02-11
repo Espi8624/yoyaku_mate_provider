@@ -350,6 +350,7 @@ class _WaitingView extends StatelessWidget {
       context: context,
       title: '待機取消',
       content: 'このお客様の待機を取消しますか？\nこの操作は取り消しできません。',
+      cancelText: null, // キャンセルボタンを削除し、削除ボタンを中央に配置
     );
     if (confirmed == true && context.mounted) {
       await context

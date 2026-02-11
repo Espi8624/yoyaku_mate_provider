@@ -49,7 +49,11 @@ class _StaffManagementViewState extends State<StaffManagementView> {
           ),
         );
       }
-      return const Center(child: Text('スタッフがいません'));
+      return const Center(
+          child: Text(
+        '現在登録されているメンバーはいません。',
+        style: TextStyle(fontSize: 16, color: AppColors.textTertiary),
+      ));
     }
 
     return ListView.builder(

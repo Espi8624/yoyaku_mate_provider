@@ -407,6 +407,9 @@ class ProviderProfileService {
 
     if (response.statusCode == 200) {
       final decoded = json.decode(utf8.decode(response.bodyBytes));
+      if (decoded['data'] == null) {
+        return [];
+      }
       return decoded['data'] as List<dynamic>;
     } else {
       throw ApiException(
