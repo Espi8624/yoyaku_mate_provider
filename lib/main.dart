@@ -92,7 +92,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp.router(
         routerConfig: router, // GoRouter設定を使用
-        title: 'Yoyaku Mate Provider',
+        title: 'ルスイ店舗管理',
         theme: ThemeData(
           scaffoldBackgroundColor: AppColors.background,
           canvasColor: AppColors.cardBackground,
@@ -101,6 +101,23 @@ class MyApp extends StatelessWidget {
             background: AppColors.background,
           ),
           useMaterial3: true,
+          textSelectionTheme: const TextSelectionThemeData(
+            cursorColor: AppColors.accentPrimary,
+            selectionColor: AppColors.accentPrimary,
+            selectionHandleColor: AppColors.accentPrimary,
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  const BorderSide(color: AppColors.accentPrimary, width: 2.0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.border, width: 1.0),
+            ),
+            floatingLabelStyle: const TextStyle(color: AppColors.accentPrimary),
+          ),
         ),
         builder: (context, child) {
           return Stack(

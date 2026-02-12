@@ -8,15 +8,17 @@ import 'package:http_parser/http_parser.dart';
 import '../models/menu_list.dart';
 import 'api_exception.dart';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class MenuService {
   final http.Client _client;
   final String _baseUrl;
 
   MenuService({
     http.Client? client,
-    String baseUrl = 'https://saboten-server.fly.dev',
+    String? baseUrl,
   })  : _client = client ?? http.Client(),
-        _baseUrl = baseUrl;
+        _baseUrl = baseUrl ?? dotenv.env['API_URL']!;
 
   Future<List<MenuListItem>> fetchMenuItems(String storeId) async {
     final uri = Uri.parse('$_baseUrl/api/menu-list?store_id=$storeId');

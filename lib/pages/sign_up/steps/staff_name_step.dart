@@ -101,12 +101,20 @@ class _StaffNameStepState extends State<StaffNameStep> {
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: AppColors.textSecondary),
-          border: const UnderlineInputBorder(),
-          enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.border),
+          filled: true,
+          fillColor: AppColors.cardBackground,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
           ),
-          focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.accentPrimary, width: 2),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide:
+                const BorderSide(color: AppColors.accentPrimary, width: 2),
           ),
         ),
         validator: (value) {

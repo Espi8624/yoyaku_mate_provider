@@ -29,19 +29,6 @@ Future<bool?> showConfirmationDialog({
             const SizedBox(height: 24),
             Row(
               children: [
-                if (cancelText != null) ...[
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        foregroundColor: AppColors.textSecondary,
-                      ),
-                      child: Text(cancelText),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                ],
                 Expanded(
                   child: isDestructive
                       ? TextButton(

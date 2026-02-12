@@ -560,9 +560,8 @@ class _SignUpPageState extends State<SignUpPage> {
         managerFirstNameController.clear();
         managerLastNameKanaController.clear();
         managerFirstNameKanaController.clear();
-        managerFirstNameKanaController.dispose();
 
-        staffEmailController.dispose();
+        staffEmailController.clear();
         staffPasswordController.clear();
         staffConfirmPasswordController.clear();
         staffPhoneController.clear();

@@ -118,6 +118,50 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
                       _buildInfoRow("待機時間", waitTimeStr),
                       const SizedBox(height: 4),
                       _buildInfoRow("備考", notesText),
+                      if (item.menuItems.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.restaurant_menu,
+                                size: 14, color: AppColors.textSecondary),
+                            const SizedBox(width: 4),
+                            const Text(
+                              "事前注文",
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: item.menuItems.map((menu) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.accentPrimary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color:
+                                      AppColors.accentPrimary.withOpacity(0.2),
+                                  width: 0.5,
+                                ),
+                              ),
+                              child: Text(
+                                "${menu.name} ×${menu.quantity}",
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w500),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
                     ],
                   ],
                 ),
@@ -227,10 +271,7 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
                 const TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
         ),
-        const Text(
-          ': ',
-          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-        ),
+        const SizedBox(width: 4),
         Expanded(
           child: Text(
             value,

@@ -42,13 +42,24 @@ class _EmailInputStepState extends State<EmailInputStep> {
             TextFormField(
               controller: widget.controller,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'メールアドレス',
                 hintText: 'example@email.com',
-                border: UnderlineInputBorder(),
-                focusedBorder: UnderlineInputBorder(
-                    borderSide:
-                        BorderSide(color: AppColors.accentPrimary, width: 2)),
+                filled: true,
+                fillColor: AppColors.cardBackground,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: AppColors.accentPrimary, width: 2),
+                ),
               ),
               validator: _validateEmail,
             ),

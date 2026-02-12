@@ -114,30 +114,40 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        'assets/app_icon.png',
+                        width: isLandscape ? 32 : 40,
+                        height: isLandscape ? 32 : 40,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'ルスイ',
+                      style: TextStyle(
+                        fontSize: isLandscape ? 16 : 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.accentPrimary,
+                      ),
+                    ),
+                  ],
+                ),
                 // 上段コンテンツをグループ化
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 画面の高さを計算し、上段余白を調整
-                    SizedBox(
-                        height: MediaQuery.of(context).size.height *
-                            (isLandscape ? 0.05 : 0.1)),
-                    Text(
-                      '🌵',
-                      style: TextStyle(
-                        fontSize: isLandscape ? 60 : 80,
-                        color: AppColors.accentPrimary,
-                      ),
-                    ),
-                    SizedBox(height: isLandscape ? 16 : 24),
-                    Text('sabotenへ\nようこそ。',
+                    Text('おかえりなさい。',
                         style: TextStyle(
                             fontSize: isLandscape ? 28 : 36,
                             fontWeight: FontWeight.bold,
                             height: 1.2,
                             color: AppColors.textPrimary)),
                     SizedBox(height: isLandscape ? 8 : 12),
-                    const Text('店舗管理始めましょう！',
+                    const Text('最善を尽くして店舗管理を補助致します！',
                         style: TextStyle(
                             fontSize: 16, color: AppColors.textSecondary)),
                   ],
@@ -216,13 +226,13 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     SizedBox(height: isLandscape ? 20 : 40),
-                    Text('おかえりなさい!',
+                    Text('本日もよろしくお願いします！',
                         style: TextStyle(
-                            fontSize: isLandscape ? 28 : 32,
+                            fontSize: isLandscape ? 16 : 24,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary)),
                     const SizedBox(height: 8),
-                    const Text('メールアドレスとパスワードを入力してください',
+                    const Text('メールアドレスとパスワードを入力してください。',
                         style: TextStyle(
                             fontSize: 15, color: AppColors.textSecondary)),
                   ],
@@ -237,11 +247,21 @@ class _LoginPageState extends State<LoginPage> {
                       controller: _idController,
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'メールアドレス',
-                        border: UnderlineInputBorder(),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
+                        filled: true,
+                        fillColor: AppColors.cardBackground,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
                               color: AppColors.accentPrimary, width: 2),
                         ),
                       ),
@@ -252,11 +272,21 @@ class _LoginPageState extends State<LoginPage> {
                       obscureText: true,
                       autofillHints: const [AutofillHints.password],
                       onFieldSubmitted: (_) => _tryLogin(),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'パスワード',
-                        border: UnderlineInputBorder(),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
+                        filled: true,
+                        fillColor: AppColors.cardBackground,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
                               color: AppColors.accentPrimary, width: 2),
                         ),
                       ),

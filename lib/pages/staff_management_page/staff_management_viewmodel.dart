@@ -12,6 +12,20 @@ class StaffManagementViewModel extends ChangeNotifier {
   // --- State ---
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+  bool _isDisposed = false;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
 
   String? _errorMessage;
   String? get errorMessage => _errorMessage;

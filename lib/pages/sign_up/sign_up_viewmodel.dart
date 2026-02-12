@@ -7,13 +7,14 @@ import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/utils/phone_formatter.dart';
 import 'package:yoyaku_mate_provider/routes.dart' show setSignUpInProgress;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SignUpViewModel extends ChangeNotifier {
   final ProviderProfileService _profileService;
 
   SignUpViewModel({ProviderProfileService? profileService})
       : _profileService = profileService ??
-            ProviderProfileService(baseUrl: 'https://saboten-server.fly.dev');
+            ProviderProfileService(baseUrl: dotenv.env['API_URL']!);
 
   // 状態変数
   String? _role;

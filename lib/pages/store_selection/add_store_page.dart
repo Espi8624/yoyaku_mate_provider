@@ -11,6 +11,7 @@ import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_business_hours_st
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AddStorePage extends StatefulWidget {
   const AddStorePage({super.key});
@@ -166,7 +167,7 @@ class _AddStorePageState extends State<AddStorePage> {
       }
 
       final profileService =
-          ProviderProfileService(baseUrl: 'https://saboten-server.fly.dev');
+          ProviderProfileService(baseUrl: dotenv.env['API_URL']!);
 
       final email = userProfile?.email ?? currentUser.email ?? '';
       // プロフィールの既存の電話番号を使用

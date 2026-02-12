@@ -76,7 +76,7 @@ class PersonalProfileView extends StatelessWidget {
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
       path: 'support@yoyakumate.jp',
-      query: 'subject=【Yoyaku Mate】 お問い合わせ',
+      query: 'subject=【Rusui】 お問い合わせ',
     );
 
     try {

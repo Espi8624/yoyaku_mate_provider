@@ -95,8 +95,8 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
       final partySize = int.parse(_partySizeController.text);
 
       // Validation: One Menu Per Person
-      if (widget.requireOneMenuPerPerson && totalQuantity < partySize) {
-        ToastWidget.show(context, '1人1メニュー制限: 人数分以上のメニューを選択してください',
+      if (widget.requireOneMenuPerPerson && totalQuantity != partySize) {
+        ToastWidget.show(context, '1人1メニュー制限: 人数と同じ数量のメニューを選択してください',
             type: ToastType.error);
         return;
       }

@@ -3,13 +3,14 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/waiting_list.dart';
 
 class WaitingService {
   static final WaitingService _instance = WaitingService._internal();
   late StreamController<List<WaitingList>> _waitingListController;
   bool _isConnected = false;
-  static const String _baseUrl = 'https://saboten-server.fly.dev';
+  static String get _baseUrl => dotenv.env['API_URL']!;
 
   // SSE接続クライアント
   http.Client? _client;

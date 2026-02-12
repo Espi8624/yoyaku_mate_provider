@@ -362,15 +362,120 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     );
 
     if (selectedLang != null) {
-      _translateAndPrint(selectedLang);
+      // 言語選択後にカテゴリー選択ダイアログを表示
+      await _showCategorySelectionDialog(selectedLang);
     }
   }
 
-  Future<void> _translateAndPrint(String targetLang) async {
+  Future<void> _showCategorySelectionDialog(String selectedLang) async {
+    final selectedCategory = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return BaseDialog(
+          title: '出力カテゴリー選択',
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // "すべて出力" Option
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: InkWell(
+                  onTap: () => Navigator.pop(context, 'ALL_CATEGORIES'),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                    child: const Text(
+                      'すべて出力',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Categories List
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    ..._viewModel.categories.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final category = entry.value;
+                      final isLast = index == _viewModel.categories.length - 1;
+
+                      return Column(
+                        children: [
+                          InkWell(
+                            onTap: () => Navigator.pop(context, category),
+                            borderRadius: isLast
+                                ? const BorderRadius.vertical(
+                                    bottom: Radius.circular(8))
+                                : (index == 0
+                                    ? const BorderRadius.vertical(
+                                        top: Radius.circular(8))
+                                    : BorderRadius.zero),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 8),
+                              child: Text(
+                                category,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: AppColors.textPrimary,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          if (!isLast)
+                            const Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: AppColors.border,
+                            ),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selectedCategory != null) {
+      // 'ALL_CATEGORIES'가 반환되면 null을 전달하여 전체 출력
+      final categoryToPrint =
+          selectedCategory == 'ALL_CATEGORIES' ? null : selectedCategory;
+      await _translateAndPrint(selectedLang, selectedCategory: categoryToPrint);
+    }
+  }
+
+  Future<void> _translateAndPrint(String targetLang,
+      {String? selectedCategory}) async {
     // If Japanese is selected, use original text
     if (targetLang == 'Japanese') {
       await _printMenu(
-          titleTranslations: {}, descTranslations: {}, targetLang: targetLang);
+          titleTranslations: {},
+          descTranslations: {},
+          targetLang: targetLang,
+          selectedCategory: selectedCategory);
       return;
     }
 
@@ -378,7 +483,11 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     final titleTranslations = <String, String>{};
     final descTranslations = <String, String>{};
 
-    for (final cat in _viewModel.categories) {
+    // フィルタリングされたカテゴリーのみ対象にする
+    final categoriesToProcess =
+        selectedCategory != null ? [selectedCategory] : _viewModel.categories;
+
+    for (final cat in categoriesToProcess) {
       // Categories don't have stored translations in this model, so use original
       // Use original text for category (or implement category translation storage later)
       titleTranslations[cat] = cat;
@@ -409,13 +518,15 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     await _printMenu(
         titleTranslations: titleTranslations,
         descTranslations: descTranslations,
-        targetLang: targetLang);
+        targetLang: targetLang,
+        selectedCategory: selectedCategory);
   }
 
   Future<void> _printMenu(
       {Map<String, String>? titleTranslations,
       Map<String, String>? descTranslations,
-      String targetLang = 'Japanese'}) async {
+      String targetLang = 'Japanese',
+      String? selectedCategory}) async {
     final doc = pw.Document();
     pw.Font font;
     pw.Font? fallbackFont;
@@ -472,6 +583,10 @@ class _MenuManagementViewState extends State<_MenuManagementView>
       debugPrint("Failed to load font: $e");
       font = pw.Font.courier();
     }
+
+    // フィルタリングされたカテゴリーのみ対象にする
+    final categoriesToProcess =
+        selectedCategory != null ? [selectedCategory] : _viewModel.categories;
 
     final allMenus =
         _viewModel.categorizedMenu.values.expand((l) => l).toList();
@@ -583,7 +698,8 @@ class _MenuManagementViewState extends State<_MenuManagementView>
               ),
             ),
             pw.SizedBox(height: 20),
-            ..._viewModel.categories.map((category) {
+            pw.SizedBox(height: 20),
+            ...categoriesToProcess.map((category) {
               final menus = _viewModel.categorizedMenu[category]
                       ?.where((m) => m.menuStatus == 'available')
                       .toList() ??

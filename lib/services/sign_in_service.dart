@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 // ログイン
 Future<void> loginAndFetchUserInfo(String email, String password,
     Function(Map<String, dynamic>) onUserInfoLoaded) async {
@@ -13,10 +15,12 @@ Future<void> loginAndFetchUserInfo(String email, String password,
   final idToken = await userCredential.user!.getIdToken();
   final uid = userCredential.user!.uid;
 
+  final baseUrl = dotenv.env['API_URL']!;
+
   // user_info 取得
   final response = await http.get(
     Uri.parse(
-        'https://saboten-server.fly.dev/api/provider_user/firebase_uid?uid=$uid&regenerate_token=true'),
+        '$baseUrl/api/provider_user/firebase_uid?uid=$uid&regenerate_token=true'),
     headers: {'Authorization': 'Bearer $idToken'},
   );
   if (response.statusCode == 200) {
