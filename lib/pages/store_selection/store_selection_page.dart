@@ -71,7 +71,7 @@ class _StoreSelectionContent extends StatelessWidget {
           _buildStoreList(context, vm, stores, userName),
           if (vm.isLoading)
             const Center(
-              child: CircularProgressIndicator(),
+              child: CircularProgressIndicator(color: AppColors.accentPrimary),
             ),
         ],
       ),

@@ -204,7 +204,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // ローディング・エラー画面処理
     if (profileVM.isLoading && profileVM.userProfile == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+          body: Center(
+              child:
+                  CircularProgressIndicator(color: AppColors.accentPrimary)));
     }
 
     if (profileVM.errorMessage != null && profileVM.userProfile == null) {
@@ -229,7 +232,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // ユーザーのプロフィールがない場合
     if (profileVM.userProfile == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+          body: Center(
+              child:
+                  CircularProgressIndicator(color: AppColors.accentPrimary)));
     }
 
     final bool isStoreSelected = profileVM.storeProfile != null;

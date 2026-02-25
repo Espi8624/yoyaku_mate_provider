@@ -8,9 +8,7 @@ class MenuListPanel extends StatelessWidget {
   final List<String> categories;
   final Map<String, List<MenuListItem>> categorizedMenu;
   final Function(int) onEditCategory;
-  final Function(int) onDeleteCategory;
   final Function(int, int) onEditMenu;
-  final Function(int, int) onDeleteMenu;
 
   const MenuListPanel({
     super.key,
@@ -18,9 +16,7 @@ class MenuListPanel extends StatelessWidget {
     required this.categories,
     required this.categorizedMenu,
     required this.onEditCategory,
-    required this.onDeleteCategory,
     required this.onEditMenu,
-    required this.onDeleteMenu,
   });
 
   @override
@@ -85,36 +81,24 @@ class MenuListPanel extends StatelessWidget {
               final Color editIconColor = isSelected
                   ? AppColors.textPrimaryLight
                   : AppColors.textSecondary;
-              final Color deleteIconColor = isSelected
-                  ? AppColors.error
-                  : AppColors.error.withOpacity(0.6);
 
               return Tab(
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(16.0, 8.0, 0.0, 8.0),
+                  padding: EdgeInsets.fromLTRB(
+                      16.0, 8.0, isSelected ? 8.0 : 16.0, 8.0),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(categories[index]),
-                      const SizedBox(width: 2),
-                      Transform.translate(
-                        offset: const Offset(8, 0),
-                        child: _buildTabIconButton(
+                      if (isSelected) ...[
+                        const SizedBox(width: 6),
+                        _buildTabIconButton(
                           icon: Icons.edit,
                           color: editIconColor,
                           tooltip: 'カテゴリー編集',
                           onPressed: () => onEditCategory(index),
                         ),
-                      ),
-                      Transform.translate(
-                        offset: const Offset(-4, 0),
-                        child: _buildTabIconButton(
-                          icon: Icons.delete_outline,
-                          color: deleteIconColor,
-                          tooltip: 'カテゴリー削除',
-                          onPressed: () => onDeleteCategory(index),
-                        ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -139,7 +123,6 @@ class MenuListPanel extends StatelessWidget {
                     return MenuItemCard(
                       menuItem: menuList[index],
                       onEdit: () => onEditMenu(tabController.index, index),
-                      onDelete: () => onDeleteMenu(tabController.index, index),
                     );
                   },
                 );

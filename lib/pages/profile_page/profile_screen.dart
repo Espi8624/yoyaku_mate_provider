@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/loading_indicator.dart';
 import 'profile_screen_viewmodel.dart';
 import './widgets/views/personal_profile_view.dart';
 import './widgets/views/store_profile_view.dart';
@@ -145,7 +146,7 @@ class _ProfileViewState extends State<_ProfileView>
           // _tabController が生成されるまではローディングインディケーターを表示
           // 競争状態防止
           child: _tabController == null
-              ? const Center(child: CircularProgressIndicator())
+              ? const LoadingIndicator()
               : _buildContent(vm, isManager),
         ),
       ],

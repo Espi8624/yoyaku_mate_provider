@@ -43,6 +43,7 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
   Widget build(BuildContext context) {
     return BaseDialog(
       title: _isEditing ? 'カテゴリー編集' : 'カテゴリー追加',
+      contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
       content: Form(
         key: _formKey,
         child: Column(
@@ -67,17 +68,50 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentPrimary,
-                    foregroundColor: AppColors.cardBackground,
-                    padding: const EdgeInsets.symmetric(vertical: 16)),
-                onPressed: _submit,
-                child: const Text("確認"),
+            if (_isEditing)
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentPrimary,
+                          foregroundColor: AppColors.cardBackground,
+                          padding: const EdgeInsets.symmetric(vertical: 16)),
+                      onPressed: _submit,
+                      child: const Text("確認"),
+                    ),
+                  ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                          foregroundColor: AppColors.error,
+                          padding: const EdgeInsets.symmetric(vertical: 0)),
+                      onPressed: () =>
+                          Navigator.of(context).pop('DELETE_ACTION'),
+                      child: const Text(
+                        "削除",
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentPrimary,
+                      foregroundColor: AppColors.cardBackground,
+                      padding: const EdgeInsets.symmetric(vertical: 16)),
+                  onPressed: _submit,
+                  child: const Text("確認"),
+                ),
               ),
-            ),
           ],
         ),
       ),

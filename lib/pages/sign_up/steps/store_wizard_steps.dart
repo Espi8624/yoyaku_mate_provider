@@ -158,7 +158,10 @@ class _StoreBasicInfoStepState extends State<StoreBasicInfoStep> {
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
                           : const Text('住所検索'),
                     ),
                   ),

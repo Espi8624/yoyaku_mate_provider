@@ -5,12 +5,14 @@ class BaseDialog extends StatefulWidget {
   final String title;
   final Widget content;
   final double? width;
+  final EdgeInsetsGeometry? contentPadding;
 
   const BaseDialog({
     super.key,
     required this.title,
     required this.content,
     this.width,
+    this.contentPadding,
   });
 
   @override
@@ -114,7 +116,8 @@ class _BaseDialogState extends State<BaseDialog> {
                     child: SingleChildScrollView(
                       // SingleChildScrollViewにScrollControllerを繋げる
                       controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                      padding: widget.contentPadding ??
+                          const EdgeInsets.fromLTRB(24, 8, 24, 24),
                       child: widget.content,
                     ),
                   ),

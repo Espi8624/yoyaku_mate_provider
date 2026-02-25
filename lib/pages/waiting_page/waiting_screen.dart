@@ -54,25 +54,6 @@ class _WaitingView extends StatelessWidget {
           qrCodeData += "&v_token=${vm.qrToken}";
         }
 
-        if (vm.isLoading) {
-          return const Center(child: LoadingIndicator());
-        }
-        if (vm.error != null) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(vm.error!, style: const TextStyle(color: AppColors.error)),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: vm.loadWaitingList,
-                  child: const Text('再試行'),
-                ),
-              ],
-            ),
-          );
-        }
-
         if (isMobile) {
           // mobile layout
           return Scaffold(
@@ -107,27 +88,45 @@ class _WaitingView extends StatelessWidget {
                     clipBehavior: Clip.none, // 影が切れないようにする
                     children: [
                       // 待機目録リスト
-                      Positioned.fill(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      if (vm.error != null)
+                        Center(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _buildFilterBar(context, vm),
-                              Expanded(
-                                child: WaitingListPanel(
-                                  waitingList: vm.filteredWaitingList,
-                                  onRefresh: vm.loadWaitingList,
-                                  onItemAction: (item) =>
-                                      _showStatusBasedDialog(context, item),
-                                  bottomPadding: 85,
-                                  qrToken: vm.qrToken,
-                                ),
+                              Text(vm.error!,
+                                  style:
+                                      const TextStyle(color: AppColors.error)),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: vm.loadWaitingList,
+                                child: const Text('再試行'),
                               ),
                             ],
                           ),
+                        )
+                      else
+                        Positioned.fill(
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildFilterBar(context, vm),
+                                Expanded(
+                                  child: WaitingListPanel(
+                                    waitingList: vm.filteredWaitingList,
+                                    onRefresh: vm.loadWaitingList,
+                                    onItemAction: (item) =>
+                                        _showStatusBasedDialog(context, item),
+                                    bottomPadding: 85,
+                                    qrToken: vm.qrToken,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
 
                       Positioned(
                         left: 0,
@@ -151,6 +150,9 @@ class _WaitingView extends StatelessWidget {
                           ],
                         ),
                       ),
+
+                      // Loading Indicator Overlay
+                      if (vm.isLoading) const LoadingIndicator(),
                     ],
                   ),
                 ),
@@ -201,36 +203,62 @@ class _WaitingView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 24.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          flex: 2,
+                  child: Stack(
+                    children: [
+                      if (vm.error != null)
+                        Center(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _buildFilterBar(context, vm),
+                              Text(vm.error!,
+                                  style:
+                                      const TextStyle(color: AppColors.error)),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: vm.loadWaitingList,
+                                child: const Text('再試行'),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.only(left: 24.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
                               Expanded(
-                                child: WaitingListPanel(
-                                  waitingList: vm.filteredWaitingList,
-                                  onRefresh: vm.loadWaitingList,
-                                  onItemAction: (item) =>
-                                      _showStatusBasedDialog(context, item),
-                                  qrToken: vm.qrToken,
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildFilterBar(context, vm),
+                                    Expanded(
+                                      child: WaitingListPanel(
+                                        waitingList: vm.filteredWaitingList,
+                                        onRefresh: vm.loadWaitingList,
+                                        onItemAction: (item) =>
+                                            _showStatusBasedDialog(
+                                                context, item),
+                                        qrToken: vm.qrToken,
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                              ),
+                              const SizedBox(width: 16),
+                              const Expanded(
+                                flex: 1,
+                                child: WaitingStatusArea(
+                                    isInitiallyExpanded: true),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        const Expanded(
-                          flex: 1,
-                          child: WaitingStatusArea(isInitiallyExpanded: true),
-                        ),
-                      ],
-                    ),
+
+                      // Loading Indicator Overlay
+                      if (vm.isLoading) const LoadingIndicator(),
+                    ],
                   ),
                 ),
               ],

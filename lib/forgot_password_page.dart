@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
+
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -75,7 +77,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               ElevatedButton(
                 onPressed: _isLoading ? null : _sendResetEmail,
                 child: _isLoading
-                    ? const CircularProgressIndicator()
+                    ? CircularProgressIndicator(color: AppColors.accentPrimary)
                     : const Text('リセットメールを送信'),
               ),
             ],

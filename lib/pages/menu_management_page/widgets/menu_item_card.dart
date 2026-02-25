@@ -5,13 +5,11 @@ import '../../../models/menu_list.dart';
 class MenuItemCard extends StatelessWidget {
   final MenuListItem menuItem;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
   const MenuItemCard({
     super.key,
     required this.menuItem,
     required this.onEdit,
-    required this.onDelete,
   });
 
   @override
@@ -136,13 +134,6 @@ class MenuItemCard extends StatelessWidget {
           onPressed: onEdit,
           splashRadius: 20,
           tooltip: '編集',
-        ),
-        IconButton(
-          icon: const Icon(Icons.delete_outline,
-              size: 22, color: AppColors.error),
-          onPressed: onDelete,
-          splashRadius: 20,
-          tooltip: '削除',
         ),
       ],
     );

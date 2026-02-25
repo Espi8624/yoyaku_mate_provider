@@ -27,47 +27,48 @@ class _StaffManagementViewState extends State<StaffManagementView> {
   Widget build(BuildContext context) {
     final vm = context.watch<StaffManagementViewModel>();
 
-    if (vm.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    return Stack(
+      children: [
+        if (vm.errorMessage != null && vm.staffList.isEmpty)
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('エラーが発生しました: ${vm.errorMessage}'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => vm.fetchStoreStaff(widget.storeId),
+                  child: const Text('再試行'),
+                ),
+              ],
+            ),
+          )
+        else if (vm.staffList.isEmpty && vm.errorMessage == null)
+          const Center(
+              child: Text(
+            '現在登録されているメンバーはいません。',
+            style: TextStyle(fontSize: 16, color: AppColors.textTertiary),
+          ))
+        else if (vm.staffList.isNotEmpty)
+          ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            itemCount: vm.staffList.length,
+            itemBuilder: (context, index) {
+              final staff = vm.staffList[index];
 
-    // エラーは ProfileScreen で共通処理される場合が多いが、
-    // ここでもリストが空でエラーがある場合の表示などを考慮
-    if (vm.staffList.isEmpty) {
-      if (vm.errorMessage != null) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('エラーが発生しました: ${vm.errorMessage}'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => vm.fetchStoreStaff(widget.storeId),
-                child: const Text('再試行'),
-              ),
-            ],
+              return _StaffCard(
+                staff: staff,
+                storeId: widget.storeId,
+                vm: vm,
+              );
+            },
           ),
-        );
-      }
-      return const Center(
-          child: Text(
-        '現在登録されているメンバーはいません。',
-        style: TextStyle(fontSize: 16, color: AppColors.textTertiary),
-      ));
-    }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      itemCount: vm.staffList.length,
-      itemBuilder: (context, index) {
-        final staff = vm.staffList[index];
-
-        return _StaffCard(
-          staff: staff,
-          storeId: widget.storeId,
-          vm: vm,
-        );
-      },
+        // Show common loading indicator on top
+        if (vm.isLoading)
+          const Center(
+              child: CircularProgressIndicator(color: AppColors.accentPrimary)),
+      ],
     );
   }
 

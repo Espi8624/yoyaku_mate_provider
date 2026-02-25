@@ -226,6 +226,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
     return BaseDialog(
       title: _isEditing ? 'メニュー編集' : 'メニュー追加',
       width: 500,
+      contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
       content: Stack(
         children: [
           Form(
@@ -306,6 +307,24 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
                         : const Text("確認"),
                   ),
                 ),
+                if (_isEditing) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                          foregroundColor: AppColors.error,
+                          padding: const EdgeInsets.symmetric(vertical: 0)),
+                      onPressed: () =>
+                          Navigator.of(context).pop('DELETE_ACTION'),
+                      child: const Text(
+                        "削除",
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

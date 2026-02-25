@@ -31,9 +31,74 @@ class _StatisticsView extends StatelessWidget {
     final viewModel = context.watch<StatisticsViewModel>();
     final data = viewModel.statisticsData;
 
-    // Initial Loading (No data yet)
+    final visitorStats = data?['visitor_stats'];
+    final hourlyCongestion =
+        (data?['hourly_congestion'] as List<dynamic>?) ?? [];
+    final avgWaitTime = (data?['average_wait_time'] as String?) ?? '0分';
+    final noShowRate = ((data?['no_show_rate'] as num?) ?? 0).toDouble();
+    final totalCancelled = (data?['total_cancelled'] as num?)?.toInt() ?? 0;
+    final totalNoShow = (data?['total_no_show'] as num?)?.toInt() ?? 0;
+
+    // Determine Highlight Data based on Selection
+    String highlightTitle = '来店数';
+    int highlightValue = visitorStats?['today'] ?? 0;
+    Color highlightColor = const Color(0xFF212529);
+    IconData? highlightIcon;
+
+    if (viewModel.selectedMetric == 'cancelled') {
+      highlightTitle = 'キャンセル数';
+      highlightValue = totalCancelled;
+      highlightColor = const Color(0xFFFA5252);
+      highlightIcon = Icons.cancel_outlined;
+    } else if (viewModel.selectedMetric == 'no_show') {
+      highlightTitle = 'No-Show数';
+      highlightValue = totalNoShow;
+      highlightColor = const Color(0xFFFF6B6B);
+      highlightIcon = Icons.person_off_outlined;
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA), // Softer background
+      appBar: AppBar(
+        title: const Text(
+          '統計',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+      ),
+      body: _buildBody(
+          context,
+          viewModel,
+          data,
+          visitorStats,
+          hourlyCongestion,
+          avgWaitTime,
+          noShowRate,
+          highlightTitle,
+          highlightValue,
+          highlightColor,
+          highlightIcon),
+    );
+  }
+
+  Widget _buildBody(
+      BuildContext context,
+      StatisticsViewModel viewModel,
+      Map<String, dynamic>? data,
+      dynamic visitorStats,
+      List<dynamic> hourlyCongestion,
+      String avgWaitTime,
+      double noShowRate,
+      String highlightTitle,
+      int highlightValue,
+      Color highlightColor,
+      IconData? highlightIcon) {
     if (viewModel.isLoading && data == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+          child: CircularProgressIndicator(color: AppColors.accentPrimary));
     }
 
     if (viewModel.errorMessage != null && data == null) {
@@ -110,44 +175,7 @@ class _StatisticsView extends StatelessWidget {
       return const Center(child: Text('No data available'));
     }
 
-    final visitorStats = data['visitor_stats'];
-    final hourlyCongestion = data['hourly_congestion'] as List<dynamic>;
-    final avgWaitTime = data['average_wait_time'] as String;
-    final noShowRate = (data['no_show_rate'] as num).toDouble();
-    final totalCancelled = (data['total_cancelled'] as num?)?.toInt() ?? 0;
-    final totalNoShow = (data['total_no_show'] as num?)?.toInt() ?? 0;
-
-    // Determine Highlight Data based on Selection
-    String highlightTitle = '来店数';
-    int highlightValue = visitorStats['today'];
-    Color highlightColor = const Color(0xFF212529);
-    IconData? highlightIcon;
-
-    if (viewModel.selectedMetric == 'cancelled') {
-      highlightTitle = 'キャンセル数';
-      highlightValue = totalCancelled;
-      highlightColor = const Color(0xFFFA5252);
-      highlightIcon = Icons.cancel_outlined;
-    } else if (viewModel.selectedMetric == 'no_show') {
-      highlightTitle = 'No-Show数';
-      highlightValue = totalNoShow;
-      highlightColor = const Color(0xFFFF6B6B);
-      highlightIcon = Icons.person_off_outlined;
-    }
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Softer background
-      appBar: AppBar(
-        title: const Text(
-          '統計',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: false,
-      ),
-      body: RefreshIndicator(
+    return RefreshIndicator(
         onRefresh: viewModel.refresh,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -386,7 +414,9 @@ class _StatisticsView extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: const Center(child: CircularProgressIndicator()),
+                    child: const Center(
+                        child: CircularProgressIndicator(
+                            color: AppColors.accentPrimary)),
                   )
                 else if (viewModel.selectedMetric == 'visitor')
                   if (viewModel.selectedPeriod == 'auto')
@@ -442,9 +472,7 @@ class _StatisticsView extends StatelessWidget {
               },
             );
           }),
-        ),
-      ),
-    );
+        ));
   }
 
   Widget _buildSectionTitle(String title) {

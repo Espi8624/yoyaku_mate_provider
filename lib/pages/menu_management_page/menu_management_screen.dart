@@ -151,7 +151,9 @@ class _MenuManagementViewState extends State<_MenuManagementView>
       builder: (_) => CategoryFormDialog(
           initialValue: oldCategory, existingCategories: _viewModel.categories),
     );
-    if (newCategory != null && newCategory != oldCategory) {
+    if (newCategory == 'DELETE_ACTION') {
+      _showDeleteCategoryDialog(index);
+    } else if (newCategory != null && newCategory != oldCategory) {
       _viewModel.editCategory(oldCategory, newCategory);
     }
   }
@@ -205,13 +207,18 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     final category = _viewModel.categories[categoryIndex];
     final menuItem = _viewModel.categorizedMenu[category]![menuIndex];
 
-    final result = await showDialog<Map<String, dynamic>>(
+    final result = await showDialog<dynamic>(
       context: context,
       builder: (_) => MenuFormDialog(
           menuItem: menuItem, storeId: _viewModel.storeId, category: category),
     );
 
-    if (result != null) {
+    if (result == 'DELETE_ACTION') {
+      _showDeleteMenuDialog(categoryIndex, menuIndex);
+      return;
+    }
+
+    if (result != null && result is Map<String, dynamic>) {
       final updatedMenu = result['menu'] as MenuListItem;
       final imageBytes = result['imageFile'] as Uint8List?;
       final imageRemoved = result['imageRemoved'] as bool? ?? false;
@@ -861,9 +868,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                           categories: vm.categories,
                           categorizedMenu: vm.categorizedMenu,
                           onEditCategory: _showEditCategoryDialog,
-                          onDeleteCategory: _showDeleteCategoryDialog,
                           onEditMenu: _showEditMenuDialog,
-                          onDeleteMenu: _showDeleteMenuDialog,
                         ),
                       ),
 
@@ -931,9 +936,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                               categories: vm.categories,
                               categorizedMenu: vm.categorizedMenu,
                               onEditCategory: _showEditCategoryDialog,
-                              onDeleteCategory: _showDeleteCategoryDialog,
                               onEditMenu: _showEditMenuDialog,
-                              onDeleteMenu: _showDeleteMenuDialog,
                             ),
                           ),
                           const VerticalDivider(
@@ -984,7 +987,10 @@ class _SaveStatusIndicator extends StatelessWidget {
               SizedBox(
                 width: 12,
                 height: 12,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.accentPrimary,
+                ),
               ),
               SizedBox(width: 8),
               Text('保存中...', style: TextStyle(fontSize: 12)),

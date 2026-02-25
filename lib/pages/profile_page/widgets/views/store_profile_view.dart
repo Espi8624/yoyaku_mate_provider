@@ -244,7 +244,8 @@ class StoreProfileView extends StatelessWidget {
 
     if (storeProfile == null || storeLicense == null) {
       if (vm.isLoading) {
-        return const Center(child: CircularProgressIndicator());
+        return const Center(
+            child: CircularProgressIndicator(color: AppColors.accentPrimary));
       }
       return const Center(child: Text("店舗情報がありません。"));
     }
@@ -303,8 +304,9 @@ class StoreProfileView extends StatelessWidget {
                               if (progress == null) return child;
                               return const SizedBox(
                                 height: 200,
-                                child:
-                                    Center(child: CircularProgressIndicator()),
+                                child: Center(
+                                    child: CircularProgressIndicator(
+                                        color: AppColors.accentPrimary)),
                               );
                             },
                             errorBuilder: (context, error, stackTrace) {
