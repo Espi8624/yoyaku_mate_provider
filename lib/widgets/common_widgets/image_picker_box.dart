@@ -33,7 +33,13 @@ class _ImagePickerBoxState extends State<ImagePickerBox> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      requestFullMetadata: false, // iOS 시뮬레이터 멈춤 버그 방지
+    );
 
     if (pickedFile != null) {
       final bytes = await pickedFile.readAsBytes();

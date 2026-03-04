@@ -483,8 +483,13 @@ class ProfileScreenViewModel extends ChangeNotifier {
 
   Future<void> uploadUserImage() async {
     final picker = ImagePicker();
-    final XFile? pickedFile =
-        await picker.pickImage(source: ImageSource.gallery);
+    final XFile? pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      requestFullMetadata: false, // iOS 시뮬레이터 멈춤 버그 방지
+    );
 
     if (pickedFile == null) return;
 
@@ -520,8 +525,13 @@ class ProfileScreenViewModel extends ChangeNotifier {
     }
 
     final picker = ImagePicker();
-    final XFile? pickedFile =
-        await picker.pickImage(source: ImageSource.gallery);
+    final XFile? pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      requestFullMetadata: false, // iOS 시뮬레이터 멈춤 버그 방지
+    );
     if (pickedFile == null) return;
 
     final imageFile = File(pickedFile.path);
