@@ -15,6 +15,7 @@ import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel
 import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
+import 'package:yoyaku_mate_provider/services/statistics_service.dart';
 import 'package:yoyaku_mate_provider/services/store_settings_service.dart';
 import 'package:yoyaku_mate_provider/pages/statistics_page/statistics_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -57,6 +58,10 @@ class MyApp extends StatelessWidget {
         Provider<StoreSettingsService>(
           create: (_) =>
               StoreSettingsService(baseUrl: dotenv.env['API_URL'] ?? ''),
+        ),
+        Provider<StatisticsService>(
+          create: (_) =>
+              StatisticsService(baseUrl: dotenv.env['API_URL'] ?? ''),
         ),
         StreamProvider<User?>(
           create: (_) => FirebaseAuth.instance.authStateChanges(),

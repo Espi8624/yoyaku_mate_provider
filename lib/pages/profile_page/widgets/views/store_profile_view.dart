@@ -43,6 +43,7 @@ class StoreProfileView extends StatelessWidget {
     required String initialValue,
   }) async {
     if (isReadOnly) return;
+    final vm = context.read<ProfileScreenViewModel>();
 
     final newValue = await showDialog<String>(
       context: context,
@@ -51,10 +52,10 @@ class StoreProfileView extends StatelessWidget {
     );
 
     if (newValue != null && newValue.isNotEmpty) {
-      final vm = context.read<ProfileScreenViewModel>();
       final success =
           await vm.updateProfileField(storeFieldKey: fieldKey, value: newValue);
-      if (success && context.mounted) {
+      if (!context.mounted) return;
+      if (success) {
         ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
       }
     }
@@ -64,6 +65,7 @@ class StoreProfileView extends StatelessWidget {
   /// デバイスのギャラリーから画像を選択し、[ProfileScreenViewModel]を通じてアップロードします。
   Future<void> _handleImageUpload(BuildContext context) async {
     if (isReadOnly) return;
+    final vm = context.read<ProfileScreenViewModel>();
 
     final picker = ImagePicker();
     final XFile? pickedFile = await picker.pickImage(
@@ -71,7 +73,7 @@ class StoreProfileView extends StatelessWidget {
       imageQuality: 80,
       maxWidth: 1024,
       maxHeight: 1024,
-      requestFullMetadata: false, // iOS 시뮬레이터 멈춤 버그 방지
+      requestFullMetadata: false, // iOSシミュレーター停止バグ防止
     );
 
     if (pickedFile != null) {
@@ -91,7 +93,6 @@ class StoreProfileView extends StatelessWidget {
 
       if (confirm != true) return;
 
-      final vm = context.read<ProfileScreenViewModel>();
       final success = await vm.uploadStoreLicense(imageFile);
 
       if (context.mounted) {
@@ -139,7 +140,9 @@ class StoreProfileView extends StatelessWidget {
         building: result['building']!,
       );
 
-      if (success && context.mounted) {
+      if (!context.mounted) return;
+
+      if (success) {
         ToastWidget.show(context, '住所が更新されました', type: ToastType.success);
       }
     }

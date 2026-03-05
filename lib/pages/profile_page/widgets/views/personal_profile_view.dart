@@ -27,6 +27,7 @@ class PersonalProfileView extends StatelessWidget {
     bool isPassword = false,
     bool isName = false,
   }) async {
+    final vm = context.read<ProfileScreenViewModel>();
     if (!isPassword) {
       final result = await showDialog(
         context: context,
@@ -41,7 +42,6 @@ class PersonalProfileView extends StatelessWidget {
       );
 
       if (result != null) {
-        final vm = context.read<ProfileScreenViewModel>();
         bool success = false;
 
         if (result is Map && isName) {
@@ -52,7 +52,9 @@ class PersonalProfileView extends StatelessWidget {
               userFieldKey: fieldKey!, value: result);
         }
 
-        if (success && context.mounted) {
+        if (!context.mounted) return;
+
+        if (success) {
           ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
         }
       }

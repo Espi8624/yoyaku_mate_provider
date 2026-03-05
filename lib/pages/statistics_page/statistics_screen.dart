@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/pages/statistics_page/statistics_viewmodel.dart';
 import 'package:yoyaku_mate_provider/services/statistics_service.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'widgets/dynamic_chart_card.dart';
 
 class StatisticsScreen extends StatelessWidget {
@@ -14,8 +13,8 @@ class StatisticsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => StatisticsViewModel(
-        service: StatisticsService(baseUrl: dotenv.env['API_URL'] ?? ''),
+      create: (ctx) => StatisticsViewModel(
+        service: ctx.read<StatisticsService>(),
         storeId: storeId,
       ),
       child: const _StatisticsView(),

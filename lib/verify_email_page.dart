@@ -37,9 +37,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
 
     if (user.emailVerified) {
       _timer?.cancel();
-      if (mounted) {
-        context.go('/');
-      }
+      if (!context.mounted) return;
+      context.go('/');
     }
   }
 
@@ -107,9 +106,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                 TextButton(
                   onPressed: () async {
                     await FirebaseAuth.instance.signOut();
-                    if (mounted) {
-                      context.go('/login');
-                    }
+                    if (!context.mounted) return;
+                    context.go('/login');
                   },
                   child: const Text('他のアカウントでログイン',
                       style: TextStyle(color: AppColors.textSecondary)),

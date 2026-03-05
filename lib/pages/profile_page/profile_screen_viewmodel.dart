@@ -337,8 +337,10 @@ class ProfileScreenViewModel extends ChangeNotifier {
         notifyListeners();
       }
 
-      await _profileService.updateUserProfile(_mongoUserId, backendUpdates);
-      await _fetchInitialUserProfile();
+      final updatedUser =
+          await _profileService.updateUserProfile(_mongoUserId, backendUpdates);
+      // サーバーが返した更新データでローカル状態を更新
+      _userProfile = updatedUser;
       success = true;
     } on ApiException catch (e) {
       _errorMessage = '更新に失敗しました: ${e.message}';
@@ -371,33 +373,13 @@ class ProfileScreenViewModel extends ChangeNotifier {
 
     try {
       if (storeFieldKey != null && storeId.isNotEmpty) {
-        await _profileService
+        // サーバーが返した更新StoreProfileでローカル状態を更新 (GET再呼び出しゼロ)
+        final updatedStore = await _profileService
             .updateStoreProfile(storeId, {storeFieldKey: value});
-
-        // 更新された店舗情報を取得してローカルリストを更新
-        final response = await _profileService.fetchStoreProfile(storeId);
-        if (response.containsKey('data') && response['data'] is Map) {
-          final updatedStore =
-              StoreProfile.fromJson(response['data'] as Map<String, dynamic>);
-
-          final index = _myStores.indexWhere((s) => s.id == storeId);
-          if (index != -1) {
-            final oldStore = _myStores[index];
-            final newStore = StoreProfile(
-              id: updatedStore.id,
-              name: updatedStore.name,
-              address: updatedStore.address,
-              phone_number: updatedStore.phone_number,
-              bizNumber: updatedStore.bizNumber,
-              storeImageUrl: updatedStore.storeImageUrl,
-              verificationStatus: updatedStore.verificationStatus ??
-                  oldStore.verificationStatus,
-              staffStatus: updatedStore.staffStatus ?? oldStore.staffStatus,
-            );
-            _myStores[index] = newStore;
-          }
-
-          await selectStore(storeId);
+        _storeProfile = updatedStore;
+        final index = _myStores.indexWhere((s) => s.id == storeId);
+        if (index != -1) {
+          _myStores[index] = updatedStore;
         }
       }
       success = true;
@@ -436,37 +418,13 @@ class ProfileScreenViewModel extends ChangeNotifier {
         'building': building,
       };
 
-      await _profileService.updateStoreProfile(storeId, updates);
-
-      // データを更新
-      final response = await _profileService.fetchStoreProfile(storeId);
-      if (response.containsKey('data') && response['data'] is Map) {
-        final updatedStore =
-            StoreProfile.fromJson(response['data'] as Map<String, dynamic>);
-
-        final index = _myStores.indexWhere((s) => s.id == storeId);
-        if (index != -1) {
-          final oldStore = _myStores[index];
-          // 更新で返されないフィールドがある場合に備えて保持（通常fetchは完全なプロファイルを返すが）
-          // 万が一APIが全てを返さない場合に備えて、既存のステータスで再構築
-          final newStore = StoreProfile(
-            id: updatedStore.id,
-            name: updatedStore.name,
-            address: updatedStore.address,
-            zipCode: updatedStore.zipCode,
-            prefecture: updatedStore.prefecture,
-            city: updatedStore.city,
-            building: updatedStore.building,
-            phone_number: updatedStore.phone_number,
-            bizNumber: updatedStore.bizNumber,
-            storeImageUrl: updatedStore.storeImageUrl,
-            verificationStatus:
-                updatedStore.verificationStatus ?? oldStore.verificationStatus,
-            staffStatus: updatedStore.staffStatus ?? oldStore.staffStatus,
-          );
-          _myStores[index] = newStore;
-        }
-        await selectStore(storeId);
+      // サーバーが返した更新StoreProfileでローカル状態を更新 (fetchStoreProfile GET再呼び出しゼロ)
+      final updatedStore =
+          await _profileService.updateStoreProfile(storeId, updates);
+      _storeProfile = updatedStore;
+      final index = _myStores.indexWhere((s) => s.id == storeId);
+      if (index != -1) {
+        _myStores[index] = updatedStore;
       }
       success = true;
     } on ApiException catch (e) {
@@ -488,7 +446,7 @@ class ProfileScreenViewModel extends ChangeNotifier {
       imageQuality: 80,
       maxWidth: 1024,
       maxHeight: 1024,
-      requestFullMetadata: false, // iOS 시뮬레이터 멈춤 버그 방지
+      requestFullMetadata: false, // iOSシミュレーター停止バグ防止
     );
 
     if (pickedFile == null) return;
@@ -530,7 +488,7 @@ class ProfileScreenViewModel extends ChangeNotifier {
       imageQuality: 80,
       maxWidth: 1024,
       maxHeight: 1024,
-      requestFullMetadata: false, // iOS 시뮬레이터 멈춤 버그 방지
+      requestFullMetadata: false, // iOSシミュレーター停止バグ防止
     );
     if (pickedFile == null) return;
 
@@ -586,35 +544,10 @@ class ProfileScreenViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _profileService.uploadLicenseImage(storeId, imageFile);
-
-      // アップロード成功後、最新の店舗情報を取得してローカルリスト(myStores)を更新
-      final response = await _profileService.fetchStoreProfile(storeId);
-
-      if (response.containsKey('data') && response['data'] is Map) {
-        // アップロード成功後、最新の店舗情報を取得してローカルリスト(myStores)を更新
-        final updatedStore =
-            StoreProfile.fromJson(response['data'] as Map<String, dynamic>);
-
-        final index = _myStores.indexWhere((s) => s.id == storeId);
-        if (index != -1) {
-          final oldStore = _myStores[index];
-          final newStore = StoreProfile(
-            id: updatedStore.id,
-            name: updatedStore.name,
-            address: updatedStore.address,
-            phone_number: updatedStore.phone_number,
-            bizNumber: updatedStore.bizNumber,
-            storeImageUrl: updatedStore.storeImageUrl,
-            verificationStatus:
-                updatedStore.verificationStatus ?? oldStore.verificationStatus,
-            staffStatus: updatedStore.staffStatus ?? oldStore.staffStatus,
-          );
-          _myStores[index] = newStore;
-        }
-      }
-
-      await selectStore(storeId);
+      // \uc11c\ubc84\uac00 \ubc18\ud658\ud55c \uad6c\uc2e0 StoreLicense\ub85c \ub85c\ucec8 \uc0c1\ud0dc \uc5c5\ub370\uc774\ud2b8 (GET \uc7ac\ud638\ucd9c \uc81c\ub85c)
+      final updatedLicense =
+          await _profileService.uploadLicenseImage(storeId, imageFile);
+      _storeLicense = updatedLicense;
       return true;
     } on ApiException catch (e) {
       _errorMessage = "アップロード失敗: ${e.message}";

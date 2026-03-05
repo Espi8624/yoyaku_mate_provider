@@ -99,10 +99,9 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
     try {
       final menuList = _categorizedMenu[oldName] ?? [];
 
-      // 모든 메뉴의 카테고리를 업데이트
-      for (var item in menuList) {
-        final updatedItem = item.copyWith(category: newName);
-        await _menuService.updateSingleMenu(updatedItem);
+      // 1回のAPI呼び出しで全メニューのカテゴリを更新 (N+1問題解決)
+      if (menuList.isNotEmpty) {
+        await _menuService.bulkUpdateCategory(storeId, oldName, newName);
       }
 
       // ローカルステータス更新
@@ -134,9 +133,9 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
 
     _setSaveStatus(SaveStatus.saving);
     try {
-      // 全てのメニューをdisableに変更
-      for (var item in menuList) {
-        await _menuService.deleteSingleMenu(item.id);
+      // 1回のAPI呼び出しで関連全メニューを非表示 (N+1問題解決)
+      if (menuList.isNotEmpty) {
+        await _menuService.bulkDeleteCategory(storeId, category);
       }
 
       // ローカルステータス更新
@@ -241,17 +240,11 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
 
     _setSaveStatus(SaveStatus.saving);
     try {
-      await _menuService.deleteSingleMenu(menuItem.id);
+      await _menuService.deleteSingleMenu(menuItem.id, storeId);
 
-      // ローカルステータス更新
-      final index = _menuItems.indexWhere((item) => item.id == menuItem.id);
-      if (index != -1) {
-        _menuItems[index] = menuItem.copyWith(
-          menuStatus: 'disable',
-          updatedAt: DateTime.now(),
-        );
-        _updateCategorizedMenu();
-      }
+      // ローカルステータス更新 (完全に削除)
+      _menuItems.removeWhere((item) => item.id == menuItem.id);
+      _updateCategorizedMenu();
 
       _setSaveStatus(SaveStatus.saved);
     } on ApiException catch (e) {
@@ -265,16 +258,15 @@ class MenuManagementScreenViewModel extends ChangeNotifier {
   Future<void> deleteAllMenus() async {
     _setSaveStatus(SaveStatus.saving);
     try {
-      for (var item in _menuItems) {
-        if (item.menuStatus != 'disable') {
-          await _menuService.deleteSingleMenu(item.id);
-        }
+      // 1回のAPI呼び出しで全メニュー非表示 (N+1問題解決)
+      final hasActiveMenus =
+          _menuItems.any((item) => item.menuStatus != 'disable');
+      if (hasActiveMenus) {
+        await _menuService.bulkDeleteAllMenus(storeId);
       }
 
-      _menuItems = _menuItems
-          .map((item) =>
-              item.copyWith(menuStatus: 'disable', updatedAt: DateTime.now()))
-          .toList();
+      // ローカルデータ完全削除
+      _menuItems.clear();
       _updateCategorizedMenu();
 
       _setSaveStatus(SaveStatus.saved);

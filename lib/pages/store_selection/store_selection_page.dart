@@ -143,6 +143,8 @@ class _StoreSelectionContent extends StatelessWidget {
 
                               final success = await vm.selectStore(store.id);
 
+                              if (!context.mounted) return;
+
                               if (success) {
                                 ToastWidget.show(
                                     context, '${store.name}が選択されました.',

@@ -230,40 +230,122 @@ class MenuService {
     }
   }
 
-  // メニュー削除（状態変更）
-  Future<MenuListItem> deleteSingleMenu(String menuId) async {
-    final uri = Uri.parse('$_baseUrl/api/menu-list');
+  // メニュー削除 (データを完全に削除)
+  Future<void> deleteSingleMenu(String menuId, String storeId) async {
+    final uri =
+        Uri.parse('$_baseUrl/api/provider_menu?id=$menuId&store_id=$storeId');
     try {
       final token = await _getIdToken();
-      final response = await _client.patch(
+      final response = await _client.delete(
         uri,
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
           'Authorization': 'Bearer $token',
         },
-        body: json.encode({
-          'id': menuId,
-          'menu_status': 'disable',
-        }),
       );
 
       final decodedBody = utf8.decode(response.bodyBytes);
       final jsonResponse = json.decode(decodedBody);
 
-      if (response.statusCode == 200) {
-        if (jsonResponse['status'] != 'success') {
-          throw ApiException(
-              jsonResponse['message'] ?? 'Failed to delete menu');
-        }
-        final menuData = jsonResponse['data'] ?? jsonResponse;
-        return MenuListItem.fromJson(menuData);
-      } else {
+      if (response.statusCode != 200) {
         throw ApiException(jsonResponse['message'] ?? 'Failed to delete menu',
             statusCode: response.statusCode);
       }
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Menu deletion failed: ${e.toString()}');
+    }
+  }
+
+  // カテゴリ名一括変更
+  Future<void> bulkUpdateCategory(
+      String storeId, String oldCategory, String newCategory) async {
+    final uri = Uri.parse(
+        '$_baseUrl/api/provider_menu/category/bulk-update?store_id=$storeId');
+    try {
+      final token = await _getIdToken();
+      final response = await _client.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'old_category': oldCategory,
+          'new_category': newCategory,
+        }),
+      );
+
+      final decodedBody = utf8.decode(response.bodyBytes);
+      final jsonResponse = json.decode(decodedBody);
+
+      if (response.statusCode != 200) {
+        throw ApiException(
+            jsonResponse['message'] ?? 'Failed to bulk update category',
+            statusCode: response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Bulk category update failed: ${e.toString()}');
+    }
+  }
+
+  // カテゴリまるごと削除（配下のメニューdisable化）
+  Future<void> bulkDeleteCategory(String storeId, String category) async {
+    final uri = Uri.parse(
+        '$_baseUrl/api/provider_menu/category/bulk-delete?store_id=$storeId');
+    try {
+      final token = await _getIdToken();
+      final response = await _client.delete(
+        uri,
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'category': category,
+        }),
+      );
+
+      final decodedBody = utf8.decode(response.bodyBytes);
+      final jsonResponse = json.decode(decodedBody);
+
+      if (response.statusCode != 200) {
+        throw ApiException(
+            jsonResponse['message'] ?? 'Failed to bulk delete category',
+            statusCode: response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Bulk category delete failed: ${e.toString()}');
+    }
+  }
+
+  // ストアの全メニュー一括削除（disable化）
+  Future<void> bulkDeleteAllMenus(String storeId) async {
+    final uri = Uri.parse(
+        '$_baseUrl/api/provider_menu/all/bulk-delete?store_id=$storeId');
+    try {
+      final token = await _getIdToken();
+      final response = await _client.delete(
+        uri,
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final decodedBody = utf8.decode(response.bodyBytes);
+      final jsonResponse = json.decode(decodedBody);
+
+      if (response.statusCode != 200) {
+        throw ApiException(
+            jsonResponse['message'] ?? 'Failed to bulk delete all menus',
+            statusCode: response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Bulk all menus delete failed: ${e.toString()}');
     }
   }
 }

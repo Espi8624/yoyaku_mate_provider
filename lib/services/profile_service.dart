@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yoyaku_mate_provider/models/store_license.dart';
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
 import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'api_exception.dart';
@@ -107,8 +108,8 @@ class ProviderProfileService {
     }
   }
 
-  // ユーザープロフィール更新
-  Future<void> updateUserProfile(
+  // ユーザープロフィール更新。更新後の UserProfile を返却 (REST 標準)
+  Future<UserProfile> updateUserProfile(
       String mongoUserId, Map<String, dynamic> update) async {
     final token = await _getIdToken();
     final response = await http.put(
@@ -123,6 +124,9 @@ class ProviderProfileService {
       throw ApiException(
           'Failed to update user profile. Status: ${response.statusCode}, Body: ${response.body}');
     }
+    final responseData = json.decode(utf8.decode(response.bodyBytes));
+    final userData = responseData['data'] ?? responseData;
+    return UserProfile.fromJson(userData as Map<String, dynamic>);
   }
 
   Future<UserProfile> uploadUserImage(File imageFile, String idToken) async {
@@ -228,8 +232,8 @@ class ProviderProfileService {
     }
   }
 
-  // 店舗プロフィール更新
-  Future<void> updateStoreProfile(
+  // 店舗プロフィール更新。更新後の StoreProfile を返却 (REST 標準)
+  Future<StoreProfile> updateStoreProfile(
       String storeId, Map<String, dynamic> update) async {
     final token = await _getIdToken();
     final response = await http.put(
@@ -244,6 +248,9 @@ class ProviderProfileService {
       throw ApiException(
           'Failed to update store profile. Status: ${response.statusCode}, Body: ${response.body}');
     }
+    final responseData = json.decode(utf8.decode(response.bodyBytes));
+    final storeData = responseData['data'] ?? responseData;
+    return StoreProfile.fromJson(storeData as Map<String, dynamic>);
   }
 
   // 会員加入
@@ -277,33 +284,30 @@ class ProviderProfileService {
     }
   }
 
-  // 営業許可証イメージアップロード
-  Future<void> uploadLicenseImage(String storeId, File imageFile) async {
-    // Firebase Authからトークンを取得
+  // 営業許可証イメージアップロード。更新後の StoreLicense を返却 (REST 標準)
+  Future<StoreLicense> uploadLicenseImage(
+      String storeId, File imageFile) async {
     final token = await _getIdToken();
     final uri = Uri.parse('$baseUrl/api/stores/upload-license');
 
     final request = http.MultipartRequest('POST', uri);
-
-    // Firebase Authから取得한トークンを使用
     request.headers['Authorization'] = 'Bearer $token';
-
-    // storeIdを formData に追加
     request.fields['storeId'] = storeId;
     request.files.add(
-      await http.MultipartFile.fromPath(
-        'licenseImage',
-        imageFile.path,
-      ),
+      await http.MultipartFile.fromPath('licenseImage', imageFile.path),
     );
 
     final response = await request.send();
+    final responseBody = await response.stream.bytesToString();
 
     if (response.statusCode != 200) {
-      final responseBody = await response.stream.bytesToString();
       throw ApiException(
           'Failed to upload license image. Status: ${response.statusCode}, Body: $responseBody');
     }
+
+    final responseData = json.decode(responseBody);
+    final licenseData = responseData['data'] ?? responseData;
+    return StoreLicense.fromJson(licenseData as Map<String, dynamic>);
   }
 
   // 店舗存在確認

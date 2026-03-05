@@ -18,6 +18,8 @@ class WaitingService {
 
   // 再接続用変数
   Timer? _reconnectTimer;
+  int _reconnectAttempts = 0; // 指数バックオフカウンター
+
   WaitingService._internal() {
     _waitingListController = StreamController<List<WaitingList>>.broadcast();
   }
@@ -85,6 +87,8 @@ class WaitingService {
 
     _client!.send(request).then((response) {
       if (response.statusCode == 200) {
+        // 接続成功時、再接続カウンターリセット
+        _reconnectAttempts = 0;
         response.stream
             .transform(utf8.decoder)
             .transform(const LineSplitter())
@@ -124,24 +128,25 @@ class WaitingService {
   }
 
   void _handleDisconnect(String storeId) {
-    if (!_isConnected) return; // 手動で停止済み
+    if (!_isConnected) return; // 手動で停止した場合
 
     _isConnected = false;
-    _isConnected = false;
-
-    // 遅延後に再接続
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 3), () {
-      // print('再接続を試行中...');
+
+    // 指数バックオフ: 3s -> 6s -> 12s -> ... 最大60秒
+    final delaySeconds = (3 * (1 << _reconnectAttempts)).clamp(3, 60);
+    _reconnectAttempts++;
+
+    _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
       connectToStream(storeId);
     });
   }
 
   void stopPolling() {
     _isConnected = false;
+    _reconnectAttempts = 0; // 停止時カウンターリセット
     _client?.close();
     _client = null;
-    _reconnectTimer?.cancel();
     _reconnectTimer?.cancel();
     _lastStoreId = null;
   }

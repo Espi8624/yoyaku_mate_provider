@@ -254,6 +254,7 @@ class WaitingScreenViewModel extends ChangeNotifier
         ToastWidget.show(context, '待機が正常に追加されました', type: ToastType.success);
       }
     } catch (e) {
+      if (!context.mounted) return;
       if (await _handleDuplicateLogin(context, e)) return;
 
       if (context.mounted) {
@@ -313,6 +314,7 @@ class WaitingScreenViewModel extends ChangeNotifier
         }
       }
     } on ApiException catch (e) {
+      if (!context.mounted) return;
       if (await _handleDuplicateLogin(context, e)) return;
       if (context.mounted) {
         ToastWidget.show(context, 'ステータスアップデート失敗: ${e.message}',
@@ -344,6 +346,7 @@ class WaitingScreenViewModel extends ChangeNotifier
         ToastWidget.show(context, '待機目録を初期化しました', type: ToastType.success);
       }
     } on ApiException catch (e) {
+      if (!context.mounted) return;
       if (await _handleDuplicateLogin(context, e)) return;
       if (context.mounted) {
         ToastWidget.show(context, '初期化失敗: ${e.message}', type: ToastType.error);
@@ -470,7 +473,6 @@ class WaitingScreenViewModel extends ChangeNotifier
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _waitingListSubscription?.cancel();
-    _waitingService.dispose();
     super.dispose();
   }
 }

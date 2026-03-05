@@ -164,6 +164,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         title: 'カテゴリー削除',
         content: 'このカテゴリーと含まれる全てのメニューを削除しますか？');
     if (confirmed == true) {
+      if (!mounted) return;
       _viewModel.deleteCategory(index);
       ToastWidget.show(context, 'カテゴリーが削除されました', type: ToastType.success);
     }
@@ -184,6 +185,8 @@ class _MenuManagementViewState extends State<_MenuManagementView>
       // メニュー保存
       final savedMenu = await _viewModel.addMenu(newMenu);
 
+      if (!mounted) return;
+
       if (savedMenu == null) {
         ToastWidget.show(context, 'メニュー追加に失敗しました', type: ToastType.error);
         return;
@@ -199,6 +202,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         await _viewModel.updateMenuWithImage(savedMenu, imageFile);
       }
 
+      if (!mounted) return;
       ToastWidget.show(context, 'メニューが追加されました', type: ToastType.success);
     }
   }
@@ -234,6 +238,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         // イメージ削除　→ 空の文字列で更新
         final menuWithoutImage = updatedMenu.copyWith(menuImageUrl: '');
         _viewModel.editMenu(menuWithoutImage);
+        if (!mounted) return;
         ToastWidget.show(context, '画像が削除されました', type: ToastType.success);
       } else {
         // テキスト情報のみ更新
@@ -248,6 +253,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     if (confirmed == true) {
       final category = _viewModel.categories[categoryIndex];
       _viewModel.deleteMenu(category, menuIndex);
+      if (!mounted) return;
       ToastWidget.show(context, 'メニューが削除されました', type: ToastType.success);
     }
   }
@@ -259,6 +265,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         content: '全てのメニューを削除状態にしますか？\nこの操作は「保存」を押すと確定されます。');
     if (confirmed == true) {
       _viewModel.deleteAllMenus();
+      if (!mounted) return;
       ToastWidget.show(context, '全てのメニューが削除状態になりました', type: ToastType.info);
     }
   }
