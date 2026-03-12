@@ -129,7 +129,7 @@ class _LoginPageState extends State<LoginPage> {
                     Text(
                       'ルスイ',
                       style: TextStyle(
-                        fontSize: isLandscape ? 16 : 24,
+                        fontSize: isLandscape ? 16 : 20,
                         fontWeight: FontWeight.bold,
                         color: AppColors.accentPrimary,
                       ),
