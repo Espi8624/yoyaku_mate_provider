@@ -384,7 +384,6 @@ class _SignUpPageState extends State<SignUpPage> {
         ToastWidget.show(context, '認証メールを送信しました。メールボックスをご確認ください。',
             type: ToastType.success);
         _nextPage();
-        _nextPage();
       }
     } on FirebaseAuthException catch (_) {
       if (!mounted) return;
@@ -431,11 +430,8 @@ class _SignUpPageState extends State<SignUpPage> {
     final success =
         await vm.sendPhoneCode(rawPhoneNumber, vm.role ?? 'manager');
     if (success && mounted) {
-      if (success && mounted) {
-        ToastWidget.show(context, '認証コードを送信しました。', type: ToastType.success);
-        _nextPage();
-        _nextPage();
-      }
+      ToastWidget.show(context, '認証コードを送信しました。', type: ToastType.success);
+      _nextPage();
     }
   }
 
@@ -448,7 +444,6 @@ class _SignUpPageState extends State<SignUpPage> {
       vm.savePhoneProgress(phoneController.text.trim());
 
       ToastWidget.show(context, '電話番号認証が完了しました。', type: ToastType.success);
-      _nextPage();
       _nextPage();
     }
   }

@@ -189,10 +189,15 @@ class ProfileScreenViewModel extends ChangeNotifier {
       if (myStoresResponse.containsKey('data') &&
           myStoresResponse['data'] is Map) {
         final outerData = myStoresResponse['data'] as Map<String, dynamic>;
-        if (outerData.containsKey('data') && outerData['data'] is List) {
-          final storesData = outerData['data'] as List;
-          _myStores =
-              storesData.map((data) => StoreProfile.fromJson(data)).toList();
+        if (outerData.containsKey('data')) {
+          final storesList = outerData['data'];
+          if (storesList == null) {
+            _myStores = [];
+          } else if (storesList is List) {
+            _myStores = storesList.map((data) => StoreProfile.fromJson(data)).toList();
+          } else {
+            throw ApiException('店舗リストデータ形式が異なります。(inner data list form)');
+          }
 
           // 店舗リストローディング後、ユーザープロフィールロード
           await _fetchInitialUserProfile();
@@ -202,7 +207,7 @@ class ProfileScreenViewModel extends ChangeNotifier {
                 'User profile could not be loaded or parsed correctly.');
           }
         } else {
-          throw ApiException('店舗リストデータ形式が異なります。(inner data)');
+          throw ApiException('店舗リストデータ形式が異なります。(inner data key)');
         }
       } else {
         throw ApiException('店舗リストデータ形式が異なります。(outer data)');

@@ -17,6 +17,21 @@ class SignUpViewModel extends ChangeNotifier {
             ProviderProfileService(baseUrl: dotenv.env['API_URL']!);
 
   // 状態変数
+  bool _isDisposed = false;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
   String? _role;
   String? get role => _role;
 
@@ -121,52 +136,52 @@ class SignUpViewModel extends ChangeNotifier {
     _isInitialized = true;
 
     if (widgetMode == 'add_store') {
-      // viewのセットアップでおおよそ処理されるが、ここでは単に戻す
-      // add_store用の初期ページロジックはViewで処理される
       return widgetMode == 'add_store' ? (_role == 'staff' ? 6 : 7) : 0;
     }
 
     final prefs = await SharedPreferences.getInstance();
+
+    // 未認証アカウントが残存している場合は即時サインアウトして最初からやり直し
     final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null && !currentUser.emailVerified) {
+      await FirebaseAuth.instance.signOut();
+      await prefs.remove('signup_role');
+      await prefs.remove('terms_agreed');
+      await prefs.remove('signup_phone');
+      notifyListeners();
+      return 0;
+    }
 
     if (currentUser == null) {
       // 新規開始
       await prefs.remove('signup_role');
       await prefs.remove('terms_agreed');
-      return 0; // 役割選択
+      return 0;
     }
 
-    // 再開フロー
-    final savedRole = prefs.getString('signup_role');
-    final savedTerms = prefs.getBool('terms_agreed') ?? false;
-
-    if (savedRole != null) _role = savedRole;
-    _isTermsAgreed = savedTerms;
-    _isPrivacyAgreed = savedTerms;
-
-    _pendingUser = currentUser;
+    // メール認証済みユーザーの再開フロー（電話番号・プロフィール未完了の場合）
     await currentUser.reload();
+    _isEmailVerified = true;
+    _pendingUser = currentUser;
 
-    _isEmailVerified = currentUser.emailVerified;
     if (currentUser.phoneNumber != null &&
         currentUser.phoneNumber!.isNotEmpty) {
       _isPhoneVerified = true;
     }
 
-    final savedPhone = prefs.getString('signup_phone');
-    if (savedPhone != null && !_isPhoneVerified) {
-      // 認証UIのフォールバックとして保存された電話番号を使用したい場合のロジック
-    }
+    final savedRole = prefs.getString('signup_role');
+    final savedTerms = prefs.getBool('terms_agreed') ?? false;
+    if (savedRole != null) _role = savedRole;
+    _isTermsAgreed = savedTerms;
+    _isPrivacyAgreed = savedTerms;
 
     notifyListeners();
 
-    // ターゲットページを決定
+    // メール認証済みなのでStep5はスキップ
     if (_role == null) return 0;
     if (!savedTerms) return 1;
-    if (!_isEmailVerified) return 5;
     if (!_isPhoneVerified) return 6; // 電話番号認証
-
-    return 8; // ユーザー/店舗情報
+    return 8; // ユーザー情報
   }
 
   Future<void> saveSignUpProgress() async {
@@ -186,6 +201,7 @@ class SignUpViewModel extends ChangeNotifier {
 
   // メールアドレスの重複チェック
   Future<bool> checkEmailDuplicate(String email) async {
+    if (_isLoading) return false; // 二重送信防止
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -223,6 +239,7 @@ class SignUpViewModel extends ChangeNotifier {
   // アカウント作成
   Future<bool> createAccountAndSendEmail(
       String email, String password, String mode) async {
+    if (_isLoading) return false; // 二重送信防止
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -239,6 +256,7 @@ class SignUpViewModel extends ChangeNotifier {
           _pendingUser = user;
           if (!user.emailVerified) {
             await user.sendEmailVerification();
+            await FirebaseAuth.instance.signOut(); // 認証完了前はセッション終了
           }
         } else {
           throw FirebaseAuthException(
@@ -247,17 +265,53 @@ class SignUpViewModel extends ChangeNotifier {
           );
         }
       } else {
-        // バリデーションはView(Form Key)で処理
-        final userCredential =
-            await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-        _pendingUser = userCredential.user;
-        if (_pendingUser == null) throw Exception('アカウント作成に失敗しました。');
+        try {
+          final userCredential =
+              await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+          _pendingUser = userCredential.user;
+          if (_pendingUser == null) throw Exception('アカウント作成に失敗しました。');
 
-        await _pendingUser!.sendEmailVerification();
-        // 検証フローの間セッションを維持するためにsignOut()を削除
+          await _pendingUser!.sendEmailVerification();
+          await FirebaseAuth.instance.signOut(); // 認証完了前はセッション終了
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'email-already-in-use') {
+            // クラッシュなどで未認証のFirebaseアカウントが残存している場合
+            // サインインして認証状態を確認する
+            try {
+              final cred = await FirebaseAuth.instance
+                  .signInWithEmailAndPassword(email: email, password: password);
+              final existingUser = cred.user;
+              if (existingUser != null && !existingUser.emailVerified) {
+                // 未認証の残存アカウント → 認証メール再送してサインアウト
+                _pendingUser = existingUser;
+                await existingUser.sendEmailVerification();
+                await FirebaseAuth.instance.signOut();
+              } else {
+                // 既に認証済みの本登録ユーザー → 重複エラーとして扱う
+                await FirebaseAuth.instance.signOut();
+                throw FirebaseAuthException(
+                  code: 'email-already-in-use',
+                  message: 'このメールアドレスは既に使用されています。',
+                );
+              }
+            } catch (signInError) {
+              if (signInError is FirebaseAuthException &&
+                  signInError.code == 'email-already-in-use') {
+                rethrow;
+              }
+              // パスワード不一致など → 本登録済みユーザーとして扱う
+              throw FirebaseAuthException(
+                code: 'email-already-in-use',
+                message: 'このメールアドレスは既に使用されています。',
+              );
+            }
+          } else {
+            rethrow;
+          }
+        }
       }
       return true;
     } on FirebaseAuthException catch (e) {
@@ -282,6 +336,7 @@ class SignUpViewModel extends ChangeNotifier {
   // メール認証完了確認
   Future<bool> verifyEmailComplete(
       String emailInput, String passwordInput) async {
+    if (_isLoading) return false; // 二重送信防止
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -299,7 +354,7 @@ class SignUpViewModel extends ChangeNotifier {
           return true;
         }
       } else {
-        // 再試行ロジック
+        // currentUser == null (signOut後) → サインインして認証状態を確認
         if (emailInput.isNotEmpty && passwordInput.isNotEmpty) {
           try {
             final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -312,12 +367,15 @@ class SignUpViewModel extends ChangeNotifier {
                 _isEmailVerified = true;
                 return true;
               } else {
-                // サインイン成功したが未認証
+                // サインイン成功したが未認証 → セッション終了してエラー表示
+                await FirebaseAuth.instance.signOut();
+                _errorMessage = 'メール認証がまだ完了していません。メールのリンクをクリックしてください。';
                 return false;
               }
             }
-          } catch (_) {
-            // 無視
+          } on FirebaseAuthException catch (e) {
+            _errorMessage = 'ログインに失敗しました: ${e.message}';
+            return false;
           }
         }
         throw Exception('セッションが切れました。再度ログインしてください。');
@@ -336,6 +394,7 @@ class SignUpViewModel extends ChangeNotifier {
   // メール再送信
   Future<bool> resendEmailLink(
       String emailInput, String passwordInput, String mode) async {
+    if (_isLoading) return false; // 二重送信防止
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -345,17 +404,22 @@ class SignUpViewModel extends ChangeNotifier {
       User? user;
       if (mode == 'resume' && FirebaseAuth.instance.currentUser != null) {
         user = FirebaseAuth.instance.currentUser;
+        if (user != null && !user.emailVerified) {
+          await user.sendEmailVerification();
+          await FirebaseAuth.instance.signOut(); // 認証完了前はセッション終了
+        }
       } else {
-        // 静かに再ログイン
+        // 静かに再ログインして認証メール再送
         final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: emailInput.trim(),
           password: passwordInput,
         );
         user = cred.user;
+        if (user != null && !user.emailVerified) {
+          await user.sendEmailVerification();
+          await FirebaseAuth.instance.signOut(); // 認証完了前はセッション終了
+        }
       }
-
-      await user?.sendEmailVerification();
-      // NOTE: 最近の修正に従いsignOut()を削除
       return true;
     } catch (e) {
       _errorMessage = 'メール送信失敗: $e';
@@ -383,6 +447,9 @@ class SignUpViewModel extends ChangeNotifier {
       final phoneNumberForFirebase = _formatPhoneNumber(internalNumberString);
 
       final completer = Completer<bool>();
+
+      // iOS Simulator에서의 테스트 번호 인증을 위해 앱 검증(reCAPTCHA 우회) 비활성화
+      await FirebaseAuth.instance.setSettings(appVerificationDisabledForTesting: true);
 
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: phoneNumberForFirebase,

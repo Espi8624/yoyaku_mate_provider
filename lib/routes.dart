@@ -98,7 +98,9 @@ final GoRouter router = GoRouter(
 
   // 自動でページ移動
   redirect: (BuildContext context, GoRouterState state) {
-    final loggedIn = FirebaseAuth.instance.currentUser != null;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    // メール認証が完了していない場合はログアウト状態として扱う
+    final loggedIn = currentUser != null && currentUser.emailVerified;
     final location = state.matchedLocation;
     final uri = state.uri;
 

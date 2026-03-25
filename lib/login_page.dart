@@ -39,6 +39,17 @@ class _LoginPageState extends State<LoginPage> {
         email: _idController.text.trim(),
         password: _pwController.text,
       );
+      // メール未認証のアカウントはログイン不可
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && !user.emailVerified) {
+        await FirebaseAuth.instance.signOut();
+        if (mounted) {
+          setState(() {
+            _errorMsg = 'メール認証が完了していません。メールボックスをご確認ください。';
+          });
+        }
+        return;
+      }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         setState(() {
