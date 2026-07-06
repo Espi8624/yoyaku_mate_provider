@@ -44,6 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Firebase cache (배포 시 자동 생성)
+.firebase/
+
 # Security
 .env
 .env.*
