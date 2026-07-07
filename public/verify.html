@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>メール認証 - Yoyaku Mate</title>
+  
+  <!-- Firebase JS SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #334155;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 40px 30px;
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 16px;
+      color: #0f172a;
+    }
+    p {
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+      color: #64748b;
+    }
+    button {
+      background-color: #0f172a;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 30px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #334155;
+    }
+    button:disabled {
+      background-color: #cbd5e1;
+      cursor: not-allowed;
+    }
+    .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .error {
+      color: #ef4444;
+      font-size: 14px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container" id="mainContainer">
+    <div class="icon">✉️</div>
+    <h1 id="title">メールアドレスの確認</h1>
+    <p id="message">下のボタンをタップして、メールアドレスの認証を完了してください。</p>
+    <button id="verifyButton" onclick="verifyEmail()">認証を完了する</button>
+    <div id="errorMsg" class="error"></div>
+  </div>
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCM7EeuPekGbbV2z3Pf42tfnzcfWJ2N7m0",
+      authDomain: "yoyaku-mate-provider.firebaseapp.com",
+      projectId: "yoyaku-mate-provider",
+      storageBucket: "yoyaku-mate-provider.firebasestorage.app",
+      messagingSenderId: "545178034865",
+      appId: "1:545178034865:web:a63454400e8d6e003df890",
+      measurementId: "G-8XKK441NE6"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    // Get URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const oobCode = urlParams.get('oobCode');
+    const mode = urlParams.get('mode');
+
+    // UI Elements
+    const verifyButton = document.getElementById('verifyButton');
+    const title = document.getElementById('title');
+    const message = document.getElementById('message');
+    const errorMsg = document.getElementById('errorMsg');
+    const icon = document.querySelector('.icon');
+
+    // Validation check on load
+    if (mode !== 'verifyEmail' || !oobCode) {
+      icon.innerHTML = '⚠️';
+      title.innerText = '不正なリンク';
+      message.innerText = '有効な認証コードが見つかりません。アプリに戻って再度お試しください。';
+      verifyButton.style.display = 'none';
+    }
+
+    // Verify function
+    function verifyEmail() {
+      verifyButton.disabled = true;
+      verifyButton.innerText = '認証中...';
+      errorMsg.innerText = '';
+
+      firebase.auth().applyActionCode(oobCode)
+        .then(() => {
+          icon.innerHTML = '✅';
+          title.innerText = '認証完了！';
+          message.innerText = 'メールアドレスの認証が完了しました。アプリに戻り「認証完了」ボタンをタップしてください。';
+          verifyButton.style.display = 'none';
+        })
+        .catch((error) => {
+          console.error(error);
+          verifyButton.disabled = false;
+          verifyButton.innerText = '再試行する';
+          
+          if (error.code === 'auth/invalid-action-code' || error.code === 'auth/expired-action-code') {
+            errorMsg.innerText = 'このリンクは既に期限切れか使用済みです。アプリから認証メールを再送してください。';
+          } else {
+            errorMsg.innerText = 'エラーが発生しました: ' + error.message;
+          }
+        });
+    }
+  </script>
+</body>
+</html>

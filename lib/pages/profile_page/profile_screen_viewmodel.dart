@@ -1,0 +1,605 @@
+import 'dart:io';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:yoyaku_mate_provider/models/store_license.dart';
+import 'package:yoyaku_mate_provider/models/store_profile.dart';
+import 'package:yoyaku_mate_provider/models/store_settings.dart';
+import 'package:yoyaku_mate_provider/models/user_profile.dart';
+import 'package:yoyaku_mate_provider/services/api_exception.dart';
+import 'package:yoyaku_mate_provider/services/profile_service.dart';
+import 'package:yoyaku_mate_provider/services/store_settings_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+
+class ProfileScreenViewModel extends ChangeNotifier {
+  final ProviderProfileService _profileService;
+  final StoreSettingsService _settingsService;
+  String firebaseUid;
+
+  String _mongoUserId = '';
+
+  String get userId => firebaseUid;
+
+  ProfileScreenViewModel({
+    required ProviderProfileService profileService,
+    required StoreSettingsService settingsService,
+    required String userId,
+    bool autoLoad = false,
+  })  : _profileService = profileService,
+        _settingsService = settingsService,
+        firebaseUid = userId {
+    _loadAppInfo();
+  }
+
+  // --- App Info ---
+  String _appVersion = '';
+  String get appVersion => _appVersion;
+
+  String _buildNumber = '';
+  String get buildNumber => _buildNumber;
+
+  Future<void> _loadAppInfo() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      _appVersion = packageInfo.version;
+      _buildNumber = packageInfo.buildNumber;
+      notifyListeners();
+    } catch (e) {
+      // print("Error loading app info: $e");
+    }
+  }
+
+  // --- State ---
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+
+  UserProfile? _userProfile;
+  UserProfile? get userProfile => _userProfile;
+
+  List<StoreProfile> _myStores = [];
+  List<StoreProfile> get myStores => _myStores;
+
+  StoreProfile? _storeProfile;
+  StoreProfile? get storeProfile => _storeProfile;
+
+  StoreSettings? _storeSettings;
+  StoreSettings? get storeSettings => _storeSettings;
+
+  StoreLicense? _storeLicense;
+  StoreLicense? get storeLicense => _storeLicense;
+
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  // snackbar表示のための状態変数
+  String? _successMessage;
+  String? get successMessage => _successMessage;
+
+  void clearSuccessMessage() {
+    _successMessage = null;
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  String get storeId => _storeProfile?.id ?? '';
+
+  // bool _isInitializedBySignUp = false;
+  // void prepareForSignUp() {
+  //   // print("--- [ViewModel] prepareForSignUp: SignUp 플래그 설정 ---");
+  //   _isInitializedBySignUp = true;
+  // }
+  bool _isProfileIncomplete = false;
+  bool get isProfileIncomplete => _isProfileIncomplete;
+
+  int _profileTabIndex = 0;
+  int get profileTabIndex => _profileTabIndex;
+
+  void setProfileTabIndex(int index) {
+    if (_profileTabIndex != index) {
+      _profileTabIndex = index;
+      notifyListeners();
+    }
+  }
+
+  // プロフィール情報初期化
+  void clearProfile() {
+    _userProfile = null;
+    _storeProfile = null;
+    _storeLicense = null;
+    _myStores = [];
+    _mongoUserId = '';
+    _isProfileIncomplete = false;
+    _profileTabIndex = 0; // Reset tab index on clear
+    notifyListeners();
+  }
+
+  // SignUp完了後、データ注入用メソッド
+  void setInitialData(UserProfile user, List<StoreProfile> stores) {
+    // print("--- [ViewModel] setInitialData 호출됨 ---");
+    // print("  - User: ${user.name}");
+    // print("  - Stores: ${stores.length}개");
+
+    _userProfile = user;
+    _mongoUserId = user.id;
+    _myStores = stores;
+    _isLoading = false;
+    _errorMessage = null;
+    _isProfileIncomplete = false;
+    // _isInitializedBySignUp = true; // SignUpに初期化されていることを表示
+
+    // print("  - _isInitializedBySignUp 플래그 설정됨");
+    notifyListeners();
+  }
+
+  // Firebase UID変更時呼出
+  void updateUser(String newUid) {
+    // UIDが変わっていない場合は何もしない
+    if (firebaseUid == newUid) {
+      return;
+    }
+
+    firebaseUid = newUid;
+
+    clearProfile();
+
+    // 新しいUIDがあれば（ログインした場合）、データローディングを開始
+    if (newUid.isNotEmpty) {
+      loadProfiles();
+    }
+  }
+
+  void addStore(StoreProfile newStore) {
+    if (!_myStores.any((store) => store.id == newStore.id)) {
+      _myStores.add(newStore);
+
+      // 現在選択された店舗初期化
+      _storeProfile = null;
+      _storeLicense = null;
+
+      notifyListeners();
+    }
+  }
+
+  // 店舗選択のみを解除するメソッド
+  void clearStoreSelection() {
+    _storeProfile = null;
+    _storeLicense = null;
+    _storeSettings = null;
+    notifyListeners();
+  }
+
+  Future<void> loadProfiles({bool forceRefresh = false}) async {
+    if (firebaseUid.isEmpty) {
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final myStoresResponse = await _profileService.fetchAllStores();
+
+      if (myStoresResponse.containsKey('data') &&
+          myStoresResponse['data'] is Map) {
+        final outerData = myStoresResponse['data'] as Map<String, dynamic>;
+        if (outerData.containsKey('data')) {
+          final storesList = outerData['data'];
+          if (storesList == null) {
+            _myStores = [];
+          } else if (storesList is List) {
+            _myStores = storesList.map((data) => StoreProfile.fromJson(data)).toList();
+          } else {
+            throw ApiException('店舗リストデータ形式が異なります。(inner data list form)');
+          }
+
+          // 店舗リストローディング後、ユーザープロフィールロード
+          await _fetchInitialUserProfile();
+
+          if (_userProfile == null) {
+            throw ApiException(
+                'User profile could not be loaded or parsed correctly.');
+          }
+        } else {
+          throw ApiException('店舗リストデータ形式が異なります。(inner data key)');
+        }
+      } else {
+        throw ApiException('店舗リストデータ形式が異なります。(outer data)');
+      }
+    } on ApiException catch (e) {
+      // ユーザーが見つからない場合は未完了フラグを立てる
+      if (e.message.contains('User not found') ||
+          e.message.contains('Status: 404')) {
+        _isProfileIncomplete = true;
+        // _errorMessageは設定しない (画面遷移するため)
+      } else {
+        _errorMessage = 'データローディング失敗: ${e.message}';
+      }
+    } catch (e) {
+      _errorMessage = '予期しないエラーが発生しました。: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> selectStore(String storeId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      // 既に持っているmyStoresリストから選択された店舗情報を即座に探索
+      final selectedStore = _myStores.firstWhere(
+        (store) => store.id == storeId,
+        orElse: () => throw ApiException("選択された店舗をローカルリストから検索できませんでした。"),
+      );
+
+      // 探した店情報を_storeProfileに直接割当（API呼出なし)
+      _storeProfile = selectedStore;
+
+      try {
+        final storeLicenseResponse =
+            await _profileService.fetchStoreLicense(storeId);
+
+        if (storeLicenseResponse.containsKey('data') &&
+            storeLicenseResponse['data'] is Map) {
+          _storeLicense = StoreLicense.fromJson(
+              storeLicenseResponse['data'] as Map<String, dynamic>);
+        }
+      } catch (e) {
+        // ライセンス取得失敗（404またはネットワークエラー）
+        // 店舗に入るのを妨げない。ライセンスをnullに設定するだけ
+        _storeLicense = null;
+      }
+
+      // Store Settings Fetch
+      try {
+        _storeSettings = await _settingsService.fetchStoreSettings(storeId);
+      } catch (e) {
+        // Settings取得失敗（404またはネットワークエラー）
+        // 店舗に入るのを妨げない。Settingsをnullに設定するだけ
+        _storeSettings = null;
+      }
+
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = '店舗詳細情報の読み込みに失敗しました: ${e.message}';
+      _storeProfile = null; // 失敗時選択されたプロフィールも初期化
+
+      return false;
+    } catch (e) {
+      _errorMessage = '予期せぬエラーが発生しました: $e';
+      _storeProfile = null; // 失敗時選択されたプロフィールも初期化
+
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _fetchInitialUserProfile() async {
+    if (firebaseUid.isEmpty) return;
+    try {
+      final userProfileResponse =
+          await _profileService.fetchUserProfile(firebaseUid);
+
+      if (userProfileResponse.containsKey('data') &&
+          userProfileResponse['data'] is Map) {
+        _userProfile = UserProfile.fromJson(
+            userProfileResponse['data'] as Map<String, dynamic>);
+        _mongoUserId = _userProfile?.id ?? '';
+      } else {
+        throw ApiException('無効なユーザーデータ形式です。');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> updateUserProfileFields(Map<String, dynamic> updates) async {
+    _isLoading = true;
+    notifyListeners();
+    _errorMessage = null;
+    bool success = false;
+
+    try {
+      if (_mongoUserId.isEmpty) {
+        throw ApiException('ユーザーIDが見つかりません。');
+      }
+
+      // Optimistic Update
+      Map<String, dynamic> backendUpdates = {};
+
+      if (_userProfile != null) {
+        UserProfile updated = _userProfile!;
+        updates.forEach((key, value) {
+          if (key == 'name') {
+            updated = updated.copyWith(name: value);
+            backendUpdates['user_name'] = value;
+          } else if (key == 'name_furigana') {
+            updated = updated.copyWith(nameFurigana: value);
+            backendUpdates['user_name_furigana'] = value;
+          } else if (key == 'email') {
+            updated = updated.copyWith(email: value);
+            backendUpdates['email'] = value;
+          } else if (key == 'phone_number') {
+            updated = updated.copyWith(phone_number: value);
+            backendUpdates['phone'] = value;
+          } else {
+            // その他のキーはそのまま使用 (必要であればマッピング追加)
+            backendUpdates[key] = value;
+          }
+        });
+        _userProfile = updated;
+        notifyListeners();
+      }
+
+      final updatedUser =
+          await _profileService.updateUserProfile(_mongoUserId, backendUpdates);
+      // サーバーが返した更新データでローカル状態を更新
+      _userProfile = updatedUser;
+      success = true;
+    } on ApiException catch (e) {
+      _errorMessage = '更新に失敗しました: ${e.message}';
+    } catch (e) {
+      _errorMessage = '予期せぬエラーが発生しました: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+
+    return success;
+  }
+
+  Future<bool> updateProfileField({
+    String? userFieldKey,
+    String? storeFieldKey,
+    required String value,
+  }) async {
+    // ユーザー情報の単純更新の場合、新しいメソッドに委譲
+    if (userFieldKey != null) {
+      return updateUserProfileFields({userFieldKey: value});
+    }
+
+    // 店舗更新ロジックは今のところ固有のままか、同様のリファクタリングが必要
+    // 安全のため、店舗ロジックはそのまま維持
+    _isLoading = true;
+    notifyListeners();
+    _errorMessage = null;
+    bool success = false;
+
+    try {
+      if (storeFieldKey != null && storeId.isNotEmpty) {
+        // サーバーが返した更新StoreProfileでローカル状態を更新 (GET再呼び出しゼロ)
+        final updatedStore = await _profileService
+            .updateStoreProfile(storeId, {storeFieldKey: value});
+        _storeProfile = updatedStore;
+        final index = _myStores.indexWhere((s) => s.id == storeId);
+        if (index != -1) {
+          _myStores[index] = updatedStore;
+        }
+      }
+      success = true;
+    } on ApiException catch (e) {
+      _errorMessage = '更新に失敗しました: ${e.message}';
+    } catch (e) {
+      _errorMessage = '予期せぬエラーが発生しました: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+
+    return success;
+  }
+
+  Future<bool> updateStoreAddress({
+    required String zipCode,
+    required String prefecture,
+    required String city,
+    required String address,
+    required String building,
+  }) async {
+    if (storeId.isEmpty) return false;
+
+    _isLoading = true;
+    notifyListeners();
+    _errorMessage = null;
+    bool success = false;
+
+    try {
+      final updates = {
+        'zip_code': zipCode,
+        'prefecture': prefecture,
+        'city': city,
+        'address': address,
+        'building': building,
+      };
+
+      // サーバーが返した更新StoreProfileでローカル状態を更新 (fetchStoreProfile GET再呼び出しゼロ)
+      final updatedStore =
+          await _profileService.updateStoreProfile(storeId, updates);
+      _storeProfile = updatedStore;
+      final index = _myStores.indexWhere((s) => s.id == storeId);
+      if (index != -1) {
+        _myStores[index] = updatedStore;
+      }
+      success = true;
+    } on ApiException catch (e) {
+      _errorMessage = '住所の更新に失敗しました: ${e.message}';
+    } catch (e) {
+      _errorMessage = '予期せぬエラーが発生しました: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+
+    return success;
+  }
+
+  Future<void> uploadUserImage() async {
+    final picker = ImagePicker();
+    final XFile? pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      requestFullMetadata: false, // iOSシミュレーター停止バグ防止
+    );
+
+    if (pickedFile == null) return;
+
+    final imageFile = File(pickedFile.path);
+
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) throw ApiException('User not logged in.');
+      final idToken = await currentUser.getIdToken(true);
+      if (idToken == null) throw ApiException('Could not get auth token.');
+
+      final updatedUserProfile =
+          await _profileService.uploadUserImage(imageFile, idToken);
+
+      _userProfile = updatedUserProfile;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'An unexpected error occurred: $e';
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> uploadStoreImage() async {
+    if (_storeProfile == null) {
+      _errorMessage = "店舗が選択されていません。";
+      notifyListeners();
+      return;
+    }
+
+    final picker = ImagePicker();
+    final XFile? pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      requestFullMetadata: false, // iOSシミュレーター停止バグ防止
+    );
+    if (pickedFile == null) return;
+
+    final imageFile = File(pickedFile.path);
+
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) throw ApiException('User not logged in.');
+      final idToken = await currentUser.getIdToken(true);
+      if (idToken == null) throw ApiException('Could not get auth token.');
+
+      final updatedStoreProfile = await _profileService.uploadStoreImage(
+          imageFile, _storeProfile!.id, idToken);
+
+      // レスポンスにverificationStatusとstaffStatusが欠けている場合は、保持する
+      if (_storeProfile != null) {
+        _storeProfile = StoreProfile(
+          id: updatedStoreProfile.id,
+          name: updatedStoreProfile.name,
+          address: updatedStoreProfile.address,
+          phone_number: updatedStoreProfile.phone_number,
+          bizNumber: updatedStoreProfile.bizNumber,
+          storeImageUrl: updatedStoreProfile.storeImageUrl,
+          verificationStatus: updatedStoreProfile.verificationStatus ??
+              _storeProfile!.verificationStatus,
+          staffStatus:
+              updatedStoreProfile.staffStatus ?? _storeProfile!.staffStatus,
+        );
+      } else {
+        _storeProfile = updatedStoreProfile;
+      }
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'An unexpected error occurred: $e';
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> uploadStoreLicense(File imageFile) async {
+    if (storeId.isEmpty) {
+      _errorMessage = "アップロードする店舗が選択されてません。";
+      notifyListeners();
+      return false;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      // \uc11c\ubc84\uac00 \ubc18\ud658\ud55c \uad6c\uc2e0 StoreLicense\ub85c \ub85c\ucec8 \uc0c1\ud0dc \uc5c5\ub370\uc774\ud2b8 (GET \uc7ac\ud638\ucd9c \uc81c\ub85c)
+      final updatedLicense =
+          await _profileService.uploadLicenseImage(storeId, imageFile);
+      _storeLicense = updatedLicense;
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = "アップロード失敗: ${e.message}";
+      return false;
+    } catch (e) {
+      _errorMessage = "予期しないエラーが発生しました。: $e";
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> joinStore(String storeId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _profileService.joinStore(storeId);
+      _successMessage = "参加リクエストを送信しました。承認をお待ちください。";
+      await loadProfiles();
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = "参加リクエスト送信失敗: ${e.message}";
+      return false;
+    } catch (e) {
+      _errorMessage = "予期しないエラーが発生しました: $e";
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateStoreSettings(StoreSettings newSettings) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _settingsService.updateStoreSettings(newSettings);
+      _storeSettings = newSettings;
+      _successMessage = '設定が保存されました';
+    } catch (e) {
+      _errorMessage = '設定の保存に失敗しました: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+}

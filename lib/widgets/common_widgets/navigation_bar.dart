@@ -1,0 +1,479 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
+
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
+
+class SideNavigationBar extends StatelessWidget {
+  final bool isExpanded;
+  final int selectedIndex;
+  final Function(int) onItemTapped;
+  final VoidCallback onToggle;
+  final VoidCallback? onLogout;
+
+  const SideNavigationBar({
+    super.key,
+    required this.isExpanded,
+    required this.selectedIndex,
+    required this.onItemTapped,
+    required this.onToggle,
+    this.onLogout,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // context.watch を使用し、ProfileViewModel の変化を感知
+    final profileVM = context.watch<ProfileScreenViewModel>();
+
+    final userProfile = profileVM.userProfile;
+    final storeProfile = profileVM.storeProfile;
+
+    // 基本値
+    final String userName = userProfile?.name ?? '...';
+    final String storeName = storeProfile?.name ?? '...';
+    final String userRole = userProfile?.role ?? 'staff';
+
+    return Container(
+      width: isExpanded ? 280 : 80,
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accentPrimary.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height - 24,
+          ),
+          child: IntrinsicHeight(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Center(
+                    child: IconButton(
+                      icon: Icon(
+                        isExpanded ? Icons.close : Icons.menu_rounded,
+                        color: AppColors.accentPrimary,
+                        size: 28,
+                      ),
+                      onPressed: onToggle,
+                      splashRadius: 20,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // プロフィール区画
+                if (isExpanded) ...[
+                  InkWell(
+                    onTap: () {
+                      // Manager: 0=Wait, 1=Menu, 2=Stats, 3=Staff, 4=Profile
+                      // Staff:   0=Wait, 1=Menu, 2=Stats, 3=Profile
+                      final profileIndex = userRole == 'manager' ? 4 : 3;
+                      onItemTapped(profileIndex);
+                      onToggle();
+                    },
+                    splashColor: AppColors.accentPrimary.withOpacity(0.05),
+                    highlightColor: AppColors.accentPrimary.withOpacity(0.02),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                      padding: const EdgeInsets.all(12.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: selectedIndex ==
+                                (userRole == 'manager' ? 4 : 3)
+                            ? [
+                                BoxShadow(
+                                  color:
+                                      AppColors.accentPrimary.withOpacity(0.2),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          ClipOval(
+                            child: Container(
+                              width: 50,
+                              height: 50,
+                              color: AppColors.accentPrimary.withOpacity(0.2),
+                              child: const Icon(Icons.person,
+                                  size: 30, color: AppColors.background),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        userName,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: userRole == "manager"
+                                            ? AppColors.roleManager
+                                            : AppColors.roleStaff,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        userRole == "manager" ? "管理者" : "職員",
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textPrimaryLight,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  storeName,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w400,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  InkWell(
+                    onTap: () {
+                      final profileIndex = userRole == 'manager' ? 4 : 3;
+                      onItemTapped(profileIndex);
+                    },
+                    splashColor: AppColors.accentPrimary.withOpacity(0.05),
+                    highlightColor: AppColors.accentPrimary.withOpacity(0.02),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                      padding: const EdgeInsets.all(4.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: selectedIndex ==
+                                (userRole == 'manager' ? 4 : 3)
+                            ? [
+                                BoxShadow(
+                                  color:
+                                      AppColors.accentPrimary.withOpacity(0.2),
+                                  blurRadius: 30,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: AppColors.accentPrimary.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                            border: Border.fromBorderSide(
+                              BorderSide(
+                                color: userRole == "manager"
+                                    ? AppColors.roleManager
+                                    : AppColors.roleStaff,
+                                width: 5.0,
+                                strokeAlign: BorderSide.strokeAlignInside,
+                              ),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            size: 24,
+                            color: AppColors.background,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 15),
+
+                const Divider(
+                  height: 1,
+                  thickness: 0.5,
+                  color: AppColors.border,
+                  indent: 16,
+                  endIndent: 16,
+                ),
+                const SizedBox(height: 15),
+
+                isExpanded
+                    ? _NavItem(
+                        icon: Icons.list_alt_rounded,
+                        label: '待機リスト',
+                        selected: selectedIndex == 0,
+                        onTap: () {
+                          onItemTapped(0);
+                          onToggle();
+                        },
+                      )
+                    : _NavIcon(
+                        icon: Icons.list_alt_rounded,
+                        selected: selectedIndex == 0,
+                        label: '待機リスト',
+                        onTap: () => onItemTapped(0),
+                        isExpanded: isExpanded,
+                      ),
+                const SizedBox(height: 12),
+
+                isExpanded
+                    ? _NavItem(
+                        icon: Icons.table_view_rounded,
+                        label: 'メニュー管理',
+                        selected: selectedIndex == 1,
+                        onTap: () {
+                          onItemTapped(1);
+                          onToggle();
+                        },
+                      )
+                    : _NavIcon(
+                        icon: Icons.table_view_rounded,
+                        selected: selectedIndex == 1,
+                        label: 'メニュー管理',
+                        onTap: () => onItemTapped(1),
+                        isExpanded: isExpanded,
+                      ),
+                const SizedBox(height: 12),
+
+                // Missing Statistics Button Added (Index 2)
+                isExpanded
+                    ? _NavItem(
+                        icon: Icons.bar_chart_rounded,
+                        label: '統計',
+                        selected: selectedIndex == 2,
+                        onTap: () {
+                          onItemTapped(2);
+                          onToggle();
+                        },
+                      )
+                    : _NavIcon(
+                        icon: Icons.bar_chart_rounded,
+                        selected: selectedIndex == 2,
+                        label: '統計',
+                        onTap: () => onItemTapped(2),
+                        isExpanded: isExpanded,
+                      ),
+                const SizedBox(height: 12),
+
+                if (userRole == 'manager') ...[
+                  isExpanded
+                      ? _NavItem(
+                          icon: Icons.people_alt_rounded,
+                          label: 'スタッフ',
+                          selected: selectedIndex == 3, // Corrected from 2
+                          onTap: () {
+                            onItemTapped(3);
+                            onToggle();
+                          },
+                        )
+                      : _NavIcon(
+                          icon: Icons.people_alt_rounded,
+                          selected: selectedIndex == 3, // Corrected from 2
+                          label: 'スタッフ',
+                          onTap: () => onItemTapped(3),
+                          isExpanded: isExpanded,
+                        ),
+                  const SizedBox(height: 12),
+                ],
+
+                // const Divider(
+                //   height: 1,
+                //   thickness: 0.5,
+                //   color: AppColors.border,
+                //   indent: 16,
+                //   endIndent: 16,
+                // ),
+                // const SizedBox(height: 12),
+
+                // isExpanded
+                //     ? _NavItem(
+                //         icon: Icons.logout_rounded,
+                //         label: 'ログアウト',
+                //         selected: false,
+                //         onTap: () {
+                //           if (onLogout != null) {
+                //             onLogout!();
+                //           } else {
+                //             CustomSnackBar.show(
+                //               context,
+                //               message: 'ログアウトしました',
+                //               status: SnackBarStatus.info,
+                //             );
+                //           }
+                //         },
+                //       )
+                //     : _NavIcon(
+                //         icon: Icons.logout_rounded,
+                //         selected: false,
+                //         label: 'ログアウト',
+                //         onTap: () {
+                //           if (onLogout != null) {
+                //             onLogout!();
+                //           } else {
+                //             CustomSnackBar.show(
+                //               context,
+                //               message: 'ログアウトしました',
+                //               status: SnackBarStatus.info,
+                //             );
+                //           }
+                //         },
+                //         isExpanded: isExpanded,
+                //       ),
+                // const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      splashColor: AppColors.accentPrimary.withOpacity(0.05),
+      highlightColor: AppColors.accentPrimary.withOpacity(0.02),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: AppColors.accentPrimary.withOpacity(0.1),
+                    blurRadius: 16,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color:
+                  selected ? AppColors.accentPrimary : AppColors.textSecondary,
+              size: 26,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: selected
+                    ? AppColors.accentPrimary
+                    : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavIcon extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+  final bool isExpanded;
+
+  const _NavIcon({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    this.onTap,
+    required this.isExpanded,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      splashColor: AppColors.accentPrimary.withOpacity(0.05),
+      highlightColor: AppColors.accentPrimary.withOpacity(0.02),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4.0),
+        padding: const EdgeInsets.all(12.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: AppColors.accentPrimary.withOpacity(0.1),
+                    blurRadius: 16,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: Center(
+          child: Icon(
+            icon,
+            color: selected ? AppColors.accentPrimary : AppColors.textSecondary,
+            size: 26,
+          ),
+        ),
+      ),
+    );
+  }
+}
