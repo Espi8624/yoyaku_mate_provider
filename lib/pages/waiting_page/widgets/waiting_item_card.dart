@@ -4,6 +4,8 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../../constants/app_colors.dart';
 import '../../../models/waiting_list.dart';
 import '../../../widgets/common_dialogs/base_dialog.dart';
+import '../../../constants/api_config.dart';
+
 
 class WaitingItemCard extends StatefulWidget {
   final WaitingList item;
@@ -214,7 +216,7 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
     // TODO: 実際の運用環境に合わせてホストを変更してください (e.g. https://yoyaku-mate.web.app)
     // ローカルテスト用: http://localhost:3000
     // 実機でテストする場合: http://[PC_IP_ADDRESS]:3000
-    const String webBaseUrl = "https://yoyaku-mate.vercel.app";
+    final String webBaseUrl = ApiConfig.webBaseUrl;
     String url =
         "$webBaseUrl/waiting-screen-flow?store_id=$storeId&waiting_id=$waitingId";
 
