@@ -26,13 +26,13 @@
 ## Solution
 * **One-tap 실시간 고객 관리 및 Push 호출:** 버튼 터치 한 번으로 대기 중인 고객에게 호출 알림을 즉시 발송하고, 대기 완료 및 취소 상태를 실시간으로 업데이트합니다.
 * **fl_chart 기반 혼잡도 통계 시각화:** 대기열 히스토리를 데이터화하여 일별/주별 대기 통계 및 피크 시간대 분석 결과를 반응형 차트 대시보드로 시각화하여 매장 회전율 향상에 기여합니다.
-* **모바일 QR 스캐너를 이용한 빠른 대기 확정:** 매장에 도달한 고객이 소지한 QR 티켓을 기기 카메라(`mobile_scanner`)로 신속하게 스캔하여 본인 확인 및 입장을 처리함으로써 대기 관리의 디지털 전환을 이끌어 냅니다.
+* **매장 연동 QR 스캐너를 통한 신속한 스태프 등록:** 수동으로 복잡한 매장 ID를 타이핑하는 번거로움 없이, 기기 카메라(`mobile_scanner`)로 매장 QR을 즉시 스캔하여 빠른 매장 매핑 및 직원 연동을 지원합니다.
 * **Android/iOS 호환 감열식 영수증 인쇄 연동:** `pdf` 및 `printing` 라이브러리를 통해 현장 대기 접수 즉시 프린터로 전송하여 실물 번호표 티켓을 인쇄해 줄 수 있는 시스템을 구축했습니다.
 * **Firebase Auth 기반 다중 스태프 권한 관리:** 매장 내 여러 명의 직원이 각자의 계정으로 접속할 수 있도록 지원하며, 점주와 일반 직원의 권한을 분리하여 시스템 안전성을 높였습니다.
 
 ## Features
 * **실시간 대기열 제어 (Queue Management):** 실시간 대기자 리스트 관리, 원클릭 호출 알림 및 입장 완료/취소 조작
-* **QR 티켓 리더 (QR Code Scanner):** 고객의 모바일 QR 코드를 카메라로 스캔하여 입장 대기 검증 및 상태 동기화
+* **매장 연동 QR 스캐너 (QR Code Scanner):** 스태프 가입 및 매장 추가 매핑 시 QR 코드 스캔으로 신속한 매장 연동 완료
 * **메뉴 & 카테고리 관리:** 매장 식사 메뉴 및 가격의 동적 업데이트, 품절 및 카테고리 설정 지원
 * **직원 관리 (Staff Management):** 다중 스태프 등록 및 역할/권한 부여 백오피스 지원
 * **통계 분석 대시보드:** 기간별/시간대별 누적 대기 통계 데이터를 시각화 차트(`fl_chart`)로 리포트
@@ -76,12 +76,12 @@ graph TD
     App["Flutter UI / Provider"] --> Services["Service Layer (Firebase, HTTP)"]
     Services --> Cache["Local SQLite / SharedPrefs"]
     Services -->|"REST API / SSE"| Server["Backend Server (fly.io)"]
-    Services -->|"Scan Target"| Scanner["Mobile Camera / Scanner SDK"]
-    Services -->|"Send Print Document"| Printer["Receipt Printer (IP, Bluetooth)"]
+    Services -->|"Scan Store ID"| Scanner["Mobile Camera / Scanner SDK"]
+    Services -->|"Send Print Document"| Printer["Receipt Printer (OS Print System / AirPrint)"]
 ```
 
 ## Lessons Learned
-* **하드웨어 연동 최적화 (카메라 및 프린터):** Android 및 iOS 기기의 내장 카메라를 활용하여 QR 코드 스캔 기능을 매끄럽게 연결하고, 무선(Network/Bluetooth) 감열식 프린터를 통해 실물 대기 번호표가 누락 없이 안정적으로 출력되도록 모바일 인쇄 시스템을 연동한 경험을 쌓았습니다.
+* **하드웨어 연동 최적화 (카메라 및 프린터):** Android 및 iOS 기기의 내장 카메라를 활용하여 QR 코드 스캔(매장 연동용) 기능을 매끄럽게 연결하고, OS 인쇄 시스템(AirPrint 등)과 연동된 감열식 프린터를 통해 실물 대기 번호표가 누락 없이 안정적으로 출력되도록 모바일 인쇄 시스템을 연동한 경험을 쌓았습니다.
 * **로컬 캐싱을 이용한 응답성 향상:** 네트워크 연결이 불안정한 식당 내부 환경에서도 원활하게 메뉴 조회가 가능하도록 SQLite를 활용한 로컬 DB 캐싱 파이프라인을 설계하여 앱의 사용성을 보장했습니다.
 * **대용량 데이터 차트 드로잉 성능 개선:** `fl_chart` 위젯이 대기 통계 데이터를 실시간으로 읽고 렌더링할 때 불필요한 프레임 드롭이나 불필요한 리빌드(Rebuild)를 제어하기 위해, Provider의 Selector 패턴을 적극적으로 도입하여 메모리 소모를 최적화했습니다.
 

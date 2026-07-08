@@ -26,13 +26,13 @@
 ## Solution
 * **ワンタップでのリアルタイム顧客管理とPush通知による呼び出し:** ボタンをタップするだけで待機中のお客様に呼び出し通知を即時に送信し、待機完了やキャンセルステータスをリアルタイムに更新します。
 * **fl_chartベースの混雑統計の可視化:** 待機列の履歴をデータ化し、日別・週別の待機統計およびピーク時間帯の分析結果をリアクティブなグラフダッシュボードとして可視化することで、店舗の回転率向上に寄与します。
-* **モバイルQRスキャナーを利用した迅速なチェックイン:** 店舗に到着したお客様が所持するQRチケットをスマートフォンのカメラ（`mobile_scanner`）で迅速にスキャンし、本人確認と入場処理を行うことで、待機管理のデジタルトランスフォーメーション（DX）を推進します。
+* **店舗連携QRスキャナーによる迅速なスタッフ登録:** 複雑な店舗IDを手動で入力する手間を省き、端末のカメラ（`mobile_scanner`）で店舗QRをスキャンするだけで即座にスタッフ登録および店舗連携を完了します。
 * **Android/iOS互換の感熱式レシート印刷連携:** `pdf`および`printing`ライブラリを介して、現場での待機受付時にプリンターへデータを送信し、実物の待機番号チケットを即座に印刷できるシステムを構築しました。
 * **Firebase Authベースのマルチスタッフ権限管理:** 店舗内の複数のスタッフが個々のアカウントでログインできるようにサポートし、店主と一般スタッフの権限を分離することでシステムの安全性を高めました。
 
 ## Features
 * **リアルタイム待機列制御（Queue Management）:** リアルタイムの待機者リスト管理、ワンクリックの呼び出し通知、および入場完了/キャンセル操作
-* **QRチケットリーダー（QR Code Scanner）:** お客様のモバイルQRコードをカメラでスキャンし、入場待機検証とステータスの同期
+* **店舗連携QRスキャナー（QR Code Scanner）:** スタッフ登録および店舗追加連携時のQRコードスキャンによる迅速な店舗連携のサポート
 * **メニュー＆カテゴリ管理:** 店舗メニューや価格の動的更新、品切れおよびカテゴリ設定のサポート
 * **スタッフ管理（Staff Management）:** 複数スタッフの登録および役割/権限付与のバックオフィス機能
 * **統計分析ダッシュボード:** 期間別・時間帯別の累積待機統計データをグラフ（`fl_chart`）でレポート
@@ -44,9 +44,9 @@
 * **Authentication:** Firebase Auth
 * **Database (Local):** SQLite (`sqflite`), `shared_preferences`
 * **Routing:** Go Router
-* **AI Engine:** Google Generative AI (Gemini SDKを活用した多言語翻訳案内のサポート)
-* **Hardware Integration:** `mobile_scanner` (カメラQR認識), `pdf` & `printing` (感熱印刷)
-* **Visualization:** `fl_chart` (グラフ描画)
+* **AI Engine:** Google Generative AI (Gemini SDK)
+* **Hardware Integration:** `mobile_scanner`, `pdf` & `printing`
+* **Visualization:** `fl_chart`
 
 ## Architecture
 ### 1. フォルダ構成
@@ -76,12 +76,12 @@ graph TD
     App["Flutter UI / Provider"] --> Services["Service Layer (Firebase, HTTP)"]
     Services --> Cache["Local SQLite / SharedPrefs"]
     Services -->|"REST API / SSE"| Server["Backend Server (fly.io)"]
-    Services -->|"Scan Target"| Scanner["Mobile Camera / Scanner SDK"]
-    Services -->|"Send Print Document"| Printer["Receipt Printer (IP, Bluetooth)"]
+    Services -->|"Scan Store ID"| Scanner["Mobile Camera / Scanner SDK"]
+    Services -->|"Send Print Document"| Printer["Receipt Printer (OS Print System / AirPrint)"]
 ```
 
 ## Lessons Learned
-* **ハードウェア連携の最適化（カメラおよびプリンター）:** AndroidおよびiOS端末のカメラを利用したQRコードスキャン機能をスムーズに連携し、無線（Network/Bluetooth）感熱式プリンターを介して実物の待機整理券が漏れなく安定して出力されるように、モバイル印刷システムを構築した経験を得ました。
+* **ハードウェア連携の最適化（カメラおよびプリンター）:** AndroidおよびiOS端末のカメラを利用したQRコードスキャン（店舗連携用）機能をスムーズに連携し、OS印刷システム（AirPrint等）と連動した感熱式プリンターを介して実物の待機整理券が漏れなく安定して出力されるように、モバイル印刷システムを構築した経験を得ました。
 * **ローカルキャッシュによる応答性の向上:** ネットワーク接続が不安定な店舗内の環境においても円滑にメニュー検索が行えるよう、SQLiteを活用したローカルDBキャッシュパイプラインを設計し、アプリのユーザビリティを保証しました。
 * **大容量データグラフ描画のパフォーマンス改善:** `fl_chart`ウィジェットが待機統計データをリアルタイムに読み込んでレンダリングする際、不要なフレームドロップや無駄なリビルド（Rebuild）を制御するため、ProviderのSelectorパターンを積極的に導入し、メモリ消費を最適化しました。
 
