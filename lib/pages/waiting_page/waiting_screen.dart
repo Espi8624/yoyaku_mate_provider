@@ -17,6 +17,8 @@ import 'widgets/waiting_status_area.dart';
 import 'waiting_screen_viewmodel.dart';
 import '../../widgets/common_widgets/toast_widget.dart';
 import '../../widgets/common_widgets/notes_display_with_translation.dart';
+import 'package:yoyaku_mate_provider/constants/api_config.dart';
+
 
 class WaitingScreen extends StatelessWidget {
   final String storeId;
@@ -49,7 +51,7 @@ class _WaitingView extends StatelessWidget {
         const double mobileBreakpoint = 700;
         final bool isMobile = constraints.maxWidth < mobileBreakpoint;
         String qrCodeData =
-            "https://yoyaku-mate.vercel.app/waiting-screen-flow?store_id=${vm.storeId}";
+            "${ApiConfig.webBaseUrl}/waiting-screen-flow?store_id=${vm.storeId}";
         if (vm.qrToken != null) {
           qrCodeData += "&v_token=${vm.qrToken}";
         }
@@ -287,7 +289,7 @@ class _WaitingView extends StatelessWidget {
   Future<void> _showMonitorUrlDialog(
       BuildContext context, WaitingScreenViewModel vm) async {
     final String url =
-        "https://yoyaku-mate.vercel.app/board?store_id=${vm.storeId}";
+        "${ApiConfig.webBaseUrl}/board?store_id=${vm.storeId}";
 
     await showDialog(
       context: context,
