@@ -231,17 +231,33 @@ class WaitingScreenViewModel extends ChangeNotifier
     _isPerformingOptimisticUpdate = true;
 
     try {
+      final now = DateTime.now();
+      // JST (UTC+9) タイムゾーンに変換
+      final jstNow = now.toUtc().add(const Duration(hours: 9));
+      final dateStr =
+          "${jstNow.year}${jstNow.month.toString().padLeft(2, '0')}${jstNow.day.toString().padLeft(2, '0')}";
+      final timeStr =
+          "${jstNow.hour.toString().padLeft(2, '0')}${jstNow.minute.toString().padLeft(2, '0')}${jstNow.second.toString().padLeft(2, '0')}";
+      final msStr = jstNow.millisecond.toString().padLeft(3, '0');
+      // 重複を防ぐためのマイクロ秒ベースのランダムな接尾辞 (100〜999)
+      final randomSuffix =
+          (100 + (now.microsecondsSinceEpoch % 900)).toString();
+      // 冪等キーとして使用するユニーク待機ID (フォーマット: YYYYMMDD-HHmmss-SSS-Random)
+      final clientWaitingId = "$dateStr-$timeStr-$msStr-$randomSuffix";
+      // 顧客が登録した実際の時刻 (ISO 8601 形式)
+      final regTimeStr =
+          "${jstNow.year}-${jstNow.month.toString().padLeft(2, '0')}-${jstNow.day.toString().padLeft(2, '0')}T${jstNow.hour.toString().padLeft(2, '0')}:${jstNow.minute.toString().padLeft(2, '0')}:${jstNow.second.toString().padLeft(2, '0')}.$msStr+09:00";
+
       final newWaitingItem = await _waitingService.createWaitingListItem(
         storeId: storeId,
         partySize: data['partySize'] as int,
         nationality: 'unknown',
         contact: data['contact']?.toString() ?? '',
         notes: data['notes']?.toString() ?? '',
-        // menuItems: data['menuItems'], // Note: WaitingService needs update to support this param
-        // WaitingService has been updated to accept menuItems, but we need to ensure data['menuItems'] is correct type
-        // It is collected as List<MenuItem> in dialog.
         menuItems: data['menuItems'] as List<MenuItem>?,
         vToken: _qrToken,
+        waitingId: clientWaitingId,
+        registrationTime: regTimeStr,
       );
 
       _waitingList.add(newWaitingItem);
