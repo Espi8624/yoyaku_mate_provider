@@ -8,9 +8,9 @@
 | :---: | :---: | :---: |
 | ![待機列管理](./docs/screenshots/screen_1.png) | ![統計ダッシュボード](./docs/screenshots/screen_2.png) | ![メニュー設定](./docs/screenshots/screen_3.png) |
 
-| 4. お客様用QRコード発行 | 5. 店舗詳細設定 | 6. 店舗設定画面 |
+| 4. お客様用QRコード発行 | 5. 店舗詳細設定 | 6. スタッフ権限管理 |
 | :---: | :---: | :---: |
-| ![QRコード発行](./docs/screenshots/screen_4.png) | ![店舗設定](./docs/screenshots/screen_5.png) | ![店舗設定画面](./docs/screenshots/screen_6.png) |
+| ![QRコード発行](./docs/screenshots/screen_4.png) | ![店舗設定](./docs/screenshots/screen_5.png) | ![スタッフ権限管理](./docs/screenshots/screen_6.png) |
 
 ## Tech Stack
 
