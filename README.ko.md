@@ -2,6 +2,16 @@
 
 가게 점주 및 직원을 위한 실시간 대기열 관리, 통계 대시보드, 티켓 출력 기능을 제공하는 모바일/데스크톱 백오피스 앱(Flutter)입니다.
 
+## Screenshots
+<!-- 매장용 앱의 실시간 대기열 관리, 통계 차트 대시보드, 메뉴 관리, QR 스캐너 등의 스크린샷 이미지 배치 영역 -->
+| 1. 실시간 대기열 관리 | 2. 통계 대시보드 | 3. 메뉴 및 카테고리 설정 |
+| :---: | :---: | :---: |
+| ![대기열 관리](./docs/screenshots/screen_1.png) | ![통계 대시보드](./docs/screenshots/screen_2.png) | ![메뉴 설정](./docs/screenshots/screen_3.png) |
+
+| 4. 고객용 QR 코드 발급 | 5. 매장 상세 설정 |
+| :---: | :---: |
+| ![QR 코드 발급](./docs/screenshots/screen_4.png) | ![매장 설정](./docs/screenshots/screen_5.png) |
+
 ## Tech Stack
 
 | 항목 | 기술 |
