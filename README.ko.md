@@ -10,7 +10,7 @@
 
 | 4. 고객용 QR 코드 발급 | 5. 매장 설정 | 6. 스태프 권한 관리 |
 | :---: | :---: | :---: |
-| ![QR 코드 발급](./docs/screenshots/screen_4.png) | ![매장 설정](./docs/screenshots/screen_5.png) | ![스태프 권한 관리](./docs/screenshots/screen_6.png) |
+| ![QR 코드 발급](./docs/screenshots/screen_4.png) | ![매장 설정](./docs/screenshots/screen_5.png?v=1) | ![스태프 권한 관리](./docs/screenshots/screen_6.png?v=1) |
 
 ## Tech Stack
 
