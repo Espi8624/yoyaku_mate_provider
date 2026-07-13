@@ -10,7 +10,7 @@
 
 | 4. お客様用QRコード発行 | 5. 店舗詳細設定 | 6. スタッフ権限管理 |
 | :---: | :---: | :---: |
-| ![QRコード発行](./docs/screenshots/screen_4.png) | ![店舗設定](./docs/screenshots/screen_5.png) | ![スタッフ権限管理](./docs/screenshots/screen_6.png) |
+| ![QRコード発行](./docs/screenshots/screen_4.png) | ![店舗設定](./docs/screenshots/screen_5.png?v=1) | ![スタッフ権限管理](./docs/screenshots/screen_6.png?v=1) |
 
 ## Tech Stack
 
