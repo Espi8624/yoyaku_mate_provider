@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_management_viewmodel.dart';
 import 'package:yoyaku_mate_provider/constants/staff_status.dart';
+import 'package:yoyaku_mate_provider/constants/time_block.dart';
+import 'package:yoyaku_mate_provider/pages/profile_page/dialogs/day_availability_dialog.dart';
 
 class StaffManagementView extends StatefulWidget {
   final String storeId;
@@ -92,6 +94,38 @@ class _StaffCard extends StatefulWidget {
 
 class _StaffCardState extends State<_StaffCard> {
   bool _isExpanded = false;
+  bool _isAvailabilityExpanded = false;
+
+  // 曜日バッジタップ時、その曜日1日分だけの勤務可能時間帯を編集するダイアログを表示
+  Future<void> _showDayAvailabilityDialog(
+      BuildContext context, String day, String dayLabel) async {
+    final availability =
+        widget.staff['availability'] as Map<String, dynamic>? ?? {};
+    final currentBlocks =
+        (availability[day] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+            <String>[];
+
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (_) =>
+          DayAvailabilityDialog(dayLabel: dayLabel, initialBlocks: currentBlocks),
+    );
+
+    if (result != null) {
+      // 他の曜日の値は維持したまま、タップされた曜日だけを更新してサーバーに送信
+      final updatedAvailability = {
+        for (final d in Weekday.values)
+          d: (availability[d] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              <String>[],
+      };
+      updatedAvailability[day] = result;
+
+      await widget.vm.updateStoreStaffAvailability(
+          widget.storeId, widget.staff['_id'], updatedAvailability);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -198,9 +232,56 @@ class _StaffCardState extends State<_StaffCard> {
                   ],
                 ),
               ],
+
+              // 勤務可能日は「権限設定」とは独立して開閉可能
+              const SizedBox(height: 12),
+              const Divider(),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isAvailabilityExpanded = !_isAvailabilityExpanded;
+                  });
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      "勤務可能日",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Icon(
+                      _isAvailabilityExpanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      size: 20,
+                      color: Colors.grey[700],
+                    ),
+                  ],
+                ),
+              ),
+              if (_isAvailabilityExpanded) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  '曜日をタップして編集',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                _AvailabilitySummary(
+                  availability:
+                      widget.staff['availability'] as Map<String, dynamic>? ??
+                          {},
+                  onDayTap: (day, dayLabel) =>
+                      _showDayAvailabilityDialog(context, day, dayLabel),
+                ),
+              ],
             ],
 
-            // const SizedBox(height: 8),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -298,6 +379,61 @@ class _StaffCardState extends State<_StaffCard> {
           shape: BoxShape.circle,
         ),
       ),
+    );
+  }
+}
+
+// スタッフの勤務可能日を曜日バッジ(ボタン)で要約表示するウィジェット
+// 選択された時間帯が1つでもある曜日は「可能」、無ければ「不可」として表示
+// 各バッジをタップすると、その曜日の勤務可能時間帯を編集できる
+class _AvailabilitySummary extends StatelessWidget {
+  final Map<String, dynamic> availability;
+  final void Function(String day, String dayLabel) onDayTap;
+
+  const _AvailabilitySummary({
+    required this.availability,
+    required this.onDayTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: List.generate(Weekday.values.length, (index) {
+        final day = Weekday.values[index];
+        final dayLabel = Weekday.labels[index];
+        final blocks = availability[day] as List<dynamic>?;
+        final isAvailable = blocks != null && blocks.isNotEmpty;
+
+        return InkWell(
+          onTap: () => onDayTap(day, dayLabel),
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 56,
+            height: 56,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isAvailable
+                  ? AppColors.accentPrimary.withOpacity(0.15)
+                  : Colors.grey.shade200,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isAvailable ? AppColors.accentPrimary : Colors.grey.shade300,
+                width: 1.5,
+              ),
+            ),
+            child: Text(
+              dayLabel,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isAvailable ? AppColors.accentPrimary : Colors.grey,
+              ),
+            ),
+          ),
+        );
+      }),
     );
   }
 }

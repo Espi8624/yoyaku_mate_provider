@@ -602,4 +602,41 @@ class ProfileScreenViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // 自分自身の勤務可能な曜日・時間帯を取得
+  Future<Map<String, dynamic>> fetchMyAvailability() async {
+    if (storeId.isEmpty) return {};
+
+    try {
+      return await _profileService.fetchMyAvailability(storeId);
+    } on ApiException catch (e) {
+      _errorMessage = "勤務可能時間の取得失敗: ${e.message}";
+      notifyListeners();
+      return {};
+    } catch (e) {
+      _errorMessage = "予期しないエラーが発生しました: $e";
+      notifyListeners();
+      return {};
+    }
+  }
+
+  // 自分自身の勤務可能な曜日・時間帯を更新
+  Future<bool> updateMyAvailability(Map<String, List<String>> availability) async {
+    if (storeId.isEmpty) return false;
+
+    try {
+      await _profileService.updateMyAvailability(storeId, availability);
+      _successMessage = '勤務可能時間が保存されました';
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = "勤務可能時間の保存失敗: ${e.message}";
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = "予期しないエラーが発生しました: $e";
+      notifyListeners();
+      return false;
+    }
+  }
 }
