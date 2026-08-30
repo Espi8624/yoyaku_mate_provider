@@ -115,4 +115,25 @@ class StaffManagementViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> updateStoreStaffAvailability(String storeId, String staffId,
+      Map<String, List<String>> availability) async {
+    try {
+      await _profileService.updateStoreStaffAvailability(
+          storeId, staffId, availability);
+      _successMessage = '勤務可能時間を更新しました';
+
+      // リストを再取得して最新状態にする (サイレント更新)
+      await fetchStoreStaff(storeId, silent: true);
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = "勤務可能時間の更新失敗: ${e.message}";
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = "予期しないエラーが発生しました: $e";
+      notifyListeners();
+      return false;
+    }
+  }
 }

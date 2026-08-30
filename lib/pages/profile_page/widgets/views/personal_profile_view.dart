@@ -11,6 +11,7 @@ import '../../../../models/user_profile.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../profile_screen_viewmodel.dart';
 import '../dialogs/edit_profile_dialog.dart';
+import '../../dialogs/availability_dialog.dart';
 import '../profile_header.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
@@ -57,6 +58,25 @@ class PersonalProfileView extends StatelessWidget {
         if (success) {
           ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
         }
+      }
+    }
+  }
+
+  Future<void> _showAvailabilityDialog(BuildContext context) async {
+    final vm = context.read<ProfileScreenViewModel>();
+    final currentAvailability = await vm.fetchMyAvailability();
+    if (!context.mounted) return;
+
+    final result = await showDialog<Map<String, List<String>>>(
+      context: context,
+      builder: (_) => AvailabilityDialog(initialAvailability: currentAvailability),
+    );
+
+    if (result != null) {
+      final success = await vm.updateMyAvailability(result);
+      if (!context.mounted) return;
+      if (success) {
+        ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
       }
     }
   }
@@ -151,6 +171,17 @@ class PersonalProfileView extends StatelessWidget {
                     subtitle: userProfile.phone_number,
                     onTap: null,
                     showTrailingIcon: false,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ProfileSection(
+                title: '勤務情報',
+                children: [
+                  ProfileSettingItem(
+                    title: '勤務可能時間',
+                    subtitle: '曜日・時間帯ごとに勤務可能な時間を設定',
+                    onTap: () => _showAvailabilityDialog(context),
                   ),
                 ],
               ),
