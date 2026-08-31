@@ -13,8 +13,7 @@
 class TimeBlock {
   static const String morning = 'MORNING';
   static const String afternoon = 'AFTERNOON';
-  static const String evening = 'EVENING';
-  static const List<String> values = [morning, afternoon, evening];
+  static const List<String> values = [morning, afternoon];
 }
 
 class Weekday {

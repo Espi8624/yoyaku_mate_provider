@@ -101,6 +101,9 @@ class ClosedDays {
         'holiday_closure': holidayClosure,
       };
 
+  // 指定した曜日(「月」「火」等の日本語ラベル)が定休日かどうかを判定
+  bool isClosedOn(String weekdayLabel) => regularWeekly.contains(weekdayLabel);
+
   // UI に表示する休業日要約情報を生成する getter
   String get summary {
     final parts = <String>[];

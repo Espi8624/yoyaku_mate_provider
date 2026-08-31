@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_management_viewmodel.dart';
+import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
+import 'package:yoyaku_mate_provider/models/user_profile.dart';
+import 'package:yoyaku_mate_provider/models/store_settings.dart';
 import 'package:yoyaku_mate_provider/constants/staff_status.dart';
 import 'package:yoyaku_mate_provider/constants/time_block.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/dialogs/day_availability_dialog.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 class StaffManagementView extends StatefulWidget {
   final String storeId;
@@ -28,43 +32,113 @@ class _StaffManagementViewState extends State<StaffManagementView> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<StaffManagementViewModel>();
+    final profileVM = context.watch<ProfileScreenViewModel>();
+    final currentUser = profileVM.userProfile;
+    final storeSettings = profileVM.storeSettings;
+    final bool isManager = currentUser?.role == 'manager';
+
+    // マネージャーは store_staff_info に自分の項目を持たないため、
+    // スタッフ一覧の中から「本人の項目」と「それ以外のメンバー」を分離する
+    Map<String, dynamic>? myStaffEntry;
+    final List<Map<String, dynamic>> otherStaffList = [];
+    for (final staff in vm.staffList) {
+      final entry = staff as Map<String, dynamic>;
+      if (!isManager && entry['user_id'] == currentUser?.id) {
+        myStaffEntry = entry;
+      } else {
+        otherStaffList.add(entry);
+      }
+    }
+
+    Widget listBody;
+    if (vm.errorMessage != null && vm.staffList.isEmpty) {
+      listBody = Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('エラーが発生しました: ${vm.errorMessage}'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => vm.fetchStoreStaff(widget.storeId),
+              child: const Text('再試行'),
+            ),
+          ],
+        ),
+      );
+    } else if (otherStaffList.isEmpty) {
+      listBody = const Center(
+          child: Text(
+        '現在登録されている他のメンバーはいません。',
+        style: TextStyle(fontSize: 16, color: AppColors.textTertiary),
+      ));
+    } else {
+      listBody = ListView.builder(
+        padding: const EdgeInsets.only(bottom: 16),
+        itemCount: otherStaffList.length,
+        itemBuilder: (context, index) {
+          final staff = otherStaffList[index];
+
+          return _StaffCard(
+            staff: staff,
+            storeId: widget.storeId,
+            vm: vm,
+            storeSettings: storeSettings,
+            // マネージャーは全メンバーを操作可能。
+            // スタッフは自分以外のカードを一切操作できない(閲覧のみ)
+            canManageStatusAndPermissions: isManager,
+            canEditAvailability: isManager,
+          );
+        },
+      );
+    }
 
     return Stack(
       children: [
-        if (vm.errorMessage != null && vm.staffList.isEmpty)
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('エラーが発生しました: ${vm.errorMessage}'),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => vm.fetchStoreStaff(widget.storeId),
-                  child: const Text('再試行'),
-                ),
-              ],
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 最上段: 自分自身の情報カード
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: isManager
+                  ? _MyManagerCard(userProfile: currentUser)
+                  : (myStaffEntry != null
+                      ? _StaffCard(
+                          staff: myStaffEntry,
+                          storeId: widget.storeId,
+                          vm: vm,
+                          storeSettings: storeSettings,
+                          // 自分自身のステータス承認・権限付与はUI上でも許可しない。
+                          // 勤務可能時間の編集のみ自分のカードから行える
+                          canManageStatusAndPermissions: false,
+                          canEditAvailability: true,
+                        )
+                      : const SizedBox.shrink()),
             ),
-          )
-        else if (vm.staffList.isEmpty && vm.errorMessage == null)
-          const Center(
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Divider(
+                  height: 1, thickness: 0.5, color: AppColors.border),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(24, 12, 24, 4),
               child: Text(
-            '現在登録されているメンバーはいません。',
-            style: TextStyle(fontSize: 16, color: AppColors.textTertiary),
-          ))
-        else if (vm.staffList.isNotEmpty)
-          ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            itemCount: vm.staffList.length,
-            itemBuilder: (context, index) {
-              final staff = vm.staffList[index];
-
-              return _StaffCard(
-                staff: staff,
-                storeId: widget.storeId,
-                vm: vm,
-              );
-            },
-          ),
+                'メンバー一覧',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: listBody,
+              ),
+            ),
+          ],
+        ),
 
         // Show common loading indicator on top
         if (vm.isLoading)
@@ -73,19 +147,91 @@ class _StaffManagementViewState extends State<StaffManagementView> {
       ],
     );
   }
+}
 
-  // Helper method moved to inside _StaffCard or kept global if stateless
+// マネージャー自身の情報を表示する軽量カード
+// (マネージャーは store_staff_info のエンティティではないため、
+//  承認/拒否・権限・勤務可能時間の概念自体を持たず、操作UIも存在しない)
+class _MyManagerCard extends StatelessWidget {
+  final UserProfile? userProfile;
+
+  const _MyManagerCard({required this.userProfile});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.accentPrimary, width: 1),
+      ),
+      color: AppColors.cardBackground,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  userProfile?.name ?? '...',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  userProfile?.email ?? '',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.roleManager,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                '管理者',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimaryLight,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _StaffCard extends StatefulWidget {
   final Map<String, dynamic> staff;
   final String storeId;
   final StaffManagementViewModel vm;
+  // 承認/拒否・権限スイッチ(他人に対する操作)を表示するかどうか
+  final bool canManageStatusAndPermissions;
+  // 勤務可能時間の編集を表示するかどうか
+  final bool canEditAvailability;
+  // 店舗の営業時間設定(nullの場合は営業時間による制限をかけない)
+  final StoreSettings? storeSettings;
 
   const _StaffCard({
     required this.staff,
     required this.storeId,
     required this.vm,
+    required this.canManageStatusAndPermissions,
+    required this.canEditAvailability,
+    this.storeSettings,
   });
 
   @override
@@ -96,6 +242,33 @@ class _StaffCardState extends State<_StaffCard> {
   bool _isExpanded = false;
   bool _isAvailabilityExpanded = false;
 
+  // 各種更新処理の成功/失敗をトースト表示する共通処理
+  // (失敗時、以前は画面上に一切フィードバックが無く「反映されない」ように見えていた)
+  void _notifyResult(BuildContext context, bool success) {
+    if (!context.mounted) return;
+    if (success) {
+      if (widget.vm.successMessage != null) {
+        ToastWidget.show(context, widget.vm.successMessage!,
+            type: ToastType.success);
+      }
+    } else {
+      ToastWidget.show(
+        context,
+        widget.vm.errorMessage ?? '更新に失敗しました',
+        type: ToastType.error,
+      );
+    }
+  }
+
+  // ステータス変更ボタン共通処理 (承認/拒否/承認取り消し/再承認)
+  Future<void> _changeStatus(BuildContext context, String status) async {
+    final success = await widget.vm
+        .updateStoreStaffStatus(widget.storeId, widget.staff['_id'], status);
+    if (context.mounted) {
+      _notifyResult(context, success);
+    }
+  }
+
   // 曜日バッジタップ時、その曜日1日分だけの勤務可能時間帯を編集するダイアログを表示
   Future<void> _showDayAvailabilityDialog(
       BuildContext context, String day, String dayLabel) async {
@@ -105,10 +278,19 @@ class _StaffCardState extends State<_StaffCard> {
         (availability[day] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
             <String>[];
 
+    final storeSettings = widget.storeSettings;
+    final hours = storeSettings?.operatingHours[day];
+
     final result = await showDialog<List<String>>(
       context: context,
-      builder: (_) =>
-          DayAvailabilityDialog(dayLabel: dayLabel, initialBlocks: currentBlocks),
+      builder: (_) => DayAvailabilityDialog(
+        dayLabel: dayLabel,
+        initialBlocks: currentBlocks,
+        is24Hours: storeSettings?.is24Hours ?? false,
+        isClosed: storeSettings?.closedDays.isClosedOn(dayLabel) ?? false,
+        businessStart: hours?['start'],
+        businessEnd: hours?['end'],
+      ),
     );
 
     if (result != null) {
@@ -122,8 +304,11 @@ class _StaffCardState extends State<_StaffCard> {
       };
       updatedAvailability[day] = result;
 
-      await widget.vm.updateStoreStaffAvailability(
+      final success = await widget.vm.updateStoreStaffAvailability(
           widget.storeId, widget.staff['_id'], updatedAvailability);
+      if (context.mounted) {
+        _notifyResult(context, success);
+      }
     }
   }
 
@@ -167,8 +352,9 @@ class _StaffCardState extends State<_StaffCard> {
               ],
             ),
 
-            // 承認済みの場合のみ「権限設定」の展開ボタンを表示
-            if (status == StaffStatus.approved) ...[
+            // 承認済み、かつステータス/権限の操作が許可されている場合のみ「権限設定」を表示
+            if (status == StaffStatus.approved &&
+                widget.canManageStatusAndPermissions) ...[
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () {
@@ -213,7 +399,7 @@ class _StaffCardState extends State<_StaffCard> {
                       value: (widget.staff['permissions'] as List<dynamic>?)
                               ?.contains('menu_edit') ??
                           false,
-                      onChanged: (value) {
+                      onChanged: (value) async {
                         final currentPermissions =
                             (widget.staff['permissions'] as List<dynamic>?)
                                     ?.map((e) => e.toString())
@@ -224,16 +410,26 @@ class _StaffCardState extends State<_StaffCard> {
                         } else {
                           currentPermissions.remove('menu_edit');
                         }
-                        widget.vm.updateStoreStaffPermissions(widget.storeId,
-                            widget.staff['_id'], currentPermissions);
+                        final success =
+                            await widget.vm.updateStoreStaffPermissions(
+                                widget.storeId,
+                                widget.staff['_id'],
+                                currentPermissions);
+                        if (context.mounted) {
+                          _notifyResult(context, success);
+                        }
                       },
                       activeColor: AppColors.accentPrimary,
                     ),
                   ],
                 ),
               ],
+            ],
 
-              // 勤務可能日は「権限設定」とは独立して開閉可能
+            // 承認済み、かつ勤務可能時間の編集が許可されている場合のみ「勤務可能日」を表示
+            // (「権限設定」とは独立して開閉可能)
+            if (status == StaffStatus.approved &&
+                widget.canEditAvailability) ...[
               const SizedBox(height: 12),
               const Divider(),
               GestureDetector(
@@ -281,66 +477,61 @@ class _StaffCardState extends State<_StaffCard> {
               ],
             ],
 
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // 承認済みの場合: 拒否ボタンを表示 (承認取り消し)
-                if (status == StaffStatus.approved)
-                  ElevatedButton(
-                    onPressed: () => widget.vm.updateStoreStaffStatus(
-                        widget.storeId,
-                        widget.staff['_id'],
-                        StaffStatus.rejected),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.rejected,
-                      foregroundColor: AppColors.textPrimaryLight,
+            // ステータス変更ボタンは操作許可がある場合のみ表示
+            if (widget.canManageStatusAndPermissions) ...[
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // 承認済みの場合: 拒否ボタンを表示 (承認取り消し)
+                  if (status == StaffStatus.approved)
+                    ElevatedButton(
+                      onPressed: () =>
+                          _changeStatus(context, StaffStatus.rejected),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.rejected,
+                        foregroundColor: AppColors.textPrimaryLight,
+                      ),
+                      child: const Text('承認取り消し'),
                     ),
-                    child: const Text('承認取り消し'),
-                  ),
 
-                // 承認待ちの場合: 拒否と承認ボタンを表示
-                if (status == StaffStatus.pending) ...[
-                  OutlinedButton(
-                    onPressed: () => widget.vm.updateStoreStaffStatus(
-                        widget.storeId,
-                        widget.staff['_id'],
-                        StaffStatus.rejected),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
+                  // 承認待ちの場合: 拒否と承認ボタンを表示
+                  if (status == StaffStatus.pending) ...[
+                    OutlinedButton(
+                      onPressed: () =>
+                          _changeStatus(context, StaffStatus.rejected),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                      ),
+                      child: const Text('拒否'),
                     ),
-                    child: const Text('拒否'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () => widget.vm.updateStoreStaffStatus(
-                        widget.storeId,
-                        widget.staff['_id'],
-                        StaffStatus.approved),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentPrimary,
-                      foregroundColor: Colors.white,
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () =>
+                          _changeStatus(context, StaffStatus.approved),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentPrimary,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('承認'),
                     ),
-                    child: const Text('承認'),
-                  ),
+                  ],
+
+                  // 拒否済みの場合: 承認ボタンを表示 (再承認)
+                  if (status == StaffStatus.rejected)
+                    ElevatedButton(
+                      onPressed: () =>
+                          _changeStatus(context, StaffStatus.approved),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentPrimary,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('再承認'),
+                    ),
                 ],
-
-                // 拒否済みの場合: 承認ボタンを表示 (再承認)
-                if (status == StaffStatus.rejected)
-                  ElevatedButton(
-                    onPressed: () => widget.vm.updateStoreStaffStatus(
-                        widget.storeId,
-                        widget.staff['_id'],
-                        StaffStatus.approved),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentPrimary,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('再承認'),
-                  ),
-              ],
-            ),
+              ),
+            ],
           ],
         ),
       ),
@@ -414,9 +605,7 @@ class _AvailabilitySummary extends StatelessWidget {
             height: 56,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isAvailable
-                  ? AppColors.accentPrimary.withOpacity(0.15)
-                  : Colors.grey.shade200,
+              color: isAvailable ? AppColors.accentPrimary : Colors.grey.shade200,
               shape: BoxShape.circle,
               border: Border.all(
                 color: isAvailable ? AppColors.accentPrimary : Colors.grey.shade300,
@@ -428,7 +617,7 @@ class _AvailabilitySummary extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isAvailable ? AppColors.accentPrimary : Colors.grey,
+                color: isAvailable ? AppColors.textPrimaryLight : Colors.grey,
               ),
             ),
           ),

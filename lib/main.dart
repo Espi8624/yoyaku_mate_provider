@@ -247,13 +247,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // 選択された店舗がある場合、従来のメインダッシュボードUIを表示
     if (isStoreSelected) {
-      final bool isManager = profileVM.userProfile?.role == 'manager';
       final storeId = profileVM.storeId;
       final List<Widget> pages = [
         WaitingScreen(storeId: storeId),
         MenuManagementScreen(storeId: storeId),
         StatisticsScreen(storeId: storeId),
-        if (isManager) StaffManagementScreen(storeId: storeId),
+        // スタッフメニューはManager/Staff共通で表示
+        StaffManagementScreen(storeId: storeId),
         const ProfileScreen(),
       ];
       return LayoutBuilder(
@@ -269,7 +269,6 @@ class _HomeScreenState extends State<HomeScreen> {
               bottomNavigationBar: NavigationBarMobile(
                 selectedIndex: _selectedIndex,
                 onItemTapped: _onItemTapped,
-                isManager: isManager,
               ),
             );
           } else {

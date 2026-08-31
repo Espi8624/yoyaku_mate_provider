@@ -8,11 +8,22 @@ import '../../../widgets/common_dialogs/base_dialog.dart';
 class DayAvailabilityDialog extends StatefulWidget {
   final String dayLabel;
   final List<String> initialBlocks;
+  // 店舗が24時間営業かどうか(trueの場合、営業時間による制限をかけない)
+  final bool is24Hours;
+  // その曜日が定休日かどうか(trueの場合、全ブロックを選択不可にする)
+  final bool isClosed;
+  // その曜日の営業開始/終了時刻("HH:MM"形式。未設定ならnull=制限なし)
+  final String? businessStart;
+  final String? businessEnd;
 
   const DayAvailabilityDialog({
     super.key,
     required this.dayLabel,
     required this.initialBlocks,
+    this.is24Hours = false,
+    this.isClosed = false,
+    this.businessStart,
+    this.businessEnd,
   });
 
   @override
@@ -56,9 +67,11 @@ class _DayAvailabilityDialogState extends State<DayAvailabilityDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            '勤務可能な時間帯を選択してください。選択がない場合は勤務不可として扱われます。',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
+          Text(
+            widget.isClosed
+                ? 'この曜日は定休日です。'
+                : '勤務可能な時間帯を選択してください。選択がない場合は勤務不可として扱われます。',
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
           const SizedBox(height: 20),
           Wrap(
@@ -67,17 +80,27 @@ class _DayAvailabilityDialogState extends State<DayAvailabilityDialog> {
             runSpacing: 8,
             children: TimeBlock.values.map((block) {
               final isSelected = _selectedBlocks.contains(block);
+              final isEnabled = TimeBlock.overlapsBusinessHours(
+                block,
+                is24Hours: widget.is24Hours,
+                isClosed: widget.isClosed,
+                start: widget.businessStart,
+                end: widget.businessEnd,
+              );
               return ChoiceChip(
                 label: Text(TimeBlock.label(block)),
                 selected: isSelected,
-                onSelected: (_) => _toggleBlock(block),
+                onSelected: isEnabled ? (_) => _toggleBlock(block) : null,
                 selectedColor: AppColors.accentPrimary,
                 labelStyle: TextStyle(
                   fontSize: 14,
-                  color: isSelected ? Colors.white : Colors.black87,
+                  color: !isEnabled
+                      ? Colors.grey
+                      : (isSelected ? Colors.white : Colors.black87),
                   fontWeight: FontWeight.w500,
                 ),
-                backgroundColor: Colors.grey.shade100,
+                backgroundColor:
+                    isEnabled ? Colors.grey.shade100 : Colors.grey.shade200,
                 side: BorderSide.none,
               );
             }).toList(),

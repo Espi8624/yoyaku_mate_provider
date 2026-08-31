@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import '../../../constants/time_block.dart';
+import '../../../models/store_settings.dart';
 import '../../../widgets/common_dialogs/base_dialog.dart';
 
 // 勤務可能な曜日・時間帯を設定するためのダイアログウィジェット
 // 曜日ごとに空リストの場合は「勤務不可」を意味する
 class AvailabilityDialog extends StatefulWidget {
   final Map<String, dynamic> initialAvailability;
+  // 店舗の営業時間設定(nullの場合は営業時間による制限をかけない)
+  final StoreSettings? storeSettings;
 
-  const AvailabilityDialog({super.key, required this.initialAvailability});
+  const AvailabilityDialog({
+    super.key,
+    required this.initialAvailability,
+    this.storeSettings,
+  });
 
   @override
   State<AvailabilityDialog> createState() => _AvailabilityDialogState();
@@ -77,10 +84,18 @@ class _AvailabilityDialogState extends State<AvailabilityDialog> {
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(Weekday.values.length, (index) {
                     final day = Weekday.values[index];
+                    final dayLabel = Weekday.labels[index];
+                    final hours = widget.storeSettings?.operatingHours[day];
                     return _AvailabilityRow(
-                      dayLabel: Weekday.labels[index],
+                      dayLabel: dayLabel,
                       selectedBlocks: _availability[day]!,
                       onToggle: (block) => _toggleBlock(day, block),
+                      is24Hours: widget.storeSettings?.is24Hours ?? false,
+                      isClosed:
+                          widget.storeSettings?.closedDays.isClosedOn(dayLabel) ??
+                              false,
+                      businessStart: hours?['start'],
+                      businessEnd: hours?['end'],
                     );
                   }),
                 ),
@@ -110,11 +125,19 @@ class _AvailabilityRow extends StatelessWidget {
   final String dayLabel;
   final Set<String> selectedBlocks;
   final ValueChanged<String> onToggle;
+  final bool is24Hours;
+  final bool isClosed;
+  final String? businessStart;
+  final String? businessEnd;
 
   const _AvailabilityRow({
     required this.dayLabel,
     required this.selectedBlocks,
     required this.onToggle,
+    this.is24Hours = false,
+    this.isClosed = false,
+    this.businessStart,
+    this.businessEnd,
   });
 
   @override
@@ -157,27 +180,50 @@ class _AvailabilityRow extends StatelessWidget {
 
           // 時間帯トグルチップ
           Expanded(
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 6,
-              runSpacing: 6,
-              children: TimeBlock.values.map((block) {
-                final isSelected = selectedBlocks.contains(block);
-                return ChoiceChip(
-                  label: Text(TimeBlock.label(block)),
-                  selected: isSelected,
-                  onSelected: (_) => onToggle(block),
-                  selectedColor: AppColors.accentPrimary,
-                  labelStyle: TextStyle(
-                    fontSize: 13,
-                    color: isSelected ? Colors.white : Colors.black87,
-                    fontWeight: FontWeight.w500,
+            child: isClosed
+                ? Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      '定休日',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  )
+                : Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: TimeBlock.values.map((block) {
+                      final isSelected = selectedBlocks.contains(block);
+                      final isEnabled = TimeBlock.overlapsBusinessHours(
+                        block,
+                        is24Hours: is24Hours,
+                        isClosed: isClosed,
+                        start: businessStart,
+                        end: businessEnd,
+                      );
+                      return ChoiceChip(
+                        label: Text(TimeBlock.label(block)),
+                        selected: isSelected,
+                        onSelected: isEnabled ? (_) => onToggle(block) : null,
+                        selectedColor: AppColors.accentPrimary,
+                        labelStyle: TextStyle(
+                          fontSize: 13,
+                          color: !isEnabled
+                              ? Colors.grey
+                              : (isSelected ? Colors.white : Colors.black87),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        backgroundColor: isEnabled
+                            ? Colors.grey.shade100
+                            : Colors.grey.shade200,
+                        side: BorderSide.none,
+                      );
+                    }).toList(),
                   ),
-                  backgroundColor: Colors.grey.shade100,
-                  side: BorderSide.none,
-                );
-              }).toList(),
-            ),
           ),
         ],
       ),

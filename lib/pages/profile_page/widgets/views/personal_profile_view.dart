@@ -69,7 +69,10 @@ class PersonalProfileView extends StatelessWidget {
 
     final result = await showDialog<Map<String, List<String>>>(
       context: context,
-      builder: (_) => AvailabilityDialog(initialAvailability: currentAvailability),
+      builder: (_) => AvailabilityDialog(
+        initialAvailability: currentAvailability,
+        storeSettings: vm.storeSettings,
+      ),
     );
 
     if (result != null) {
