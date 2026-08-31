@@ -63,7 +63,10 @@ class _BaseDialogState extends State<BaseDialog> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: Container(
+            // Container(color:)はColoredBoxとして描画され、内部のListTile等が
+            // 参照するMaterial祖先とその間に割り込んでink splashを隠してしまうため、
+            // 背景色を保持しつつMaterialとして提供する
+            child: Material(
               color: AppColors.cardBackground,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
