@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../models/store_settings.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
+import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../dialogs/business_hours_dialog.dart';
 import '../../dialogs/holiday_dialog.dart';
 import '../../dialogs/number_input_dialog.dart';
 import '../../dialogs/text_input_dialog.dart';
-import '../../profile_screen_viewmodel.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
 
-class OperationSettingsSection extends StatelessWidget {
+// 更新の成功/失敗は共有状態ではなく、呼び出し直後にtry/catchで即時Toast表示する
+String _describeError(Object error) {
+  if (error is ApiException) return error.message;
+  return '予期しないエラーが発生しました: $error';
+}
+
+class OperationSettingsSection extends ConsumerWidget {
   final bool isReadOnly;
 
   const OperationSettingsSection({
@@ -19,16 +26,14 @@ class OperationSettingsSection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<ProfileScreenViewModel>();
-    final storeSettings = vm.storeSettings;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final storeId = ref.watch(selectedStoreProfileProvider)?.id;
+    if (storeId == null) return const SizedBox();
 
-    if (storeSettings == null) {
-      if (vm.isLoading) {
-        return const SizedBox(); // Loading handled by parent or overlay
-      }
-      return const SizedBox(); // Or error message
-    }
+    final storeSettingsAsync = ref.watch(storeSettingsProvider(storeId: storeId));
+    final storeSettings = storeSettingsAsync.valueOrNull;
+
+    if (storeSettings == null) return const SizedBox();
 
     return ProfileSection(
       title: '運営設定',
@@ -37,7 +42,9 @@ class OperationSettingsSection extends StatelessWidget {
           title: 'チームあたりの予想待機時間',
           subtitle: '${storeSettings.waitingPolicy.estimatedWaitTime ?? 10}分',
           showTrailingIcon: !isReadOnly,
-          onTap: isReadOnly ? null : () => _showEditWaitTimeDialog(context, vm),
+          onTap: isReadOnly
+              ? null
+              : () => _showEditWaitTimeDialog(context, ref, storeSettings),
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         ProfileSettingItem(
@@ -46,15 +53,18 @@ class OperationSettingsSection extends StatelessWidget {
               ? '24時間営業 (リセット: ${storeSettings.resetTime})'
               : _buildBusinessHoursSummary(storeSettings.operatingHours),
           showTrailingIcon: !isReadOnly,
-          onTap:
-              isReadOnly ? null : () => _showBusinessHoursDialog(context, vm),
+          onTap: isReadOnly
+              ? null
+              : () => _showBusinessHoursDialog(context, ref, storeSettings),
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         ProfileSettingItem(
           title: '休業日',
           subtitle: storeSettings.closedDays.summary,
           showTrailingIcon: !isReadOnly,
-          onTap: isReadOnly ? null : () => _showHolidayDialog(context, vm),
+          onTap: isReadOnly
+              ? null
+              : () => _showHolidayDialog(context, ref, storeSettings),
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         ProfileSettingItem(
@@ -65,7 +75,7 @@ class OperationSettingsSection extends StatelessWidget {
           showTrailingIcon: !isReadOnly,
           onTap: isReadOnly
               ? null
-              : () => _showAIAdditionalInfoDialog(context, vm),
+              : () => _showAIAdditionalInfoDialog(context, ref, storeSettings),
         ),
       ],
     );
@@ -77,11 +87,22 @@ class OperationSettingsSection extends StatelessWidget {
     return '平日: $weekdayHours';
   }
 
-  Future<void> _showEditWaitTimeDialog(
-      BuildContext context, ProfileScreenViewModel vm) async {
-    final storeSettings = vm.storeSettings;
-    if (storeSettings == null) return;
+  Future<void> _applyUpdate(
+      BuildContext context, WidgetRef ref, StoreSettings updated,
+      {String? successMessage}) async {
+    try {
+      await ref.read(storeActionsProvider.notifier).updateStoreSettings(updated);
+      if (!context.mounted) return;
+      ToastWidget.show(context, successMessage ?? '設定が保存されました',
+          type: ToastType.success);
+    } catch (e) {
+      if (!context.mounted) return;
+      ToastWidget.show(context, _describeError(e), type: ToastType.error);
+    }
+  }
 
+  Future<void> _showEditWaitTimeDialog(
+      BuildContext context, WidgetRef ref, StoreSettings storeSettings) async {
     final result = await showDialog<int>(
       context: context,
       builder: (_) => NumberInputDialog(
@@ -95,25 +116,13 @@ class OperationSettingsSection extends StatelessWidget {
           storeSettings.waitingPolicy.copyWith(estimatedWaitTime: result);
       final updatedSettings =
           storeSettings.copyWith(waitingPolicy: updatedPolicy);
-      await vm.updateStoreSettings(updatedSettings);
-
-      if (context.mounted) {
-        if (vm.errorMessage != null) {
-          ToastWidget.show(context, vm.errorMessage!, type: ToastType.error);
-        } else if (vm.successMessage != null) {
-          ToastWidget.show(context, '予想待機時間が${result}分に設定されました。',
-              type: ToastType.success);
-          vm.clearSuccessMessage();
-        }
-      }
+      await _applyUpdate(context, ref, updatedSettings,
+          successMessage: '予想待機時間が$result分に設定されました。');
     }
   }
 
   Future<void> _showBusinessHoursDialog(
-      BuildContext context, ProfileScreenViewModel vm) async {
-    final storeSettings = vm.storeSettings;
-    if (storeSettings == null) return;
-
+      BuildContext context, WidgetRef ref, StoreSettings storeSettings) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => BusinessHoursDialog(
@@ -130,25 +139,12 @@ class OperationSettingsSection extends StatelessWidget {
         is24Hours: result['is24Hours'] as bool,
         resetTime: result['resetTime'] as String,
       );
-      await vm.updateStoreSettings(updatedSettings);
-
-      if (context.mounted) {
-        if (vm.errorMessage != null) {
-          ToastWidget.show(context, vm.errorMessage!, type: ToastType.error);
-        } else if (vm.successMessage != null) {
-          ToastWidget.show(context, vm.successMessage!,
-              type: ToastType.success);
-          vm.clearSuccessMessage();
-        }
-      }
+      await _applyUpdate(context, ref, updatedSettings);
     }
   }
 
   Future<void> _showHolidayDialog(
-      BuildContext context, ProfileScreenViewModel vm) async {
-    final storeSettings = vm.storeSettings;
-    if (storeSettings == null) return;
-
+      BuildContext context, WidgetRef ref, StoreSettings storeSettings) async {
     final result = await showDialog<ClosedDays>(
       context: context,
       builder: (_) =>
@@ -157,25 +153,12 @@ class OperationSettingsSection extends StatelessWidget {
 
     if (result != null) {
       final updatedSettings = storeSettings.copyWith(closedDays: result);
-      await vm.updateStoreSettings(updatedSettings);
-
-      if (context.mounted) {
-        if (vm.errorMessage != null) {
-          ToastWidget.show(context, vm.errorMessage!, type: ToastType.error);
-        } else if (vm.successMessage != null) {
-          ToastWidget.show(context, vm.successMessage!,
-              type: ToastType.success);
-          vm.clearSuccessMessage();
-        }
-      }
+      await _applyUpdate(context, ref, updatedSettings);
     }
   }
 
   Future<void> _showAIAdditionalInfoDialog(
-      BuildContext context, ProfileScreenViewModel vm) async {
-    final storeSettings = vm.storeSettings;
-    if (storeSettings == null) return;
-
+      BuildContext context, WidgetRef ref, StoreSettings storeSettings) async {
     final result = await showDialog<String>(
       context: context,
       builder: (_) => TextInputDialog(
@@ -188,17 +171,7 @@ class OperationSettingsSection extends StatelessWidget {
 
     if (result != null) {
       final updatedSettings = storeSettings.copyWith(aiAdditionalInfo: result);
-      await vm.updateStoreSettings(updatedSettings);
-
-      if (context.mounted) {
-        if (vm.errorMessage != null) {
-          ToastWidget.show(context, vm.errorMessage!, type: ToastType.error);
-        } else if (vm.successMessage != null) {
-          ToastWidget.show(context, vm.successMessage!,
-              type: ToastType.success);
-          vm.clearSuccessMessage();
-        }
-      }
+      await _applyUpdate(context, ref, updatedSettings);
     }
   }
 }

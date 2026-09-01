@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
 
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 
-class SideNavigationBar extends StatelessWidget {
+class SideNavigationBar extends ConsumerWidget {
   // 0=待機リスト, 1=メニュー管理, 2=統計, 3=スタッフ, 4=プロフィール (Manager/Staff共通)
   static const int _profileIndex = 4;
 
@@ -24,12 +24,9 @@ class SideNavigationBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // context.watch を使用し、ProfileViewModel の変化を感知
-    final profileVM = context.watch<ProfileScreenViewModel>();
-
-    final userProfile = profileVM.userProfile;
-    final storeProfile = profileVM.storeProfile;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userProfile = ref.watch(userProfileProvider).valueOrNull;
+    final storeProfile = ref.watch(selectedStoreProfileProvider);
 
     // 基本値
     final String userName = userProfile?.name ?? '...';

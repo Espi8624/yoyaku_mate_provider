@@ -1,48 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
-import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_management_viewmodel.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
+import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_management_providers.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
 import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'package:yoyaku_mate_provider/models/store_settings.dart';
+import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/constants/staff_status.dart';
 import 'package:yoyaku_mate_provider/constants/time_block.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/dialogs/day_availability_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
-class StaffManagementView extends StatefulWidget {
+// 例外からユーザー向けメッセージを組み立てる共通処理
+// (ApiExceptionはメッセージ部分のみ、それ以外は予期しないエラーとして表示)
+String _describeError(Object error, {required String actionLabel}) {
+  if (error is ApiException) {
+    return '$actionLabel: ${error.message}';
+  }
+  return '予期しないエラーが発生しました: $error';
+}
+
+class StaffManagementView extends ConsumerWidget {
   final String storeId;
 
   const StaffManagementView({super.key, required this.storeId});
 
   @override
-  State<StaffManagementView> createState() => _StaffManagementViewState();
-}
-
-class _StaffManagementViewState extends State<StaffManagementView> {
-  @override
-  void initState() {
-    super.initState();
-    // 画面表示時にデータをロード
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<StaffManagementViewModel>().fetchStoreStaff(widget.storeId);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<StaffManagementViewModel>();
-    final profileVM = context.watch<ProfileScreenViewModel>();
-    final currentUser = profileVM.userProfile;
-    final storeSettings = profileVM.storeSettings;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // API取得結果は宣言的に購読するだけでよく、initState等での明示的な呼び出しは不要
+    final staffAsync = ref.watch(staffListProvider(storeId: storeId));
+    final currentUser = ref.watch(userProfileProvider).valueOrNull;
+    final storeSettings =
+        ref.watch(storeSettingsProvider(storeId: storeId)).valueOrNull;
     final bool isManager = currentUser?.role == 'manager';
+
+    final staffList = staffAsync.value ?? const <Map<String, dynamic>>[];
 
     // マネージャーは store_staff_info に自分の項目を持たないため、
     // スタッフ一覧の中から「本人の項目」と「それ以外のメンバー」を分離する
     Map<String, dynamic>? myStaffEntry;
     final List<Map<String, dynamic>> otherStaffList = [];
-    for (final staff in vm.staffList) {
-      final entry = staff as Map<String, dynamic>;
+    for (final entry in staffList) {
       if (!isManager && entry['user_id'] == currentUser?.id) {
         myStaffEntry = entry;
       } else {
@@ -51,21 +50,22 @@ class _StaffManagementViewState extends State<StaffManagementView> {
     }
 
     Widget listBody;
-    if (vm.errorMessage != null && vm.staffList.isEmpty) {
+    if (staffAsync.hasError && !staffAsync.hasValue) {
       listBody = Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('エラーが発生しました: ${vm.errorMessage}'),
+            Text('エラーが発生しました: ${staffAsync.error}'),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => vm.fetchStoreStaff(widget.storeId),
+              onPressed: () =>
+                  ref.invalidate(staffListProvider(storeId: storeId)),
               child: const Text('再試行'),
             ),
           ],
         ),
       );
-    } else if (otherStaffList.isEmpty) {
+    } else if (staffAsync.hasValue && otherStaffList.isEmpty) {
       listBody = const Center(
           child: Text(
         '現在登録されている他のメンバーはいません。',
@@ -80,8 +80,7 @@ class _StaffManagementViewState extends State<StaffManagementView> {
 
           return _StaffCard(
             staff: staff,
-            storeId: widget.storeId,
-            vm: vm,
+            storeId: storeId,
             storeSettings: storeSettings,
             // マネージャーは全メンバーを操作可能。
             // スタッフは自分以外のカードを一切操作できない(閲覧のみ)
@@ -105,8 +104,7 @@ class _StaffManagementViewState extends State<StaffManagementView> {
                   : (myStaffEntry != null
                       ? _StaffCard(
                           staff: myStaffEntry,
-                          storeId: widget.storeId,
-                          vm: vm,
+                          storeId: storeId,
                           storeSettings: storeSettings,
                           // 自分自身のステータス承認・権限付与はUI上でも許可しない。
                           // 勤務可能時間の編集のみ自分のカードから行える
@@ -140,8 +138,10 @@ class _StaffManagementViewState extends State<StaffManagementView> {
           ],
         ),
 
-        // Show common loading indicator on top
-        if (vm.isLoading)
+        // 初回ロード中(=まだ一度もデータを取得できていない間)のみ全画面スピナーを表示。
+        // invalidateによる再取得中は直前のデータを表示したまま裏で更新する
+        // (ちらつきを避けるため、更新中の細かいインジケーターは付けない)
+        if (staffAsync.isLoading && !staffAsync.hasValue)
           const Center(
               child: CircularProgressIndicator(color: AppColors.accentPrimary)),
       ],
@@ -214,10 +214,10 @@ class _MyManagerCard extends StatelessWidget {
   }
 }
 
-class _StaffCard extends StatefulWidget {
+// Ephemeral State (展開/折りたたみ) は useState で保持し、StatefulWidgetを廃止
+class _StaffCard extends HookConsumerWidget {
   final Map<String, dynamic> staff;
   final String storeId;
-  final StaffManagementViewModel vm;
   // 承認/拒否・権限スイッチ(他人に対する操作)を表示するかどうか
   final bool canManageStatusAndPermissions;
   // 勤務可能時間の編集を表示するかどうか
@@ -228,57 +228,40 @@ class _StaffCard extends StatefulWidget {
   const _StaffCard({
     required this.staff,
     required this.storeId,
-    required this.vm,
     required this.canManageStatusAndPermissions,
     required this.canEditAvailability,
     this.storeSettings,
   });
 
-  @override
-  State<_StaffCard> createState() => _StaffCardState();
-}
-
-class _StaffCardState extends State<_StaffCard> {
-  bool _isExpanded = false;
-  bool _isAvailabilityExpanded = false;
-
-  // 各種更新処理の成功/失敗をトースト表示する共通処理
-  // (失敗時、以前は画面上に一切フィードバックが無く「反映されない」ように見えていた)
-  void _notifyResult(BuildContext context, bool success) {
-    if (!context.mounted) return;
-    if (success) {
-      if (widget.vm.successMessage != null) {
-        ToastWidget.show(context, widget.vm.successMessage!,
-            type: ToastType.success);
-      }
-    } else {
+  // ステータス変更ボタン共通処理 (承認/拒否/承認取り消し/再承認)
+  Future<void> _changeStatus(
+      BuildContext context, WidgetRef ref, String status) async {
+    try {
+      await ref
+          .read(staffActionsProvider.notifier)
+          .updateStatus(storeId, staff['_id'], status);
+      if (!context.mounted) return;
+      final message =
+          status == StaffStatus.approved ? 'スタッフを承認しました' : 'スタッフを拒否しました';
+      ToastWidget.show(context, message, type: ToastType.success);
+    } catch (e) {
+      if (!context.mounted) return;
       ToastWidget.show(
         context,
-        widget.vm.errorMessage ?? '更新に失敗しました',
+        _describeError(e, actionLabel: 'ステータス更新失敗'),
         type: ToastType.error,
       );
     }
   }
 
-  // ステータス変更ボタン共通処理 (承認/拒否/承認取り消し/再承認)
-  Future<void> _changeStatus(BuildContext context, String status) async {
-    final success = await widget.vm
-        .updateStoreStaffStatus(widget.storeId, widget.staff['_id'], status);
-    if (context.mounted) {
-      _notifyResult(context, success);
-    }
-  }
-
   // 曜日バッジタップ時、その曜日1日分だけの勤務可能時間帯を編集するダイアログを表示
   Future<void> _showDayAvailabilityDialog(
-      BuildContext context, String day, String dayLabel) async {
-    final availability =
-        widget.staff['availability'] as Map<String, dynamic>? ?? {};
+      BuildContext context, WidgetRef ref, String day, String dayLabel) async {
+    final availability = staff['availability'] as Map<String, dynamic>? ?? {};
     final currentBlocks =
         (availability[day] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
             <String>[];
 
-    final storeSettings = widget.storeSettings;
     final hours = storeSettings?.operatingHours[day];
 
     final result = await showDialog<List<String>>(
@@ -293,28 +276,39 @@ class _StaffCardState extends State<_StaffCard> {
       ),
     );
 
-    if (result != null) {
-      // 他の曜日の値は維持したまま、タップされた曜日だけを更新してサーバーに送信
-      final updatedAvailability = {
-        for (final d in Weekday.values)
-          d: (availability[d] as List<dynamic>?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              <String>[],
-      };
-      updatedAvailability[day] = result;
+    if (result == null) return;
 
-      final success = await widget.vm.updateStoreStaffAvailability(
-          widget.storeId, widget.staff['_id'], updatedAvailability);
-      if (context.mounted) {
-        _notifyResult(context, success);
-      }
+    // 他の曜日の値は維持したまま、タップされた曜日だけを更新してサーバーに送信
+    final updatedAvailability = {
+      for (final d in Weekday.values)
+        d: (availability[d] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            <String>[],
+    };
+    updatedAvailability[day] = result;
+
+    try {
+      await ref
+          .read(staffActionsProvider.notifier)
+          .updateAvailability(storeId, staff['_id'], updatedAvailability);
+      if (!context.mounted) return;
+      ToastWidget.show(context, '勤務可能時間を更新しました', type: ToastType.success);
+    } catch (e) {
+      if (!context.mounted) return;
+      ToastWidget.show(
+        context,
+        _describeError(e, actionLabel: '勤務可能時間の更新失敗'),
+        type: ToastType.error,
+      );
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final status = widget.staff['status'];
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isExpanded = useState(false);
+    final isAvailabilityExpanded = useState(false);
+    final status = staff['status'];
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -332,7 +326,7 @@ class _StaffCardState extends State<_StaffCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.staff['user_name'] ?? 'Unknown User',
+                      staff['user_name'] ?? 'Unknown User',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -340,7 +334,7 @@ class _StaffCardState extends State<_StaffCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      widget.staff['email'] ?? '',
+                      staff['email'] ?? '',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
@@ -354,14 +348,10 @@ class _StaffCardState extends State<_StaffCard> {
 
             // 承認済み、かつステータス/権限の操作が許可されている場合のみ「権限設定」を表示
             if (status == StaffStatus.approved &&
-                widget.canManageStatusAndPermissions) ...[
+                canManageStatusAndPermissions) ...[
               const SizedBox(height: 8),
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isExpanded = !_isExpanded;
-                  });
-                },
+                onTap: () => isExpanded.value = !isExpanded.value,
                 behavior: HitTestBehavior.opaque,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
@@ -375,7 +365,7 @@ class _StaffCardState extends State<_StaffCard> {
                       ),
                     ),
                     Icon(
-                      _isExpanded
+                      isExpanded.value
                           ? Icons.keyboard_arrow_up
                           : Icons.keyboard_arrow_down,
                       size: 20,
@@ -384,7 +374,7 @@ class _StaffCardState extends State<_StaffCard> {
                   ],
                 ),
               ),
-              if (_isExpanded) ...[
+              if (isExpanded.value) ...[
                 const SizedBox(height: 12),
                 const Divider(),
                 Row(
@@ -396,12 +386,12 @@ class _StaffCardState extends State<_StaffCard> {
                     ),
                     const SizedBox(width: 8),
                     Switch(
-                      value: (widget.staff['permissions'] as List<dynamic>?)
+                      value: (staff['permissions'] as List<dynamic>?)
                               ?.contains('menu_edit') ??
                           false,
                       onChanged: (value) async {
                         final currentPermissions =
-                            (widget.staff['permissions'] as List<dynamic>?)
+                            (staff['permissions'] as List<dynamic>?)
                                     ?.map((e) => e.toString())
                                     .toList() ??
                                 [];
@@ -410,13 +400,21 @@ class _StaffCardState extends State<_StaffCard> {
                         } else {
                           currentPermissions.remove('menu_edit');
                         }
-                        final success =
-                            await widget.vm.updateStoreStaffPermissions(
-                                widget.storeId,
-                                widget.staff['_id'],
-                                currentPermissions);
-                        if (context.mounted) {
-                          _notifyResult(context, success);
+                        try {
+                          await ref
+                              .read(staffActionsProvider.notifier)
+                              .updatePermissions(
+                                  storeId, staff['_id'], currentPermissions);
+                          if (!context.mounted) return;
+                          ToastWidget.show(context, '権限を更新しました',
+                              type: ToastType.success);
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ToastWidget.show(
+                            context,
+                            _describeError(e, actionLabel: '権限更新失敗'),
+                            type: ToastType.error,
+                          );
                         }
                       },
                       activeColor: AppColors.accentPrimary,
@@ -428,16 +426,12 @@ class _StaffCardState extends State<_StaffCard> {
 
             // 承認済み、かつ勤務可能時間の編集が許可されている場合のみ「勤務可能日」を表示
             // (「権限設定」とは独立して開閉可能)
-            if (status == StaffStatus.approved &&
-                widget.canEditAvailability) ...[
+            if (status == StaffStatus.approved && canEditAvailability) ...[
               const SizedBox(height: 12),
               const Divider(),
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isAvailabilityExpanded = !_isAvailabilityExpanded;
-                  });
-                },
+                onTap: () => isAvailabilityExpanded.value =
+                    !isAvailabilityExpanded.value,
                 behavior: HitTestBehavior.opaque,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
@@ -451,7 +445,7 @@ class _StaffCardState extends State<_StaffCard> {
                       ),
                     ),
                     Icon(
-                      _isAvailabilityExpanded
+                      isAvailabilityExpanded.value
                           ? Icons.keyboard_arrow_up
                           : Icons.keyboard_arrow_down,
                       size: 20,
@@ -460,7 +454,7 @@ class _StaffCardState extends State<_StaffCard> {
                   ],
                 ),
               ),
-              if (_isAvailabilityExpanded) ...[
+              if (isAvailabilityExpanded.value) ...[
                 const SizedBox(height: 12),
                 const Text(
                   '曜日をタップして編集',
@@ -469,16 +463,15 @@ class _StaffCardState extends State<_StaffCard> {
                 const SizedBox(height: 8),
                 _AvailabilitySummary(
                   availability:
-                      widget.staff['availability'] as Map<String, dynamic>? ??
-                          {},
+                      staff['availability'] as Map<String, dynamic>? ?? {},
                   onDayTap: (day, dayLabel) =>
-                      _showDayAvailabilityDialog(context, day, dayLabel),
+                      _showDayAvailabilityDialog(context, ref, day, dayLabel),
                 ),
               ],
             ],
 
             // ステータス変更ボタンは操作許可がある場合のみ表示
-            if (widget.canManageStatusAndPermissions) ...[
+            if (canManageStatusAndPermissions) ...[
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -487,7 +480,7 @@ class _StaffCardState extends State<_StaffCard> {
                   if (status == StaffStatus.approved)
                     ElevatedButton(
                       onPressed: () =>
-                          _changeStatus(context, StaffStatus.rejected),
+                          _changeStatus(context, ref, StaffStatus.rejected),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.rejected,
                         foregroundColor: AppColors.textPrimaryLight,
@@ -499,7 +492,7 @@ class _StaffCardState extends State<_StaffCard> {
                   if (status == StaffStatus.pending) ...[
                     OutlinedButton(
                       onPressed: () =>
-                          _changeStatus(context, StaffStatus.rejected),
+                          _changeStatus(context, ref, StaffStatus.rejected),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
                         side: const BorderSide(color: Colors.red),
@@ -509,7 +502,7 @@ class _StaffCardState extends State<_StaffCard> {
                     const SizedBox(width: 12),
                     ElevatedButton(
                       onPressed: () =>
-                          _changeStatus(context, StaffStatus.approved),
+                          _changeStatus(context, ref, StaffStatus.approved),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentPrimary,
                         foregroundColor: Colors.white,
@@ -522,7 +515,7 @@ class _StaffCardState extends State<_StaffCard> {
                   if (status == StaffStatus.rejected)
                     ElevatedButton(
                       onPressed: () =>
-                          _changeStatus(context, StaffStatus.approved),
+                          _changeStatus(context, ref, StaffStatus.approved),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentPrimary,
                         foregroundColor: Colors.white,

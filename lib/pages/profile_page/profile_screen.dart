@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/app_colors.dart';
-import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
-import 'package:yoyaku_mate_provider/widgets/common_widgets/loading_indicator.dart';
-import 'profile_screen_viewmodel.dart';
+import 'package:yoyaku_mate_provider/models/store_profile.dart';
+import 'package:yoyaku_mate_provider/models/user_profile.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
 import './widgets/views/personal_profile_view.dart';
 import './widgets/views/store_profile_view.dart';
 
@@ -16,91 +17,19 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class _ProfileView extends StatefulWidget {
+// タブ切替(個人/店舗)はページローカルなEphemeral Stateのため useTabController で保持する
+// (以前はProfileScreenViewModelのprofileTabIndexとしてグローバルに保持していたが、
+//  このページ以外から参照されていなかったためローカル化した)
+class _ProfileView extends HookConsumerWidget {
   const _ProfileView();
 
   @override
-  State<_ProfileView> createState() => _ProfileViewState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tabController = useTabController(initialLength: 2);
 
-class _ProfileViewState extends State<_ProfileView>
-    with TickerProviderStateMixin {
-  TabController? _tabController;
-  late final ProfileScreenViewModel _viewModel;
-
-  @override
-  void initState() {
-    super.initState();
-    _viewModel = context.read<ProfileScreenViewModel>();
-
-    _viewModel.addListener(_onViewModelUpdated);
-
-    _setupTabController();
-  }
-
-  void _onViewModelUpdated() {
-    if (!mounted) return;
-
-    // エラー表示
-    if (_viewModel.errorMessage != null) {
-      ToastWidget.show(context, _viewModel.errorMessage!,
-          type: ToastType.error);
-    }
-    // 成功表示
-    else if (_viewModel.successMessage != null) {
-      ToastWidget.show(context, _viewModel.successMessage!,
-          type: ToastType.success);
-      _viewModel.clearSuccessMessage();
-    }
-
-    // データが変更される時、TabController 設定を行う
-    _setupTabController();
-  }
-
-  // TabController を設定
-  void _setupTabController() {
-    // ViewModel へ userProfile データがない場合何もしない
-    if (_viewModel.userProfile == null) return;
-
-    // 常に2つ（個人、店舗）
-    const newLength = 2;
-
-    // コントローラーが生成され、長さが同じ時、何もしない
-    if (_tabController != null && _tabController!.length == newLength) return;
-
-    // 状態を変更しないといけないため、setState ないで、コントローラーを生成/再生成する
-    setState(() {
-      // 以前コントローラーが存在していた場合、dispose
-      _tabController?.dispose();
-      // ViewModelに保存されたインデックスで初期化
-      _tabController = TabController(
-        length: newLength,
-        vsync: this,
-        initialIndex: _viewModel.profileTabIndex,
-      );
-
-      // タブ変更時にViewModelを更新
-      _tabController?.addListener(() {
-        if (_tabController != null && !_tabController!.indexIsChanging) {
-          _viewModel.setProfileTabIndex(_tabController!.index);
-        }
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _viewModel.removeListener(_onViewModelUpdated);
-    // nullable コントローラーを dispose
-    _tabController?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // context.watch を使用し、ViewModel の状態変化を感知し、UI をビルドし直し
-    final vm = context.watch<ProfileScreenViewModel>();
-    final bool isManager = vm.userProfile?.role == 'manager';
+    final userProfile = ref.watch(userProfileProvider).valueOrNull;
+    final bool isManager = userProfile?.role == 'manager';
+    final storeProfile = ref.watch(selectedStoreProfileProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -122,58 +51,45 @@ class _ProfileViewState extends State<_ProfileView>
           const double mobileBreakpoint = 700;
           final bool isMobile = constraints.maxWidth < mobileBreakpoint;
 
+          final content = _buildContent(
+            tabController: tabController,
+            userProfile: userProfile,
+            storeProfile: storeProfile,
+            isManager: isManager,
+          );
+
           if (isMobile) {
-            return SafeArea(
-              child: _buildColumn(vm: vm, isManager: isManager),
-            );
+            return SafeArea(child: content);
           } else {
-            return _buildColumn(vm: vm, isManager: isManager);
+            return content;
           }
         },
       ),
     );
   }
 
-  Widget _buildColumn(
-      {required ProfileScreenViewModel vm, required bool isManager}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-
-        // Contents
-        Expanded(
-          // _tabController が生成されるまではローディングインディケーターを表示
-          // 競争状態防止
-          child: _tabController == null
-              ? const LoadingIndicator()
-              : _buildContent(vm, isManager),
-        ),
-      ],
-    );
-  }
-
-  // ViewModel の状態によって適切なコンテンツ Widgets を返却するヘルパーメソッド
-  Widget _buildContent(ProfileScreenViewModel vm, bool isManager) {
-    if (vm.userProfile == null) {
+  Widget _buildContent({
+    required TabController tabController,
+    required UserProfile? userProfile,
+    required StoreProfile? storeProfile,
+    required bool isManager,
+  }) {
+    if (userProfile == null) {
       return const Center(child: Text("ユーザー情報が見つかりません。"));
     }
 
     return Column(
       children: [
-        // 役割に関係なく、TabBar を表示
-        Center(child: _buildTabBar()),
+        Center(child: _buildTabBar(tabController)),
         const SizedBox(height: 24),
-
-        // TabBarView を表示
         Expanded(
           child: TabBarView(
-            controller: _tabController!,
+            controller: tabController,
             children: [
-              PersonalProfileView(userProfile: vm.userProfile!),
+              PersonalProfileView(userProfile: userProfile),
 
               // store profile が null の場合を備えた防御コード
-              if (vm.storeProfile != null)
+              if (storeProfile != null)
                 StoreProfileView(isReadOnly: !isManager)
               else
                 const Center(child: Text("店舗情報がありません。")),
@@ -184,7 +100,7 @@ class _ProfileViewState extends State<_ProfileView>
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar(TabController tabController) {
     // タブの数に応じて幅を調整
     const width = 190.0;
 
@@ -203,7 +119,7 @@ class _ProfileViewState extends State<_ProfileView>
         ],
       ),
       child: TabBar(
-        controller: _tabController,
+        controller: tabController,
         indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
           borderRadius: BorderRadius.circular(15),

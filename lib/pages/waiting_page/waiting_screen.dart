@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Clipboard
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/waiting_list.dart';
 import 'package:yoyaku_mate_provider/services/waiting_service.dart';
@@ -31,7 +32,10 @@ class WaitingScreen extends StatelessWidget {
         return WaitingScreenViewModel(
           storeId: storeId,
           waitingService: WaitingService(),
-          settingsService: context.read<StoreSettingsService>(),
+          // main.dartのProvider<StoreSettingsService>登録は
+          // ProfileScreenViewModel撤去に伴い削除したため、ここで直接生成する
+          settingsService:
+              StoreSettingsService(baseUrl: dotenv.env['API_URL'] ?? ''),
         );
       },
       child: const _WaitingView(),

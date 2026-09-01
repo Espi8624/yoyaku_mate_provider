@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
-import 'package:provider/provider.dart';
-import '../../services/profile_service.dart';
-import 'staff_management_viewmodel.dart';
 import 'widgets/staff_management_view.dart';
 
+// Riverpodへの移行後は ChangeNotifierProvider によるViewModelのスコープ生成が不要になった
+// (staffListProvider/staffActionsProvider は family の autoDispose によって
+//  画面遷移時に自動的に破棄される)
 class StaffManagementScreen extends StatelessWidget {
   final String storeId;
 
@@ -12,39 +12,34 @@ class StaffManagementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => StaffManagementViewModel(
-        profileService: context.read<ProviderProfileService>(),
-      ),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
-        appBar: AppBar(
-          title: const Text(
-            "スタッフ管理",
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        title: const Text(
+          "スタッフ管理",
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
           ),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: false,
         ),
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            const double mobileBreakpoint = 700;
-            final bool isMobile = constraints.maxWidth < mobileBreakpoint;
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          const double mobileBreakpoint = 700;
+          final bool isMobile = constraints.maxWidth < mobileBreakpoint;
 
-            if (isMobile) {
-              return SafeArea(
-                child: _buildColumn(),
-              );
-            } else {
-              return _buildColumn();
-            }
-          },
-        ),
+          if (isMobile) {
+            return SafeArea(
+              child: _buildColumn(),
+            );
+          } else {
+            return _buildColumn();
+          }
+        },
       ),
     );
   }

@@ -2,10 +2,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/constants/privacy_policy.dart';
 import 'package:yoyaku_mate_provider/constants/terms_of_service.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
+import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_viewmodel.dart';
 import 'package:yoyaku_mate_provider/routes.dart' show setSignUpInProgress;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,14 +25,14 @@ import 'package:yoyaku_mate_provider/pages/sign_up/steps/manager_info_step.dart'
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_name_step.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
-class SignUpPage extends StatefulWidget {
+class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
 
   @override
-  State<SignUpPage> createState() => _SignUpPageState();
+  ConsumerState<SignUpPage> createState() => _SignUpPageState();
 }
 
-class _SignUpPageState extends State<SignUpPage> {
+class _SignUpPageState extends ConsumerState<SignUpPage> {
   late PageController _pageController;
   int _currentPageIndex = 0;
 
@@ -67,7 +69,7 @@ class _SignUpPageState extends State<SignUpPage> {
       TextEditingController();
 
   bool _isInitialized = false;
-  ProfileScreenViewModel? _profileVM;
+  ProviderSubscription<AsyncValue<UserProfile>>? _userProfileSubscription;
 
   @override
   void initState() {
@@ -83,9 +85,11 @@ class _SignUpPageState extends State<SignUpPage> {
 
     final vm = context.read<SignUpViewModel>();
 
-    // ここでViewModelをキャッシュして利用可能にする
-    _profileVM = context.read<ProfileScreenViewModel>();
-    _profileVM?.addListener(_populateUserData);
+    // userProfileProviderの変化を監視 (build外なのでlistenManualを使用)
+    _userProfileSubscription = ref.listenManual(
+      userProfileProvider,
+      (previous, next) => _populateUserData(),
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -100,11 +104,7 @@ class _SignUpPageState extends State<SignUpPage> {
   void _populateUserData() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final profileVM = _profileVM;
-        // profileVMが有効か確認
-        if (profileVM == null) return;
-
-        final userProfile = profileVM.userProfile;
+        final userProfile = ref.read(userProfileProvider).valueOrNull;
         final currentUser = FirebaseAuth.instance.currentUser;
 
         if (userProfile != null) {
@@ -174,7 +174,7 @@ class _SignUpPageState extends State<SignUpPage> {
   void dispose() {
     setSignUpInProgress(false);
     _pageController.removeListener(_pageControllerListener);
-    _profileVM?.removeListener(_populateUserData);
+    _userProfileSubscription?.close();
     _pageController.dispose();
 
     managerEmailController.dispose();
@@ -499,7 +499,12 @@ class _SignUpPageState extends State<SignUpPage> {
 
     if (success && mounted) {
       // 登録完了後、グローバルなプロフィール情報を更新してから遷移
-      await context.read<ProfileScreenViewModel>().loadProfiles();
+      ref.invalidate(userProfileProvider);
+      ref.invalidate(myStoresProvider);
+      await Future.wait([
+        ref.read(userProfileProvider.future),
+        ref.read(myStoresProvider.future),
+      ]);
       if (mounted) {
         // Refactor: 登録完了画面 または ホームへ (main.dart route logic will redirect to StoreSelection)
         // ここでは一旦完了画面へ

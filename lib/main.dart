@@ -4,19 +4,21 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+// Provider/StreamProvider 등 이름이 provider 패키지와 충돌하므로 필요한 이름만 노출
+import 'package:flutter_riverpod/flutter_riverpod.dart'
+    show ProviderScope, ConsumerStatefulWidget, ConsumerState, AsyncValueX;
 import 'package:go_router/go_router.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/firebase_options.dart';
 import 'package:yoyaku_mate_provider/pages/store_selection/store_selection_page.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
+import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
 import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen.dart';
-import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/services/statistics_service.dart';
-import 'package:yoyaku_mate_provider/services/store_settings_service.dart';
 import 'package:yoyaku_mate_provider/pages/statistics_page/statistics_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -41,7 +43,10 @@ void main() async {
     return true;
   };
 
-  runApp(const MyApp());
+  // ProviderScope: Riverpod 상태관리 루트 스코프
+  // (기존 provider 패키지 기반 MultiProvider 트리는 MyApp 내부에 그대로 유지 -
+  //  페이지 단위로 순차 마이그레이션하는 동안 두 트리가 공존한다)
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -49,50 +54,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ユーザー/店舗セッション状態はRiverpod(session_providers.dart)へ全面移行済み。
+    // まだ移行していないStatisticsService用のみMultiProviderを維持する
     return MultiProvider(
       providers: [
-        Provider<ProviderProfileService>(
-          create: (_) =>
-              ProviderProfileService(baseUrl: dotenv.env['API_URL'] ?? ''),
-        ),
-        Provider<StoreSettingsService>(
-          create: (_) =>
-              StoreSettingsService(baseUrl: dotenv.env['API_URL'] ?? ''),
-        ),
         Provider<StatisticsService>(
           create: (_) =>
               StatisticsService(baseUrl: dotenv.env['API_URL'] ?? ''),
-        ),
-        StreamProvider<User?>(
-          create: (_) => FirebaseAuth.instance.authStateChanges(),
-          initialData: null,
-        ),
-        ChangeNotifierProxyProvider<User?, ProfileScreenViewModel>(
-          create: (context) => ProfileScreenViewModel(
-            profileService: context.read<ProviderProfileService>(),
-            settingsService: context.read<StoreSettingsService>(),
-            userId: '',
-            autoLoad: false,
-          ),
-          update: (context, user, previousViewModel) {
-            if (previousViewModel == null) {
-              return ProfileScreenViewModel(
-                  profileService: context.read<ProviderProfileService>(),
-                  settingsService: context.read<StoreSettingsService>(),
-                  userId: '',
-                  autoLoad: false);
-            }
-
-            final newUid = user?.uid ?? '';
-            final oldUid = previousViewModel.firebaseUid;
-
-            if (newUid == oldUid) {
-              return previousViewModel;
-            }
-
-            previousViewModel.updateUser(newUid);
-            return previousViewModel;
-          },
         ),
       ],
       child: MaterialApp.router(
@@ -157,21 +125,16 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
   bool _isExpanded = false;
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -187,41 +150,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final profileVM = context.watch<ProfileScreenViewModel>();
+    final userProfileAsync = ref.watch(userProfileProvider);
 
-    if (profileVM.isProfileIncomplete) {
+    // ユーザーがまだ登録されていない場合 (サインアップ未完了) はサインアップへ誘導
+    if (userProfileAsync.hasError &&
+        userProfileAsync.error is ProfileNotFoundException) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         // 現在のパスが既にsignupならリダイレクトしない(ループ防止)
         // context.goだと確認できないが、GoRouterStateを取得するのが少し手間なので
         // 単純に遷移させる。routes.dart側で /signup にいる場合はリダイレクトしない制御があればベストだが
         // ここでは単純に遷移。
+        if (!context.mounted) return;
         try {
-          // print("Attempting redirect to /signup?mode=resume");
           context.go('/signup?mode=resume');
         } catch (e) {
           // print("Redirect failed: $e");
         }
       });
-      // 明示的なreturnを削除し、下の共通ローディング処理に任せる
-      // return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    // ローディング・エラー画面処理
-    if (profileVM.isLoading && profileVM.userProfile == null) {
       return const Scaffold(
           body: Center(
               child:
                   CircularProgressIndicator(color: AppColors.accentPrimary)));
     }
 
-    if (profileVM.errorMessage != null && profileVM.userProfile == null) {
+    // ローディング・エラー画面処理
+    if (userProfileAsync.isLoading && !userProfileAsync.hasValue) {
+      return const Scaffold(
+          body: Center(
+              child:
+                  CircularProgressIndicator(color: AppColors.accentPrimary)));
+    }
+
+    if (userProfileAsync.hasError && !userProfileAsync.hasValue) {
       return Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('データローディング失敗: ${profileVM.errorMessage}'),
+              Text('データローディング失敗: ${userProfileAsync.error}'),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
@@ -236,18 +202,20 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // ユーザーのプロフィールがない場合
-    if (profileVM.userProfile == null) {
+    final userProfile = userProfileAsync.valueOrNull;
+    if (userProfile == null) {
       return const Scaffold(
           body: Center(
               child:
                   CircularProgressIndicator(color: AppColors.accentPrimary)));
     }
 
-    final bool isStoreSelected = profileVM.storeProfile != null;
+    final selectedStore = ref.watch(selectedStoreProfileProvider);
+    final bool isStoreSelected = selectedStore != null;
 
     // 選択された店舗がある場合、従来のメインダッシュボードUIを表示
     if (isStoreSelected) {
-      final storeId = profileVM.storeId;
+      final storeId = selectedStore.id;
       final List<Widget> pages = [
         WaitingScreen(storeId: storeId),
         MenuManagementScreen(storeId: storeId),
