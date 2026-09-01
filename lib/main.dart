@@ -3,8 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-// Provider/StreamProvider 등 이름이 provider 패키지와 충돌하므로 필요한 이름만 노출
 import 'package:flutter_riverpod/flutter_riverpod.dart'
     show ProviderScope, ConsumerStatefulWidget, ConsumerState, AsyncValueX;
 import 'package:go_router/go_router.dart';
@@ -18,7 +16,6 @@ import 'package:yoyaku_mate_provider/pages/menu_management_page/menu_management_
 import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen.dart';
 import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_management_screen.dart';
 import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen.dart';
-import 'package:yoyaku_mate_provider/services/statistics_service.dart';
 import 'package:yoyaku_mate_provider/pages/statistics_page/statistics_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -54,73 +51,65 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ユーザー/店舗セッション状態はRiverpod(session_providers.dart)へ全面移行済み。
-    // まだ移行していないStatisticsService用のみMultiProviderを維持する
-    return MultiProvider(
-      providers: [
-        Provider<StatisticsService>(
-          create: (_) =>
-              StatisticsService(baseUrl: dotenv.env['API_URL'] ?? ''),
+    // ユーザー/店舗セッション状態・統計データはRiverpodへ全面移行済みのため
+    // provider パッケージのMultiProviderは不要になった
+    return MaterialApp.router(
+      routerConfig: router, // GoRouter設定を使用
+      title: 'ルスイ店舗管理',
+      theme: ThemeData(
+        scaffoldBackgroundColor: AppColors.background,
+        canvasColor: AppColors.cardBackground,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.accentPrimary,
+          background: AppColors.background,
         ),
-      ],
-      child: MaterialApp.router(
-        routerConfig: router, // GoRouter設定を使用
-        title: 'ルスイ店舗管理',
-        theme: ThemeData(
-          scaffoldBackgroundColor: AppColors.background,
-          canvasColor: AppColors.cardBackground,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: AppColors.accentPrimary,
-            background: AppColors.background,
-          ),
-          useMaterial3: true,
-          textSelectionTheme: const TextSelectionThemeData(
-            cursorColor: AppColors.accentPrimary,
-            selectionColor: AppColors.accentPrimary,
-            selectionHandleColor: AppColors.accentPrimary,
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: AppColors.accentPrimary, width: 2.0),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.border, width: 1.0),
-            ),
-            floatingLabelStyle: const TextStyle(color: AppColors.accentPrimary),
-          ),
+        useMaterial3: true,
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: AppColors.accentPrimary,
+          selectionColor: AppColors.accentPrimary,
+          selectionHandleColor: AppColors.accentPrimary,
         ),
-        builder: (context, child) {
-          return Stack(
-            children: [
-              if (child != null) child,
-              // ステータスバーの視認性向上のためのグラデーション
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: IgnorePointer(
-                  child: Container(
-                    height: 50,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.08),
-                          Colors.transparent,
-                        ],
-                      ),
+        inputDecorationTheme: InputDecorationTheme(
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide:
+                const BorderSide(color: AppColors.accentPrimary, width: 2.0),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border, width: 1.0),
+          ),
+          floatingLabelStyle: const TextStyle(color: AppColors.accentPrimary),
+        ),
+      ),
+      builder: (context, child) {
+        return Stack(
+          children: [
+            if (child != null) child,
+            // ステータスバーの視認性向上のためのグラデーション
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.08),
+                        Colors.transparent,
+                      ],
                     ),
                   ),
                 ),
               ),
-            ],
-          );
-        },
-      ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

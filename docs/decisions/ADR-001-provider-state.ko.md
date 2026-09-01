@@ -1,7 +1,7 @@
 # ADR-001: 상태 관리 도구로 Provider 패턴 채택
 
 > 작성일: 2026-07-10  
-> 상태: 확정
+> 상태: **상위 대체됨** (2026-09-01, [리팩토링 기록](../refactoring/001-provider-to-riverpod-migration.ko.md) 참고 — Riverpod + Hooks로 전면 마이그레이션 완료, `provider` 패키지는 pubspec에서 제거됨)
 
 ## 컨텍스트
 
@@ -38,3 +38,4 @@ Flutter 애플리케이션에서 여러 화면에 걸쳐 공유되는 상태(인
 ## 관련 문서
 
 - [아키텍처 개요](../implementation/architecture.ko.md)
+- [리팩토링 기록: Provider(MVVM) → Riverpod + Hooks 전면 마이그레이션](../refactoring/001-provider-to-riverpod-migration.ko.md)

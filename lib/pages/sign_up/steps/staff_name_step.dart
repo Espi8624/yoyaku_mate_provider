@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_viewmodel.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_providers.dart';
 import 'package:yoyaku_mate_provider/widgets/common_buttons/action_button.dart';
 
-class StaffNameStep extends StatefulWidget {
+class StaffNameStep extends ConsumerStatefulWidget {
   final TextEditingController lastNameController;
   final TextEditingController firstNameController;
   final TextEditingController lastNameKanaController;
@@ -21,17 +21,17 @@ class StaffNameStep extends StatefulWidget {
   });
 
   @override
-  State<StaffNameStep> createState() => _StaffNameStepState();
+  ConsumerState<StaffNameStep> createState() => _StaffNameStepState();
 }
 
-class _StaffNameStepState extends State<StaffNameStep> {
+class _StaffNameStepState extends ConsumerState<StaffNameStep> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<SignUpViewModel>();
-    final isLoading = vm.isLoading;
-    final errorMessage = vm.errorMessage;
+    final state = ref.watch(signUpNotifierProvider);
+    final isLoading = state.isLoading;
+    final errorMessage = state.errorMessage;
 
     return SingleChildScrollView(
       child: Form(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
-import 'package:yoyaku_mate_provider/pages/statistics_page/statistics_viewmodel.dart';
-import 'package:yoyaku_mate_provider/services/statistics_service.dart';
+import 'package:yoyaku_mate_provider/pages/statistics_page/statistics_providers.dart';
 import 'widgets/dynamic_chart_card.dart';
 
 class StatisticsScreen extends StatelessWidget {
@@ -12,23 +12,113 @@ class StatisticsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (ctx) => StatisticsViewModel(
-        service: ctx.read<StatisticsService>(),
-        storeId: storeId,
-      ),
-      child: const _StatisticsView(),
-    );
+    return _StatisticsView(storeId: storeId);
   }
 }
 
-class _StatisticsView extends StatelessWidget {
-  const _StatisticsView();
+class _StatisticsView extends HookConsumerWidget {
+  final String storeId;
+
+  const _StatisticsView({required this.storeId});
 
   @override
-  Widget build(BuildContext context) {
-    final viewModel = context.watch<StatisticsViewModel>();
-    final data = viewModel.statisticsData;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 期間/日付/指標の選択はページローカルなephemeral UI状態のためHooksで管理
+    final selectedPeriod = useState('auto'); // 'auto', 'weekly', 'monthly', 'yearly'
+    final selectedMetric = useState('visitor'); // 'visitor', 'no_show', 'cancelled'
+    final currentDate = useState(DateTime.now());
+
+    // 既存 StatisticsViewModel の formattedDate/isCurrentPeriod と同一ロジック
+    String formattedDate() {
+      if (selectedPeriod.value == 'weekly') {
+        final start = currentDate.value.subtract(const Duration(days: 6));
+        return "${start.month}月${start.day}日 - ${currentDate.value.month}月${currentDate.value.day}日";
+      } else if (selectedPeriod.value == 'monthly') {
+        return "${currentDate.value.year}年 ${currentDate.value.month}月";
+      } else if (selectedPeriod.value == 'yearly') {
+        return "${currentDate.value.year}年";
+      }
+      return "${currentDate.value.year}年 ${currentDate.value.month}月 ${currentDate.value.day}日";
+    }
+
+    bool isCurrentPeriod() {
+      final now = DateTime.now();
+      if (selectedPeriod.value == 'weekly') {
+        final diff = now.difference(currentDate.value).inDays;
+        return diff < 1 && diff >= 0 && now.day == currentDate.value.day;
+      } else if (selectedPeriod.value == 'monthly') {
+        return now.year == currentDate.value.year &&
+            now.month == currentDate.value.month;
+      } else if (selectedPeriod.value == 'yearly') {
+        return now.year == currentDate.value.year;
+      }
+      return now.difference(currentDate.value).inDays == 0 &&
+          now.day == currentDate.value.day;
+    }
+
+    void setPeriod(String period) {
+      if (selectedPeriod.value == period) return;
+      selectedPeriod.value = period;
+      // 期間タイプ変更時は今日にリセット
+      currentDate.value = DateTime.now();
+    }
+
+    void setMetric(String metric) {
+      if (selectedMetric.value == metric) return;
+      selectedMetric.value = metric;
+
+      // 'no_show'/'cancelled' に切り替える際、現在の期間が'auto'（今日）なら'weekly'に切り替える
+      // 'auto'には時間別のNo-Show/Cancelデータが存在しないため
+      if ((metric == 'no_show' || metric == 'cancelled') &&
+          selectedPeriod.value == 'auto') {
+        selectedPeriod.value = 'weekly';
+        currentDate.value = DateTime.now();
+      }
+    }
+
+    void previousPeriod() {
+      if (selectedPeriod.value == 'weekly') {
+        currentDate.value = currentDate.value.subtract(const Duration(days: 7));
+      } else if (selectedPeriod.value == 'monthly') {
+        currentDate.value = DateTime(
+            currentDate.value.year, currentDate.value.month - 1, 1);
+      } else if (selectedPeriod.value == 'yearly') {
+        currentDate.value = DateTime(currentDate.value.year - 1, 1, 1);
+      } else {
+        currentDate.value = currentDate.value.subtract(const Duration(days: 1));
+      }
+    }
+
+    void nextPeriod() {
+      if (isCurrentPeriod()) return; // 未来への移動を制限
+
+      DateTime next;
+      if (selectedPeriod.value == 'weekly') {
+        next = currentDate.value.add(const Duration(days: 7));
+      } else if (selectedPeriod.value == 'monthly') {
+        next = DateTime(currentDate.value.year, currentDate.value.month + 1, 1);
+      } else if (selectedPeriod.value == 'yearly') {
+        next = DateTime(currentDate.value.year + 1, 1, 1);
+      } else {
+        next = currentDate.value.add(const Duration(days: 1));
+      }
+
+      if (next.isAfter(DateTime.now())) {
+        next = DateTime.now();
+      }
+      currentDate.value = next;
+    }
+
+    final provider = statisticsDataProvider(
+      storeId: storeId,
+      period: selectedPeriod.value,
+      date: currentDate.value,
+    );
+    final statsAsync = ref.watch(provider);
+
+    Future<void> refresh() => ref.refresh(provider.future);
+
+    final data = statsAsync.valueOrNull;
 
     final visitorStats = data?['visitor_stats'];
     final hourlyCongestion =
@@ -44,12 +134,12 @@ class _StatisticsView extends StatelessWidget {
     Color highlightColor = const Color(0xFF212529);
     IconData? highlightIcon;
 
-    if (viewModel.selectedMetric == 'cancelled') {
+    if (selectedMetric.value == 'cancelled') {
       highlightTitle = 'キャンセル数';
       highlightValue = totalCancelled;
       highlightColor = const Color(0xFFFA5252);
       highlightIcon = Icons.cancel_outlined;
-    } else if (viewModel.selectedMetric == 'no_show') {
+    } else if (selectedMetric.value == 'no_show') {
       highlightTitle = 'No-Show数';
       highlightValue = totalNoShow;
       highlightColor = const Color(0xFFFF6B6B);
@@ -69,23 +159,33 @@ class _StatisticsView extends StatelessWidget {
         centerTitle: false,
       ),
       body: _buildBody(
-          context,
-          viewModel,
-          data,
-          visitorStats,
-          hourlyCongestion,
-          avgWaitTime,
-          noShowRate,
-          highlightTitle,
-          highlightValue,
-          highlightColor,
-          highlightIcon),
+        context,
+        statsAsync,
+        data,
+        visitorStats,
+        hourlyCongestion,
+        avgWaitTime,
+        noShowRate,
+        highlightTitle,
+        highlightValue,
+        highlightColor,
+        highlightIcon,
+        selectedPeriod.value,
+        selectedMetric.value,
+        formattedDate(),
+        isCurrentPeriod(),
+        setPeriod,
+        setMetric,
+        previousPeriod,
+        nextPeriod,
+        refresh,
+      ),
     );
   }
 
   Widget _buildBody(
       BuildContext context,
-      StatisticsViewModel viewModel,
+      AsyncValue<Map<String, dynamic>> statsAsync,
       Map<String, dynamic>? data,
       dynamic visitorStats,
       List<dynamic> hourlyCongestion,
@@ -94,14 +194,25 @@ class _StatisticsView extends StatelessWidget {
       String highlightTitle,
       int highlightValue,
       Color highlightColor,
-      IconData? highlightIcon) {
-    if (viewModel.isLoading && data == null) {
+      IconData? highlightIcon,
+      String selectedPeriod,
+      String selectedMetric,
+      String formattedDate,
+      bool isCurrentPeriod,
+      void Function(String) setPeriod,
+      void Function(String) setMetric,
+      VoidCallback previousPeriod,
+      VoidCallback nextPeriod,
+      Future<void> Function() refresh) {
+    final isLoading = statsAsync.isLoading && data == null;
+
+    if (isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: AppColors.accentPrimary));
     }
 
-    if (viewModel.errorMessage != null && data == null) {
-      if (viewModel.errorMessage!.contains('403')) {
+    if (statsAsync.hasError && data == null) {
+      if (statsAsync.error.toString().contains('403')) {
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -141,7 +252,7 @@ class _StatisticsView extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 OutlinedButton.icon(
-                  onPressed: viewModel.refresh,
+                  onPressed: refresh,
                   icon: const Icon(Icons.refresh),
                   label: const Text('再読み込み'),
                   style: OutlinedButton.styleFrom(
@@ -160,9 +271,9 @@ class _StatisticsView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Error: ${viewModel.errorMessage}'),
+            Text('Error: ${statsAsync.error}'),
             ElevatedButton(
-              onPressed: viewModel.refresh,
+              onPressed: refresh,
               child: const Text('Retry'),
             ),
           ],
@@ -175,7 +286,7 @@ class _StatisticsView extends StatelessWidget {
     }
 
     return RefreshIndicator(
-        onRefresh: viewModel.refresh,
+        onRefresh: refresh,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
@@ -185,11 +296,11 @@ class _StatisticsView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildSectionTitle(
-                  viewModel.selectedPeriod == 'weekly'
+                  selectedPeriod == 'weekly'
                       ? '週間ハイライト'
-                      : viewModel.selectedPeriod == 'monthly'
+                      : selectedPeriod == 'monthly'
                           ? '月間ハイライト'
-                          : viewModel.selectedPeriod == 'yearly'
+                          : selectedPeriod == 'yearly'
                               ? '年間ハイライト'
                               : '本日のハイライト',
                 ),
@@ -245,9 +356,9 @@ class _StatisticsView extends StatelessWidget {
                     children: [
                       // Sliding Background Indicator
                       AnimatedAlign(
-                        alignment: viewModel.selectedMetric == 'visitor'
+                        alignment: selectedMetric == 'visitor'
                             ? Alignment.centerLeft
-                            : (viewModel.selectedMetric == 'cancelled'
+                            : (selectedMetric == 'cancelled'
                                 ? Alignment.center
                                 : Alignment.centerRight),
                         duration: const Duration(milliseconds: 250),
@@ -274,7 +385,7 @@ class _StatisticsView extends StatelessWidget {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => viewModel.setMetric('visitor'),
+                              onTap: () => setMetric('visitor'),
                               behavior: HitTestBehavior.translucent,
                               child: Center(
                                 child: Text(
@@ -282,7 +393,7 @@ class _StatisticsView extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
-                                    color: viewModel.selectedMetric == 'visitor'
+                                    color: selectedMetric == 'visitor'
                                         ? const Color(0xFF212529)
                                         : const Color(0xFF868E96),
                                   ),
@@ -292,21 +403,19 @@ class _StatisticsView extends StatelessWidget {
                           ),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => viewModel.setMetric('cancelled'),
+                              onTap: () => setMetric('cancelled'),
                               behavior: HitTestBehavior.translucent,
                               child: Center(
                                 child: Text(
                                   'キャンセル',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    fontWeight:
-                                        viewModel.selectedMetric == 'cancelled'
-                                            ? FontWeight.w600
-                                            : FontWeight.w500,
-                                    color:
-                                        viewModel.selectedMetric == 'cancelled'
-                                            ? const Color(0xFF212529)
-                                            : const Color(0xFF868E96),
+                                    fontWeight: selectedMetric == 'cancelled'
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                    color: selectedMetric == 'cancelled'
+                                        ? const Color(0xFF212529)
+                                        : const Color(0xFF868E96),
                                   ),
                                 ),
                               ),
@@ -314,18 +423,17 @@ class _StatisticsView extends StatelessWidget {
                           ),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => viewModel.setMetric('no_show'),
+                              onTap: () => setMetric('no_show'),
                               behavior: HitTestBehavior.translucent,
                               child: Center(
                                 child: Text(
                                   'No-Show',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    fontWeight:
-                                        viewModel.selectedMetric == 'no_show'
-                                            ? FontWeight.w600
-                                            : FontWeight.w500,
-                                    color: viewModel.selectedMetric == 'no_show'
+                                    fontWeight: selectedMetric == 'no_show'
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                    color: selectedMetric == 'no_show'
                                         ? const Color(0xFF212529)
                                         : const Color(0xFF868E96),
                                   ),
@@ -344,36 +452,40 @@ class _StatisticsView extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildPeriodButton(viewModel, 'auto', '今日',
-                          isDisabled: viewModel.selectedMetric == 'no_show' ||
-                              viewModel.selectedMetric == 'cancelled'),
+                      _buildPeriodButton(
+                          selectedPeriod, setPeriod, 'auto', '今日',
+                          isDisabled: selectedMetric == 'no_show' ||
+                              selectedMetric == 'cancelled'),
                       const SizedBox(width: 8),
-                      _buildPeriodButton(viewModel, 'weekly', '週間'),
+                      _buildPeriodButton(
+                          selectedPeriod, setPeriod, 'weekly', '週間'),
                       const SizedBox(width: 8),
-                      _buildPeriodButton(viewModel, 'monthly', '月間'),
+                      _buildPeriodButton(
+                          selectedPeriod, setPeriod, 'monthly', '月間'),
                       const SizedBox(width: 8),
-                      _buildPeriodButton(viewModel, 'yearly', '年間'),
+                      _buildPeriodButton(
+                          selectedPeriod, setPeriod, 'yearly', '年間'),
                     ],
                   ),
                 ),
                 const SizedBox(height: 8),
 
                 // Date Navigator (Visible only when not 'auto')
-                if (viewModel.selectedPeriod != 'auto') ...[
+                if (selectedPeriod != 'auto') ...[
                   Container(
                     padding: const EdgeInsets.only(top: 4),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          onPressed: viewModel.previousPeriod,
+                          onPressed: previousPeriod,
                           icon:
                               const Icon(Icons.chevron_left_rounded, size: 32),
                           color: Colors.black54,
                         ),
                         const SizedBox(width: 16),
                         Text(
-                          viewModel.formattedDate,
+                          formattedDate,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -383,12 +495,10 @@ class _StatisticsView extends StatelessWidget {
                         const SizedBox(width: 16),
                         IconButton(
                           // 未来への移動は isCurrentPeriod で制御
-                          onPressed: viewModel.isCurrentPeriod
-                              ? null
-                              : viewModel.nextPeriod,
+                          onPressed: isCurrentPeriod ? null : nextPeriod,
                           icon:
                               const Icon(Icons.chevron_right_rounded, size: 32),
-                          color: viewModel.isCurrentPeriod
+                          color: isCurrentPeriod
                               ? Colors.black12
                               : Colors.black54,
                         ),
@@ -399,7 +509,7 @@ class _StatisticsView extends StatelessWidget {
                 const SizedBox(height: 4),
 
                 // Chart Display
-                if (viewModel.isLoading)
+                if (statsAsync.isLoading)
                   Container(
                     height: 280,
                     decoration: BoxDecoration(
@@ -417,8 +527,8 @@ class _StatisticsView extends StatelessWidget {
                         child: CircularProgressIndicator(
                             color: AppColors.accentPrimary)),
                   )
-                else if (viewModel.selectedMetric == 'visitor')
-                  if (viewModel.selectedPeriod == 'auto')
+                else if (selectedMetric == 'visitor')
+                  if (selectedPeriod == 'auto')
                     DynamicChartCard(
                         chartData: hourlyCongestion.map((e) {
                       return {
@@ -430,7 +540,7 @@ class _StatisticsView extends StatelessWidget {
                   else
                     DynamicChartCard(
                         chartData: data['chart_data'] as List<dynamic>?)
-                else if (viewModel.selectedMetric == 'cancelled')
+                else if (selectedMetric == 'cancelled')
                   DynamicChartCard(
                       chartData: data['cancelled_chart_data'] as List<dynamic>?)
                 else
@@ -669,12 +779,12 @@ class _StatisticsView extends StatelessWidget {
     }
   }
 
-  Widget _buildPeriodButton(
-      StatisticsViewModel viewModel, String period, String label,
+  Widget _buildPeriodButton(String selectedPeriod,
+      void Function(String) setPeriod, String period, String label,
       {bool isDisabled = false}) {
-    final isSelected = viewModel.selectedPeriod == period;
+    final isSelected = selectedPeriod == period;
     return InkWell(
-      onTap: isDisabled ? null : () => viewModel.setPeriod(period),
+      onTap: isDisabled ? null : () => setPeriod(period),
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

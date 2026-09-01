@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/constants/privacy_policy.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_viewmodel.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_providers.dart';
 import 'package:yoyaku_mate_provider/widgets/common_buttons/action_button.dart';
 
-class PrivacyPolicyStep extends StatelessWidget {
+class PrivacyPolicyStep extends ConsumerWidget {
   final VoidCallback onNext;
   final VoidCallback onShowFullPolicy;
 
@@ -16,9 +16,10 @@ class PrivacyPolicyStep extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<SignUpViewModel>();
-    final isAgreed = vm.isPrivacyAgreed;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(signUpNotifierProvider);
+    final notifier = ref.read(signUpNotifierProvider.notifier);
+    final isAgreed = state.isPrivacyAgreed;
 
     return SingleChildScrollView(
       child: Column(
@@ -70,7 +71,7 @@ class PrivacyPolicyStep extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           InkWell(
-            onTap: () => vm.setPrivacyAgreed(!isAgreed),
+            onTap: () => notifier.setPrivacyAgreed(!isAgreed),
             splashFactory: NoSplash.splashFactory,
             highlightColor: Colors.transparent,
             splashColor: Colors.transparent,
@@ -85,7 +86,7 @@ class PrivacyPolicyStep extends StatelessWidget {
                     child: Checkbox(
                       value: isAgreed,
                       activeColor: AppColors.accentPrimary,
-                      onChanged: (val) => vm.setPrivacyAgreed(val ?? false),
+                      onChanged: (val) => notifier.setPrivacyAgreed(val ?? false),
                     ),
                   ),
                   const SizedBox(width: 12),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_viewmodel.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_providers.dart';
 
-class RoleSelectionStep extends StatelessWidget {
+class RoleSelectionStep extends ConsumerWidget {
   final VoidCallback onRoleSelected;
 
   const RoleSelectionStep({
@@ -12,7 +12,7 @@ class RoleSelectionStep extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -30,7 +30,7 @@ class RoleSelectionStep extends StatelessWidget {
           label: '管理者として登録',
           icon: Icons.storefront,
           onPressed: () {
-            context.read<SignUpViewModel>().setRole('manager');
+            ref.read(signUpNotifierProvider.notifier).setRole('manager');
             onRoleSelected();
           },
         ),
@@ -40,7 +40,7 @@ class RoleSelectionStep extends StatelessWidget {
           label: '職員として登録',
           icon: Icons.person_outline,
           onPressed: () {
-            context.read<SignUpViewModel>().setRole('staff');
+            ref.read(signUpNotifierProvider.notifier).setRole('staff');
             onRoleSelected();
           },
         ),

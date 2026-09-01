@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_viewmodel.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_providers.dart';
 import 'package:yoyaku_mate_provider/widgets/common_buttons/action_button.dart';
 
-class VerificationCodeInputStep extends StatelessWidget {
+class VerificationCodeInputStep extends ConsumerWidget {
   final TextEditingController controller;
   final VoidCallback onVerify;
   final VoidCallback onResend;
@@ -17,10 +17,10 @@ class VerificationCodeInputStep extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<SignUpViewModel>();
-    final isLoading = vm.isLoading;
-    final errorMessage = vm.errorMessage;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(signUpNotifierProvider);
+    final isLoading = state.isLoading;
+    final errorMessage = state.errorMessage;
 
     return SingleChildScrollView(
       child: Column(

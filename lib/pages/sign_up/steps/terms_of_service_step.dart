@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/constants/terms_of_service.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_viewmodel.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_providers.dart';
 import 'package:yoyaku_mate_provider/widgets/common_buttons/action_button.dart';
 
-class TermsOfServiceStep extends StatelessWidget {
+class TermsOfServiceStep extends ConsumerWidget {
   final VoidCallback onNext;
   final VoidCallback onShowFullTerms;
 
@@ -16,9 +16,10 @@ class TermsOfServiceStep extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<SignUpViewModel>();
-    final isAgreed = vm.isTermsAgreed;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(signUpNotifierProvider);
+    final notifier = ref.read(signUpNotifierProvider.notifier);
+    final isAgreed = state.isTermsAgreed;
 
     return SingleChildScrollView(
       child: Column(
@@ -70,7 +71,7 @@ class TermsOfServiceStep extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           InkWell(
-            onTap: () => vm.setTermsAgreed(!isAgreed),
+            onTap: () => notifier.setTermsAgreed(!isAgreed),
             splashFactory: NoSplash.splashFactory,
             highlightColor: Colors.transparent,
             splashColor: Colors.transparent,
@@ -85,7 +86,7 @@ class TermsOfServiceStep extends StatelessWidget {
                     child: Checkbox(
                       value: isAgreed,
                       activeColor: AppColors.accentPrimary,
-                      onChanged: (val) => vm.setTermsAgreed(val ?? false),
+                      onChanged: (val) => notifier.setTermsAgreed(val ?? false),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -101,7 +102,7 @@ class TermsOfServiceStep extends StatelessWidget {
             label: '次へ',
             onPressed: isAgreed
                 ? () {
-                    vm.saveSignUpProgress();
+                    notifier.saveSignUpProgress();
                     onNext();
                   }
                 : null,

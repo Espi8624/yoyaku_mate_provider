@@ -39,7 +39,7 @@ docs/
 
 | 문서 | 결정 내용 |
 |------|----------|
-| [ADR-001-provider-state.md](./decisions/ADR-001-provider-state.ko.md) | Provider 패턴 상태 관리 선택 이유 |
+| [ADR-001-provider-state.md](./decisions/ADR-001-provider-state.ko.md) | Provider 패턴 상태 관리 선택 이유 (상위 대체됨, 아래 리팩토링 참고) |
 
 ---
 
@@ -53,4 +53,6 @@ docs/
 
 ## Refactoring (리팩토링)
 
-*기록 예정*
+| 문서 | 설명 |
+|------|------|
+| [001-provider-to-riverpod-migration.md](./refactoring/001-provider-to-riverpod-migration.ko.md) | 상태관리 아키텍처 Provider(MVVM) → Riverpod + Hooks 전면 마이그레이션 |

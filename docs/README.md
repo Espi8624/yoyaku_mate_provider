@@ -39,7 +39,7 @@ docs/
 
 | ドキュメント | 決定内容 |
 |------|----------|
-| [ADR-001-provider-state.md](./decisions/ADR-001-provider-state.md) | Provider パターンによる状態管理選定の理由 |
+| [ADR-001-provider-state.md](./decisions/ADR-001-provider-state.md) | Provider パターンによる状態管理選定の理由 (上書き済み、下記リファクタリング参照) |
 
 ---
 
@@ -53,4 +53,6 @@ docs/
 
 ## Refactoring (リファクタリング)
 
-*記録予定*
+| ドキュメント | 説明 |
+|------|------|
+| [001-provider-to-riverpod-migration.md](./refactoring/001-provider-to-riverpod-migration.md) | 状態管理アーキテクチャの Provider(MVVM) → Riverpod + Hooks 全面移行 |
