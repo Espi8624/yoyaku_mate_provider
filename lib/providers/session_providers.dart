@@ -25,6 +25,7 @@ import 'package:yoyaku_mate_provider/models/store_settings.dart';
 import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/services/profile_service.dart';
+import 'package:yoyaku_mate_provider/services/shift_table_service.dart';
 import 'package:yoyaku_mate_provider/services/store_settings_service.dart';
 
 part 'session_providers.g.dart';
@@ -39,6 +40,11 @@ ProviderProfileService profileService(Ref ref) {
 @riverpod
 StoreSettingsService storeSettingsService(Ref ref) {
   return StoreSettingsService(baseUrl: dotenv.env['API_URL'] ?? '');
+}
+
+@riverpod
+ShiftTableService shiftTableService(Ref ref) {
+  return ShiftTableService(baseUrl: dotenv.env['API_URL'] ?? '');
 }
 
 // --- 認証状態 ---
@@ -155,15 +161,6 @@ Future<StoreSettings?> storeSettings(Ref ref, {required String storeId}) async {
   }
 }
 
-@riverpod
-Future<Map<String, dynamic>> myAvailability(
-  Ref ref, {
-  required String storeId,
-}) async {
-  final service = ref.watch(profileServiceProvider);
-  return await service.fetchMyAvailability(storeId);
-}
-
 // --- ユーザープロフィール関連アクション ---
 
 @riverpod
@@ -221,13 +218,6 @@ class ProfileActions extends _$ProfileActions {
     final service = ref.read(profileServiceProvider);
     await service.uploadUserImage(File(pickedFile.path), idToken);
     ref.invalidate(userProfileProvider);
-  }
-
-  Future<void> updateMyAvailability(
-      String storeId, Map<String, List<String>> availability) async {
-    final service = ref.read(profileServiceProvider);
-    await service.updateMyAvailability(storeId, availability);
-    ref.invalidate(myAvailabilityProvider(storeId: storeId));
   }
 }
 

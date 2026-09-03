@@ -78,10 +78,17 @@ class _WaitingView extends HookConsumerWidget {
     final selectedFilter = useState('all');
 
     // アプリのフォアグラウンド復帰を検知してリストを再取得＆SSE再接続
+    // ref.invalidateはInheritedWidget(ProviderScope)への依存登録を伴うため、
+    // Hookの初期化中(initHook)に直接呼ぶとアサーションエラーになる。
+    // (ホットリスタート直後はAppLifecycleStateが既にresumedのまま初回buildを迎えるため、
+    //  useEffectの初回発火がinitHookのタイミングと重なり再現する)
+    // postFrameCallbackでフレーム確定後まで呼び出しを遅延させることで回避する
     final lifecycleState = useAppLifecycleState();
     useEffect(() {
       if (lifecycleState == AppLifecycleState.resumed) {
-        ref.invalidate(waitingListNotifierProvider(storeId: storeId));
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.invalidate(waitingListNotifierProvider(storeId: storeId));
+        });
       }
       return null;
     }, [lifecycleState]);

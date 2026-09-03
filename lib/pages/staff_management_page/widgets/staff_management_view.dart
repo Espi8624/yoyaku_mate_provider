@@ -37,12 +37,14 @@ class StaffManagementView extends ConsumerWidget {
 
     final staffList = staffAsync.value ?? const <Map<String, dynamic>>[];
 
-    // マネージャーは store_staff_info に自分の項目を持たないため、
-    // スタッフ一覧の中から「本人の項目」と「それ以外のメンバー」を分離する
+    // スタッフ一覧の中から「本人の項目」と「それ以外のメンバー」を分離する。
+    // マネージャーは本来 store_staff_info に自分の項目を持たない想定だが、
+    // (スタッフから昇格した等の経緯で)項目が残っているケースでも上部のカードと
+    // メンバー一覧に二重表示されないよう、役割に関わらず本人の項目は常に除外する
     Map<String, dynamic>? myStaffEntry;
     final List<Map<String, dynamic>> otherStaffList = [];
     for (final entry in staffList) {
-      if (!isManager && entry['user_id'] == currentUser?.id) {
+      if (entry['user_id'] == currentUser?.id) {
         myStaffEntry = entry;
       } else {
         otherStaffList.add(entry);
@@ -254,25 +256,23 @@ class _StaffCard extends HookConsumerWidget {
     }
   }
 
-  // 曜日バッジタップ時、その曜日1日分だけの勤務可能時間帯を編集するダイアログを表示
+  // 曜日バッジタップ時、その曜日1日分だけの勤務不可時間帯を編集するダイアログを表示
   Future<void> _showDayAvailabilityDialog(
       BuildContext context, WidgetRef ref, String day, String dayLabel) async {
     final availability = staff['availability'] as Map<String, dynamic>? ?? {};
-    final currentBlocks =
-        (availability[day] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-            <String>[];
+    // 旧スキーマ(文字列リスト)のデータが残っている場合は無視する(型不一致でクラッシュしないよう防御)
+    final currentRanges = (availability[day] as List<dynamic>?)
+            ?.whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList() ??
+        <Map<String, dynamic>>[];
 
-    final hours = storeSettings?.operatingHours[day];
-
-    final result = await showDialog<List<String>>(
+    final result = await showDialog<List<Map<String, dynamic>>>(
       context: context,
       builder: (_) => DayAvailabilityDialog(
         dayLabel: dayLabel,
-        initialBlocks: currentBlocks,
-        is24Hours: storeSettings?.is24Hours ?? false,
+        initialRanges: currentRanges,
         isClosed: storeSettings?.closedDays.isClosedOn(dayLabel) ?? false,
-        businessStart: hours?['start'],
-        businessEnd: hours?['end'],
       ),
     );
 
@@ -282,9 +282,10 @@ class _StaffCard extends HookConsumerWidget {
     final updatedAvailability = {
       for (final d in Weekday.values)
         d: (availability[d] as List<dynamic>?)
-                ?.map((e) => e.toString())
+                ?.whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
                 .toList() ??
-            <String>[],
+            <Map<String, dynamic>>[],
     };
     updatedAvailability[day] = result;
 
@@ -293,12 +294,12 @@ class _StaffCard extends HookConsumerWidget {
           .read(staffActionsProvider.notifier)
           .updateAvailability(storeId, staff['_id'], updatedAvailability);
       if (!context.mounted) return;
-      ToastWidget.show(context, '勤務可能時間を更新しました', type: ToastType.success);
+      ToastWidget.show(context, '勤務不可時間を更新しました', type: ToastType.success);
     } catch (e) {
       if (!context.mounted) return;
       ToastWidget.show(
         context,
-        _describeError(e, actionLabel: '勤務可能時間の更新失敗'),
+        _describeError(e, actionLabel: '勤務不可時間の更新失敗'),
         type: ToastType.error,
       );
     }
@@ -424,7 +425,7 @@ class _StaffCard extends HookConsumerWidget {
               ],
             ],
 
-            // 承認済み、かつ勤務可能時間の編集が許可されている場合のみ「勤務可能日」を表示
+            // 承認済み、かつ勤務不可時間の編集が許可されている場合のみ「勤務不可時間」を表示
             // (「権限設定」とは独立して開閉可能)
             if (status == StaffStatus.approved && canEditAvailability) ...[
               const SizedBox(height: 12),
@@ -437,7 +438,7 @@ class _StaffCard extends HookConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Text(
-                      "勤務可能日",
+                      "勤務不可時間",
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[700],
@@ -457,7 +458,7 @@ class _StaffCard extends HookConsumerWidget {
               if (isAvailabilityExpanded.value) ...[
                 const SizedBox(height: 12),
                 const Text(
-                  '曜日をタップして編集',
+                  '曜日をタップして編集(赤=終日不可、橙=一部不可)',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
@@ -587,8 +588,19 @@ class _AvailabilitySummary extends StatelessWidget {
       children: List.generate(Weekday.values.length, (index) {
         final day = Weekday.values[index];
         final dayLabel = Weekday.labels[index];
-        final blocks = availability[day] as List<dynamic>?;
-        final isAvailable = blocks != null && blocks.isNotEmpty;
+        // 旧スキーマ(文字列リスト)のデータが残っている場合は無視する(型不一致でクラッシュしないよう防御)
+        final ranges =
+            (availability[day] as List<dynamic>?)?.whereType<Map>().toList() ??
+                const [];
+        final hasAllDay = ranges.any((r) => r['all_day'] == true);
+        final hasPartial = !hasAllDay && ranges.isNotEmpty;
+
+        // 終日不可: 赤、一部の時間帯のみ不可: 橙、制限なし: 通常色
+        final Color badgeColor = hasAllDay
+            ? AppColors.rejected
+            : hasPartial
+                ? AppColors.pending
+                : AppColors.accentPrimary;
 
         return InkWell(
           onTap: () => onDayTap(day, dayLabel),
@@ -598,19 +610,16 @@ class _AvailabilitySummary extends StatelessWidget {
             height: 56,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isAvailable ? AppColors.accentPrimary : Colors.grey.shade200,
+              color: badgeColor,
               shape: BoxShape.circle,
-              border: Border.all(
-                color: isAvailable ? AppColors.accentPrimary : Colors.grey.shade300,
-                width: 1.5,
-              ),
+              border: Border.all(color: badgeColor, width: 1.5),
             ),
             child: Text(
               dayLabel,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isAvailable ? AppColors.textPrimaryLight : Colors.grey,
+                color: AppColors.textPrimaryLight,
               ),
             ),
           ),

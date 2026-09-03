@@ -1,29 +1,21 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
-import '../../../constants/time_block.dart';
 import '../../../widgets/common_dialogs/base_dialog.dart';
+import 'add_unavailable_range_dialog.dart';
 
-// 特定の1曜日の勤務可能時間帯だけを設定するための軽量ダイアログ
+// 特定の1曜日の勤務不可時間帯だけを設定するための軽量ダイアログ
 // 曜日バッジをタップした際に表示される
 class DayAvailabilityDialog extends StatefulWidget {
   final String dayLabel;
-  final List<String> initialBlocks;
-  // 店舗が24時間営業かどうか(trueの場合、営業時間による制限をかけない)
-  final bool is24Hours;
-  // その曜日が定休日かどうか(trueの場合、全ブロックを選択不可にする)
+  final List<Map<String, dynamic>> initialRanges;
+  // その曜日が定休日かどうか(trueの場合、追加操作を不可にする)
   final bool isClosed;
-  // その曜日の営業開始/終了時刻("HH:MM"形式。未設定ならnull=制限なし)
-  final String? businessStart;
-  final String? businessEnd;
 
   const DayAvailabilityDialog({
     super.key,
     required this.dayLabel,
-    required this.initialBlocks,
-    this.is24Hours = false,
+    required this.initialRanges,
     this.isClosed = false,
-    this.businessStart,
-    this.businessEnd,
   });
 
   @override
@@ -31,26 +23,29 @@ class DayAvailabilityDialog extends StatefulWidget {
 }
 
 class _DayAvailabilityDialogState extends State<DayAvailabilityDialog> {
-  late Set<String> _selectedBlocks;
+  late List<Map<String, dynamic>> _ranges;
 
   @override
   void initState() {
     super.initState();
-    _selectedBlocks = widget.initialBlocks.toSet();
+    _ranges = List<Map<String, dynamic>>.from(widget.initialRanges);
   }
 
-  void _toggleBlock(String block) {
-    setState(() {
-      if (_selectedBlocks.contains(block)) {
-        _selectedBlocks.remove(block);
-      } else {
-        _selectedBlocks.add(block);
-      }
-    });
+  Future<void> _addRange() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => const AddUnavailableRangeDialog(),
+    );
+    if (result == null) return;
+    setState(() => _ranges.add(result));
+  }
+
+  void _removeRange(int index) {
+    setState(() => _ranges.removeAt(index));
   }
 
   void _submit() {
-    Navigator.of(context).pop(_selectedBlocks.toList());
+    Navigator.of(context).pop(_ranges);
   }
 
   @override
@@ -62,7 +57,7 @@ class _DayAvailabilityDialogState extends State<DayAvailabilityDialog> {
         : desktopMaxWidth;
 
     return BaseDialog(
-      title: '${widget.dayLabel}曜日の勤務可能時間',
+      title: '${widget.dayLabel}曜日の勤務不可時間',
       width: dialogWidth,
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -70,56 +65,73 @@ class _DayAvailabilityDialogState extends State<DayAvailabilityDialog> {
           Text(
             widget.isClosed
                 ? 'この曜日は定休日です。'
-                : '勤務可能な時間帯を選択してください。選択がない場合は勤務不可として扱われます。',
+                : '働けない時間帯を追加してください。何も追加しない場合は終日勤務可能として扱われます。',
             style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
-          const SizedBox(height: 20),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: TimeBlock.values.map((block) {
-              final isSelected = _selectedBlocks.contains(block);
-              final isEnabled = TimeBlock.overlapsBusinessHours(
-                block,
-                is24Hours: widget.is24Hours,
-                isClosed: widget.isClosed,
-                start: widget.businessStart,
-                end: widget.businessEnd,
-              );
-              return ChoiceChip(
-                label: Text(TimeBlock.label(block)),
-                selected: isSelected,
-                onSelected: isEnabled ? (_) => _toggleBlock(block) : null,
-                selectedColor: AppColors.accentPrimary,
-                labelStyle: TextStyle(
-                  fontSize: 14,
-                  color: !isEnabled
-                      ? Colors.grey
-                      : (isSelected ? Colors.white : Colors.black87),
-                  fontWeight: FontWeight.w500,
+          const SizedBox(height: 16),
+          if (widget.isClosed)
+            const SizedBox.shrink()
+          else ...[
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (int i = 0; i < _ranges.length; i++)
+                  _RangeChip(range: _ranges[i], onDelete: () => _removeRange(i)),
+                ActionChip(
+                  avatar: const Icon(Icons.add, size: 16, color: AppColors.accentPrimary),
+                  label: const Text('追加'),
+                  labelStyle: const TextStyle(color: AppColors.accentPrimary),
+                  backgroundColor: AppColors.accentPrimary.withValues(alpha: 0.08),
+                  side: BorderSide.none,
+                  onPressed: _addRange,
                 ),
-                backgroundColor:
-                    isEnabled ? Colors.grey.shade100 : Colors.grey.shade200,
-                side: BorderSide.none,
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentPrimary,
-                foregroundColor: AppColors.textPrimaryLight,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              onPressed: _submit,
-              child: const Text('確認'),
+              ],
             ),
-          ),
+          ],
         ],
       ),
+      footer: widget.isClosed
+          ? null
+          : SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentPrimary,
+                  foregroundColor: AppColors.textPrimaryLight,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                onPressed: _submit,
+                child: const Text('確認'),
+              ),
+            ),
+    );
+  }
+}
+
+class _RangeChip extends StatelessWidget {
+  final Map<String, dynamic> range;
+  final VoidCallback onDelete;
+
+  const _RangeChip({required this.range, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final allDay = range['all_day'] == true;
+    final label = allDay ? '終日' : '${range['start_time']}-${range['end_time']}';
+
+    return Chip(
+      label: Text(label),
+      labelStyle: TextStyle(
+        fontSize: 13,
+        fontWeight: allDay ? FontWeight.w600 : FontWeight.normal,
+        color: allDay ? AppColors.rejected : AppColors.textPrimary,
+      ),
+      backgroundColor: allDay ? AppColors.rejectedBackground : Colors.grey.shade100,
+      side: BorderSide.none,
+      deleteIcon: const Icon(Icons.close, size: 16),
+      onDeleted: onDelete,
     );
   }
 }

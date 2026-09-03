@@ -43,6 +43,24 @@ final storeSettingsServiceProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef StoreSettingsServiceRef = AutoDisposeProviderRef<StoreSettingsService>;
+String _$shiftTableServiceHash() => r'bf9a6a8e1d2ef6244fef252f5db916b5ac9f3728';
+
+/// See also [shiftTableService].
+@ProviderFor(shiftTableService)
+final shiftTableServiceProvider =
+    AutoDisposeProvider<ShiftTableService>.internal(
+  shiftTableService,
+  name: r'shiftTableServiceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$shiftTableServiceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef ShiftTableServiceRef = AutoDisposeProviderRef<ShiftTableService>;
 String _$firebaseUserHash() => r'41ccd6f03a5c4ed94888741812ccad955176fcc0';
 
 /// See also [firebaseUser].
@@ -409,138 +427,6 @@ class _StoreSettingsProviderElement
   String get storeId => (origin as StoreSettingsProvider).storeId;
 }
 
-String _$myAvailabilityHash() => r'4531189d612a6767af9d3398fc9bdd4e46a2e389';
-
-/// See also [myAvailability].
-@ProviderFor(myAvailability)
-const myAvailabilityProvider = MyAvailabilityFamily();
-
-/// See also [myAvailability].
-class MyAvailabilityFamily extends Family<AsyncValue<Map<String, dynamic>>> {
-  /// See also [myAvailability].
-  const MyAvailabilityFamily();
-
-  /// See also [myAvailability].
-  MyAvailabilityProvider call({
-    required String storeId,
-  }) {
-    return MyAvailabilityProvider(
-      storeId: storeId,
-    );
-  }
-
-  @override
-  MyAvailabilityProvider getProviderOverride(
-    covariant MyAvailabilityProvider provider,
-  ) {
-    return call(
-      storeId: provider.storeId,
-    );
-  }
-
-  static const Iterable<ProviderOrFamily>? _dependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
-
-  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
-      _allTransitiveDependencies;
-
-  @override
-  String? get name => r'myAvailabilityProvider';
-}
-
-/// See also [myAvailability].
-class MyAvailabilityProvider
-    extends AutoDisposeFutureProvider<Map<String, dynamic>> {
-  /// See also [myAvailability].
-  MyAvailabilityProvider({
-    required String storeId,
-  }) : this._internal(
-          (ref) => myAvailability(
-            ref as MyAvailabilityRef,
-            storeId: storeId,
-          ),
-          from: myAvailabilityProvider,
-          name: r'myAvailabilityProvider',
-          debugGetCreateSourceHash:
-              const bool.fromEnvironment('dart.vm.product')
-                  ? null
-                  : _$myAvailabilityHash,
-          dependencies: MyAvailabilityFamily._dependencies,
-          allTransitiveDependencies:
-              MyAvailabilityFamily._allTransitiveDependencies,
-          storeId: storeId,
-        );
-
-  MyAvailabilityProvider._internal(
-    super._createNotifier, {
-    required super.name,
-    required super.dependencies,
-    required super.allTransitiveDependencies,
-    required super.debugGetCreateSourceHash,
-    required super.from,
-    required this.storeId,
-  }) : super.internal();
-
-  final String storeId;
-
-  @override
-  Override overrideWith(
-    FutureOr<Map<String, dynamic>> Function(MyAvailabilityRef provider) create,
-  ) {
-    return ProviderOverride(
-      origin: this,
-      override: MyAvailabilityProvider._internal(
-        (ref) => create(ref as MyAvailabilityRef),
-        from: from,
-        name: null,
-        dependencies: null,
-        allTransitiveDependencies: null,
-        debugGetCreateSourceHash: null,
-        storeId: storeId,
-      ),
-    );
-  }
-
-  @override
-  AutoDisposeFutureProviderElement<Map<String, dynamic>> createElement() {
-    return _MyAvailabilityProviderElement(this);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is MyAvailabilityProvider && other.storeId == storeId;
-  }
-
-  @override
-  int get hashCode {
-    var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, storeId.hashCode);
-
-    return _SystemHash.finish(hash);
-  }
-}
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-mixin MyAvailabilityRef on AutoDisposeFutureProviderRef<Map<String, dynamic>> {
-  /// The parameter `storeId` of this provider.
-  String get storeId;
-}
-
-class _MyAvailabilityProviderElement
-    extends AutoDisposeFutureProviderElement<Map<String, dynamic>>
-    with MyAvailabilityRef {
-  _MyAvailabilityProviderElement(super.provider);
-
-  @override
-  String get storeId => (origin as MyAvailabilityProvider).storeId;
-}
-
 String _$selectedStoreIdHash() => r'ab359076264b0abc8a2eb0ee420efcbef20bd63b';
 
 /// See also [SelectedStoreId].
@@ -557,7 +443,7 @@ final selectedStoreIdProvider =
 );
 
 typedef _$SelectedStoreId = AutoDisposeNotifier<String?>;
-String _$profileActionsHash() => r'65490653ed1b487fb0c16848700a4f9059dcf832';
+String _$profileActionsHash() => r'ca95b5786cec44d17e31bdf4c0134eb924968e27';
 
 /// See also [ProfileActions].
 @ProviderFor(ProfileActions)

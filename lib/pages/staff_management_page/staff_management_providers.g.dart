@@ -158,7 +158,7 @@ class _StaffListProviderElement
   String get storeId => (origin as StaffListProvider).storeId;
 }
 
-String _$staffActionsHash() => r'b8258b3ae341fa52172bdc9775c135799e9bdb64';
+String _$staffActionsHash() => r'0806951be4225a4abbb52de51de8c5ec57433e01';
 
 /// See also [StaffActions].
 @ProviderFor(StaffActions)

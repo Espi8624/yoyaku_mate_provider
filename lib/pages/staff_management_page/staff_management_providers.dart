@@ -43,7 +43,7 @@ class StaffActions extends _$StaffActions {
   }
 
   Future<void> updateAvailability(String storeId, String staffId,
-      Map<String, List<String>> availability) async {
+      Map<String, List<Map<String, dynamic>>> availability) async {
     final service = ref.read(profileServiceProvider);
     await service.updateStoreStaffAvailability(storeId, staffId, availability);
     ref.invalidate(staffListProvider(storeId: storeId));

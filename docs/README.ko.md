@@ -21,6 +21,7 @@ docs/
 | [ticket-printing.md](./features/ticket-printing.ko.md) | 감열 프린터 티켓 출력 시스템 |
 | [statistics-dashboard.md](./features/statistics-dashboard.ko.md) | 대기 통계 분석 대시보드 |
 | [staff-availability.md](./features/staff-availability.ko.md) | 스태프 요일별 근무 가능 시간대 입력·조회·수정 |
+| [shift-table.md](./features/shift-table.ko.md) | 스태프 관리 화면 2페이지, 주간 시프트표(Outlook/Teams풍 그리드) 생성·열람·편집 |
 
 ---
 
@@ -32,6 +33,7 @@ docs/
 | [sse-client.md](./implementation/sse-client.ko.md) | SSE 구독 클라이언트 (지수 백오프 재연결) |
 | [idempotency.md](./implementation/idempotency.ko.md) | 클라이언트 멱등성 키 생성 및 전달 |
 | [staff-availability.md](./implementation/staff-availability.ko.md) | Availability 다이얼로그 2단 구성, 요일 단위 부분 업데이트 병합 로직 구현 상세 |
+| [shift-table.md](./implementation/shift-table.ko.md) | PageView 스와이프 구성, 시프트 그리드 스크롤 동기화, Riverpod 프로바이더 구현 상세 |
 
 ---
 

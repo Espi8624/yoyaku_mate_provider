@@ -6,6 +6,9 @@ class BaseDialog extends StatefulWidget {
   final Widget content;
   final double? width;
   final EdgeInsetsGeometry? contentPadding;
+  // スクロール量に関わらずダイアログ下部に固定表示するウィジェット(確認ボタン等)。
+  // 未指定の場合は従来通りcontent内に含める形も可能
+  final Widget? footer;
 
   const BaseDialog({
     super.key,
@@ -13,6 +16,7 @@ class BaseDialog extends StatefulWidget {
     required this.content,
     this.width,
     this.contentPadding,
+    this.footer,
   });
 
   @override
@@ -120,10 +124,18 @@ class _BaseDialogState extends State<BaseDialog> {
                       // SingleChildScrollViewにScrollControllerを繋げる
                       controller: _scrollController,
                       padding: widget.contentPadding ??
-                          const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                          EdgeInsets.fromLTRB(
+                              24, 8, 24, widget.footer != null ? 8 : 24),
                       child: widget.content,
                     ),
                   ),
+
+                  // footer指定時、スクロール量に関わらず下部に固定表示する
+                  if (widget.footer != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                      child: widget.footer,
+                    ),
                 ],
               ),
             ),

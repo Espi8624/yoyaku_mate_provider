@@ -7,6 +7,7 @@ import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../dialogs/business_hours_dialog.dart';
 import '../../dialogs/holiday_dialog.dart';
 import '../../dialogs/number_input_dialog.dart';
+import '../../dialogs/staff_count_dialog.dart';
 import '../../dialogs/text_input_dialog.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
@@ -59,6 +60,15 @@ class OperationSettingsSection extends ConsumerWidget {
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         ProfileSettingItem(
+          title: '必要人員設定',
+          subtitle: _buildStaffCountSummary(storeSettings.requiredStaffCount),
+          showTrailingIcon: !isReadOnly,
+          onTap: isReadOnly
+              ? null
+              : () => _showStaffCountDialog(context, ref, storeSettings),
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        ProfileSettingItem(
           title: '休業日',
           subtitle: storeSettings.closedDays.summary,
           showTrailingIcon: !isReadOnly,
@@ -85,6 +95,18 @@ class OperationSettingsSection extends ConsumerWidget {
     final weekdayHours =
         '${hours['monday']?['start'] ?? ''}-${hours['monday']?['end'] ?? ''}';
     return '平日: $weekdayHours';
+  }
+
+  // 必要人員設定の要約表示。1件も設定されていない場合は「未設定」を表示し、
+  // それ以外は月曜日の値を代表例として表示する(営業時間の要約と同じ方針)
+  String _buildStaffCountSummary(Map<String, DayStaffRequirement> requirements) {
+    // shiftChangeCount(交代回数)は0も有効な設定値(=1ブロック)のため、
+    // 「設定済みかどうか」の判定にはcount(必要人数)のみを用いる
+    final hasAnySetting = requirements.values.any((r) => r.count > 0);
+    if (!hasAnySetting) return '未設定';
+
+    final monday = requirements['monday'];
+    return '月 ${monday?.count ?? 0}名・交代${monday?.shiftChangeCount ?? 0}回 他';
   }
 
   Future<void> _applyUpdate(
@@ -129,6 +151,7 @@ class OperationSettingsSection extends ConsumerWidget {
         initialHours: storeSettings.operatingHours,
         initialIs24Hours: storeSettings.is24Hours,
         initialResetTime: storeSettings.resetTime,
+        closedWeekdayLabels: storeSettings.closedDays.regularWeekly,
       ),
     );
 
@@ -139,6 +162,22 @@ class OperationSettingsSection extends ConsumerWidget {
         is24Hours: result['is24Hours'] as bool,
         resetTime: result['resetTime'] as String,
       );
+      await _applyUpdate(context, ref, updatedSettings);
+    }
+  }
+
+  Future<void> _showStaffCountDialog(
+      BuildContext context, WidgetRef ref, StoreSettings storeSettings) async {
+    final result = await showDialog<Map<String, DayStaffRequirement>>(
+      context: context,
+      builder: (_) => StaffCountDialog(
+        initialRequirements: storeSettings.requiredStaffCount,
+        closedWeekdayLabels: storeSettings.closedDays.regularWeekly,
+      ),
+    );
+
+    if (result != null) {
+      final updatedSettings = storeSettings.copyWith(requiredStaffCount: result);
       await _applyUpdate(context, ref, updatedSettings);
     }
   }

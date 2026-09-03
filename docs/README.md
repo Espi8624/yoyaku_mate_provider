@@ -21,6 +21,7 @@ docs/
 | [ticket-printing.md](./features/ticket-printing.md) | 感熱プリンター待機整理券発券システム |
 | [statistics-dashboard.md](./features/statistics-dashboard.md) | 待機統計分析ダッシュボード |
 | [staff-availability.md](./features/staff-availability.md) | スタッフの曜日別勤務可能時間帯の入力・照会・修正 |
+| [shift-table.md](./features/shift-table.md) | スタッフ管理画面2ページ目、週間シフト表(Outlook/Teams風グリッド)の作成・閲覧・編集 |
 
 ---
 
@@ -32,6 +33,7 @@ docs/
 | [sse-client.md](./implementation/sse-client.md) | SSE購読クライアント (指数バックオフ再接続) |
 | [idempotency.md](./implementation/idempotency.md) | クライアント側での冪等性キーの生成と伝送 |
 | [staff-availability.md](./implementation/staff-availability.md) | Availabilityダイアログの二段構成、曜日単位の部分更新マージロジック実装詳細 |
+| [shift-table.md](./implementation/shift-table.md) | PageViewスワイプ構成、シフトグリッドのスクロール同期、Riverpodプロバイダー実装詳細 |
 
 ---
 

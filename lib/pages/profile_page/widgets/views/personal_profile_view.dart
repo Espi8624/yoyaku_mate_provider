@@ -12,7 +12,6 @@ import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.
 import '../../../../models/user_profile.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../dialogs/edit_profile_dialog.dart';
-import '../../dialogs/availability_dialog.dart';
 import '../profile_header.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
@@ -66,40 +65,6 @@ class PersonalProfileView extends ConsumerWidget {
           if (!context.mounted) return;
           ToastWidget.show(context, _describeError(e), type: ToastType.error);
         }
-      }
-    }
-  }
-
-  Future<void> _showAvailabilityDialog(
-      BuildContext context, WidgetRef ref) async {
-    final storeId = ref.read(selectedStoreProfileProvider)?.id;
-    if (storeId == null) return;
-
-    final currentAvailability =
-        await ref.read(myAvailabilityProvider(storeId: storeId).future);
-    if (!context.mounted) return;
-
-    final storeSettings =
-        ref.read(storeSettingsProvider(storeId: storeId)).valueOrNull;
-
-    final result = await showDialog<Map<String, List<String>>>(
-      context: context,
-      builder: (_) => AvailabilityDialog(
-        initialAvailability: currentAvailability,
-        storeSettings: storeSettings,
-      ),
-    );
-
-    if (result != null) {
-      try {
-        await ref
-            .read(profileActionsProvider.notifier)
-            .updateMyAvailability(storeId, result);
-        if (!context.mounted) return;
-        ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
-      } catch (e) {
-        if (!context.mounted) return;
-        ToastWidget.show(context, _describeError(e), type: ToastType.error);
       }
     }
   }
@@ -194,17 +159,6 @@ class PersonalProfileView extends ConsumerWidget {
                     subtitle: userProfile.phone_number,
                     onTap: null,
                     showTrailingIcon: false,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              ProfileSection(
-                title: '勤務情報',
-                children: [
-                  ProfileSettingItem(
-                    title: '勤務可能時間',
-                    subtitle: '曜日・時間帯ごとに勤務可能な時間を設定',
-                    onTap: () => _showAvailabilityDialog(context, ref),
                   ),
                 ],
               ),
