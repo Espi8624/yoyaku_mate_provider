@@ -1,34 +1,39 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/constants/privacy_policy.dart';
 import 'package:yoyaku_mate_provider/constants/terms_of_service.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
+import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 import '../../../../models/user_profile.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
-import '../../profile_screen_viewmodel.dart';
 import '../dialogs/edit_profile_dialog.dart';
-import '../../dialogs/availability_dialog.dart';
 import '../profile_header.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
 
-class PersonalProfileView extends StatelessWidget {
+String _describeError(Object error) {
+  if (error is ApiException) return error.message;
+  return '予期しないエラーが発生しました: $error';
+}
+
+class PersonalProfileView extends ConsumerWidget {
   final UserProfile userProfile;
   const PersonalProfileView({super.key, required this.userProfile});
 
   Future<void> _showEditDialog(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required String title,
     String? fieldKey,
     required String initialValue,
     bool isPassword = false,
     bool isName = false,
   }) async {
-    final vm = context.read<ProfileScreenViewModel>();
     if (!isPassword) {
       final result = await showDialog(
         context: context,
@@ -43,40 +48,23 @@ class PersonalProfileView extends StatelessWidget {
       );
 
       if (result != null) {
-        bool success = false;
+        try {
+          if (result is Map && isName) {
+            await ref
+                .read(profileActionsProvider.notifier)
+                .updateUserProfileFields(Map<String, dynamic>.from(result));
+          } else if (result is String && result.isNotEmpty) {
+            await ref
+                .read(profileActionsProvider.notifier)
+                .updateUserProfileField(fieldKey!, result);
+          }
 
-        if (result is Map && isName) {
-          success = await vm
-              .updateUserProfileFields(Map<String, dynamic>.from(result));
-        } else if (result is String && result.isNotEmpty) {
-          success = await vm.updateProfileField(
-              userFieldKey: fieldKey!, value: result);
-        }
-
-        if (!context.mounted) return;
-
-        if (success) {
+          if (!context.mounted) return;
           ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
+        } catch (e) {
+          if (!context.mounted) return;
+          ToastWidget.show(context, _describeError(e), type: ToastType.error);
         }
-      }
-    }
-  }
-
-  Future<void> _showAvailabilityDialog(BuildContext context) async {
-    final vm = context.read<ProfileScreenViewModel>();
-    final currentAvailability = await vm.fetchMyAvailability();
-    if (!context.mounted) return;
-
-    final result = await showDialog<Map<String, List<String>>>(
-      context: context,
-      builder: (_) => AvailabilityDialog(initialAvailability: currentAvailability),
-    );
-
-    if (result != null) {
-      final success = await vm.updateMyAvailability(result);
-      if (!context.mounted) return;
-      if (success) {
-        ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
       }
     }
   }
@@ -118,8 +106,8 @@ class PersonalProfileView extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final vm = context.read<ProfileScreenViewModel>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appVersion = ref.watch(appInfoProvider).valueOrNull?.version ?? '';
 
     return Column(
       children: [
@@ -132,9 +120,9 @@ class PersonalProfileView extends StatelessWidget {
                 furigana: userProfile.nameFurigana, // New
                 imageUrl: userProfile.userImageUrl,
                 onTapImage: () {
-                  vm.uploadUserImage();
+                  ref.read(profileActionsProvider.notifier).uploadUserImage();
                 },
-                onTapName: () => _showEditDialog(context,
+                onTapName: () => _showEditDialog(context, ref,
                     title: 'お名前',
                     fieldKey: 'name',
                     initialValue: userProfile.name,
@@ -171,17 +159,6 @@ class PersonalProfileView extends StatelessWidget {
                     subtitle: userProfile.phone_number,
                     onTap: null,
                     showTrailingIcon: false,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              ProfileSection(
-                title: '勤務情報',
-                children: [
-                  ProfileSettingItem(
-                    title: '勤務可能時間',
-                    subtitle: '曜日・時間帯ごとに勤務可能な時間を設定',
-                    onTap: () => _showAvailabilityDialog(context),
                   ),
                 ],
               ),
@@ -229,7 +206,7 @@ class PersonalProfileView extends StatelessWidget {
                 children: [
                   ProfileSettingItem(
                     title: 'バージョン',
-                    subtitle: vm.appVersion,
+                    subtitle: appVersion,
                     onTap: null,
                     showTrailingIcon: false,
                   ),

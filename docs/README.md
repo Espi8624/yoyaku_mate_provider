@@ -21,6 +21,7 @@ docs/
 | [ticket-printing.md](./features/ticket-printing.md) | 感熱プリンター待機整理券発券システム |
 | [statistics-dashboard.md](./features/statistics-dashboard.md) | 待機統計分析ダッシュボード |
 | [staff-availability.md](./features/staff-availability.md) | スタッフの曜日別勤務可能時間帯の入力・照会・修正 |
+| [shift-table.md](./features/shift-table.md) | スタッフ管理画面2ページ目、週間シフト表(Outlook/Teams風グリッド)の作成・閲覧・編集 |
 
 ---
 
@@ -32,6 +33,7 @@ docs/
 | [sse-client.md](./implementation/sse-client.md) | SSE購読クライアント (指数バックオフ再接続) |
 | [idempotency.md](./implementation/idempotency.md) | クライアント側での冪等性キーの生成と伝送 |
 | [staff-availability.md](./implementation/staff-availability.md) | Availabilityダイアログの二段構成、曜日単位の部分更新マージロジック実装詳細 |
+| [shift-table.md](./implementation/shift-table.md) | PageViewスワイプ構成、シフトグリッドのスクロール同期、Riverpodプロバイダー実装詳細 |
 
 ---
 
@@ -39,7 +41,7 @@ docs/
 
 | ドキュメント | 決定内容 |
 |------|----------|
-| [ADR-001-provider-state.md](./decisions/ADR-001-provider-state.md) | Provider パターンによる状態管理選定の理由 |
+| [ADR-001-provider-state.md](./decisions/ADR-001-provider-state.md) | Provider パターンによる状態管理選定の理由 (上書き済み、下記リファクタリング参照) |
 
 ---
 
@@ -53,4 +55,6 @@ docs/
 
 ## Refactoring (リファクタリング)
 
-*記録予定*
+| ドキュメント | 説明 |
+|------|------|
+| [001-provider-to-riverpod-migration.md](./refactoring/001-provider-to-riverpod-migration.md) | 状態管理アーキテクチャの Provider(MVVM) → Riverpod + Hooks 全面移行 |

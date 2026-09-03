@@ -1,12 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/constants/privacy_policy.dart';
 import 'package:yoyaku_mate_provider/constants/terms_of_service.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_viewmodel.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
+import 'package:yoyaku_mate_provider/models/user_profile.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_providers.dart';
 import 'package:yoyaku_mate_provider/routes.dart' show setSignUpInProgress;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
@@ -23,14 +24,14 @@ import 'package:yoyaku_mate_provider/pages/sign_up/steps/manager_info_step.dart'
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_name_step.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
-class SignUpPage extends StatefulWidget {
+class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
 
   @override
-  State<SignUpPage> createState() => _SignUpPageState();
+  ConsumerState<SignUpPage> createState() => _SignUpPageState();
 }
 
-class _SignUpPageState extends State<SignUpPage> {
+class _SignUpPageState extends ConsumerState<SignUpPage> {
   late PageController _pageController;
   int _currentPageIndex = 0;
 
@@ -67,7 +68,7 @@ class _SignUpPageState extends State<SignUpPage> {
       TextEditingController();
 
   bool _isInitialized = false;
-  ProfileScreenViewModel? _profileVM;
+  ProviderSubscription<AsyncValue<UserProfile>>? _userProfileSubscription;
 
   @override
   void initState() {
@@ -81,16 +82,16 @@ class _SignUpPageState extends State<SignUpPage> {
     if (_isInitialized) return;
     _isInitialized = true;
 
-    final vm = context.read<SignUpViewModel>();
-
-    // ここでViewModelをキャッシュして利用可能にする
-    _profileVM = context.read<ProfileScreenViewModel>();
-    _profileVM?.addListener(_populateUserData);
+    // userProfileProviderの変化を監視 (build外なのでlistenManualを使用)
+    _userProfileSubscription = ref.listenManual(
+      userProfileProvider,
+      (previous, next) => _populateUserData(),
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      _loadSignUpProgress(vm);
+      _loadSignUpProgress();
       _populateUserData();
     });
 
@@ -100,11 +101,7 @@ class _SignUpPageState extends State<SignUpPage> {
   void _populateUserData() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final profileVM = _profileVM;
-        // profileVMが有効か確認
-        if (profileVM == null) return;
-
-        final userProfile = profileVM.userProfile;
+        final userProfile = ref.read(userProfileProvider).valueOrNull;
         final currentUser = FirebaseAuth.instance.currentUser;
 
         if (userProfile != null) {
@@ -145,8 +142,9 @@ class _SignUpPageState extends State<SignUpPage> {
     });
   }
 
-  Future<void> _loadSignUpProgress(SignUpViewModel vm) async {
-    final targetPage = await vm.loadSignUpProgress(null);
+  Future<void> _loadSignUpProgress() async {
+    final targetPage =
+        await ref.read(signUpNotifierProvider.notifier).loadSignUpProgress(null);
 
     if (mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -174,7 +172,7 @@ class _SignUpPageState extends State<SignUpPage> {
   void dispose() {
     setSignUpInProgress(false);
     _pageController.removeListener(_pageControllerListener);
-    _profileVM?.removeListener(_populateUserData);
+    _userProfileSubscription?.close();
     _pageController.dispose();
 
     managerEmailController.dispose();
@@ -201,7 +199,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
-    context.watch<SignUpViewModel>(); // 再ビルドを監視
+    ref.watch(signUpNotifierProvider); // 再ビルドを監視
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -241,7 +239,7 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   List<Widget> _buildPages() {
-    final role = context.watch<SignUpViewModel>().role;
+    final role = ref.watch(signUpNotifierProvider).role;
     if (role == 'manager') {
       return [
         RoleSelectionStep(onRoleSelected: _handleRoleSelection), // 0
@@ -321,13 +319,14 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _checkEmailDuplicate() async {
-    final vm = context.read<SignUpViewModel>();
+    final role = ref.read(signUpNotifierProvider).role;
+    final notifier = ref.read(signUpNotifierProvider.notifier);
     final emailController =
-        vm.role == 'manager' ? managerEmailController : staffEmailController;
+        role == 'manager' ? managerEmailController : staffEmailController;
     final email = emailController.text.trim();
 
     try {
-      final success = await vm.checkEmailDuplicate(email);
+      final success = await notifier.checkEmailDuplicate(email);
       if (success) _nextPage();
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -367,18 +366,18 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _createAccountAndSendEmail() async {
-    final vm = context.read<SignUpViewModel>();
+    final role = ref.read(signUpNotifierProvider).role;
+    final notifier = ref.read(signUpNotifierProvider.notifier);
     final emailController =
-        vm.role == 'manager' ? managerEmailController : staffEmailController;
-    final passwordController = vm.role == 'manager'
-        ? managerPasswordController
-        : staffPasswordController;
+        role == 'manager' ? managerEmailController : staffEmailController;
+    final passwordController =
+        role == 'manager' ? managerPasswordController : staffPasswordController;
 
     final email = emailController.text.trim();
     final password = passwordController.text;
 
     try {
-      final success = await vm.createAccountAndSendEmail(email, password, '');
+      final success = await notifier.createAccountAndSendEmail(email, password, '');
       if (success) {
         if (!mounted) return;
         ToastWidget.show(context, '認証メールを送信しました。メールボックスをご確認ください。',
@@ -392,27 +391,27 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _verifyEmailComplete() async {
-    final vm = context.read<SignUpViewModel>();
+    final role = ref.read(signUpNotifierProvider).role;
+    final notifier = ref.read(signUpNotifierProvider.notifier);
     final emailController =
-        vm.role == 'manager' ? managerEmailController : staffEmailController;
-    final passwordController = vm.role == 'manager'
-        ? managerPasswordController
-        : staffPasswordController;
+        role == 'manager' ? managerEmailController : staffEmailController;
+    final passwordController =
+        role == 'manager' ? managerPasswordController : staffPasswordController;
 
-    final success = await vm.verifyEmailComplete(
+    final success = await notifier.verifyEmailComplete(
         emailController.text, passwordController.text);
     if (success && mounted) _nextPage();
   }
 
   Future<void> _resendEmailLink() async {
-    final vm = context.read<SignUpViewModel>();
+    final role = ref.read(signUpNotifierProvider).role;
+    final notifier = ref.read(signUpNotifierProvider.notifier);
     final emailController =
-        vm.role == 'manager' ? managerEmailController : staffEmailController;
-    final passwordController = vm.role == 'manager'
-        ? managerPasswordController
-        : staffPasswordController;
+        role == 'manager' ? managerEmailController : staffEmailController;
+    final passwordController =
+        role == 'manager' ? managerPasswordController : staffPasswordController;
 
-    final success = await vm.resendEmailLink(
+    final success = await notifier.resendEmailLink(
         emailController.text, passwordController.text, '');
     if (success && mounted) {
       if (success && mounted) {
@@ -422,13 +421,13 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _sendPhoneCode() async {
-    final vm = context.read<SignUpViewModel>();
+    final role = ref.read(signUpNotifierProvider).role;
+    final notifier = ref.read(signUpNotifierProvider.notifier);
     final phoneController =
-        vm.role == 'manager' ? managerPhoneController : staffPhoneController;
+        role == 'manager' ? managerPhoneController : staffPhoneController;
     final rawPhoneNumber = phoneController.text.trim();
 
-    final success =
-        await vm.sendPhoneCode(rawPhoneNumber, vm.role ?? 'manager');
+    final success = await notifier.sendPhoneCode(rawPhoneNumber, role ?? 'manager');
     if (success && mounted) {
       ToastWidget.show(context, '認証コードを送信しました。', type: ToastType.success);
       _nextPage();
@@ -436,12 +435,13 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _verifyPhoneCode() async {
-    final vm = context.read<SignUpViewModel>();
-    final success = await vm.verifyPhoneCode(verificationCodeController.text);
+    final role = ref.read(signUpNotifierProvider).role;
+    final notifier = ref.read(signUpNotifierProvider.notifier);
+    final success = await notifier.verifyPhoneCode(verificationCodeController.text);
     if (success && mounted) {
       final phoneController =
-          vm.role == 'manager' ? managerPhoneController : staffPhoneController;
-      vm.savePhoneProgress(phoneController.text.trim());
+          role == 'manager' ? managerPhoneController : staffPhoneController;
+      notifier.savePhoneProgress(phoneController.text.trim());
 
       ToastWidget.show(context, '電話番号認証が完了しました。', type: ToastType.success);
       _nextPage();
@@ -449,11 +449,12 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _resendPhoneCode() async {
-    final vm = context.read<SignUpViewModel>();
+    final role = ref.read(signUpNotifierProvider).role;
+    final notifier = ref.read(signUpNotifierProvider.notifier);
     final phoneController =
-        vm.role == 'manager' ? managerPhoneController : staffPhoneController;
-    final success = await vm.sendPhoneCode(
-        phoneController.text.trim(), vm.role ?? 'manager');
+        role == 'manager' ? managerPhoneController : staffPhoneController;
+    final success =
+        await notifier.sendPhoneCode(phoneController.text.trim(), role ?? 'manager');
     if (success && mounted) {
       if (success && mounted) {
         ToastWidget.show(context, '認証コードを再送信しました。', type: ToastType.success);
@@ -462,7 +463,7 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _handleSignUp() async {
-    final vm = context.read<SignUpViewModel>();
+    final notifier = ref.read(signUpNotifierProvider.notifier);
 
     final managerName =
         '${managerLastNameController.text.trim()} ${managerFirstNameController.text.trim()}';
@@ -474,7 +475,7 @@ class _SignUpPageState extends State<SignUpPage> {
         '${staffLastNameKanaController.text.trim()} ${staffFirstNameKanaController.text.trim()}';
 
     // Refactor: Pass null/empty for store fields
-    final success = await vm.handleSignUp(
+    final success = await notifier.handleSignUp(
       mode: null,
       managerName: managerName,
       managerNameKana: managerNameKana,
@@ -499,7 +500,12 @@ class _SignUpPageState extends State<SignUpPage> {
 
     if (success && mounted) {
       // 登録完了後、グローバルなプロフィール情報を更新してから遷移
-      await context.read<ProfileScreenViewModel>().loadProfiles();
+      ref.invalidate(userProfileProvider);
+      ref.invalidate(myStoresProvider);
+      await Future.wait([
+        ref.read(userProfileProvider.future),
+        ref.read(myStoresProvider.future),
+      ]);
       if (mounted) {
         // Refactor: 登録完了画面 または ホームへ (main.dart route logic will redirect to StoreSelection)
         // ここでは一旦完了画面へ
@@ -516,16 +522,15 @@ class _SignUpPageState extends State<SignUpPage> {
     // Refactor: StoreWizard skip logic removed
 
     if (currentUser != null) {
+      final isEmailVerified = ref.read(signUpNotifierProvider).isEmailVerified;
       if (_currentPageIndex == 2) {
         // プライバシー -> メール
-        final isEmailVerified = context.read<SignUpViewModel>().isEmailVerified;
         if (isEmailVerified) {
           nextIndex = 6; // Phone
         } else {
           nextIndex = 5; // メール認証待機
         }
-      } else if (_currentPageIndex == 5 &&
-          context.read<SignUpViewModel>().isEmailVerified) {
+      } else if (_currentPageIndex == 5 && isEmailVerified) {
         nextIndex = 6; // Phone
       }
     }
@@ -535,7 +540,7 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   void _handleRoleSelection() {
-    context.read<SignUpViewModel>().saveSignUpProgress();
+    ref.read(signUpNotifierProvider.notifier).saveSignUpProgress();
     _nextPage();
   }
 
@@ -545,7 +550,7 @@ class _SignUpPageState extends State<SignUpPage> {
     } else {
       final shouldGoBack = await _showCancelConfirmDialog();
       if (shouldGoBack && mounted) {
-        context.read<SignUpViewModel>().reset();
+        ref.read(signUpNotifierProvider.notifier).reset();
 
         managerEmailController.clear();
         managerPasswordController.clear();

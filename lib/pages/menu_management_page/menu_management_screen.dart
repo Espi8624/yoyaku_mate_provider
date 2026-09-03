@@ -6,16 +6,16 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/panels/action_button_panel_mobile.dart';
 import '../../models/menu_list.dart';
-import '../../services/menu_service.dart';
+import '../../services/api_exception.dart';
+import 'menu_management_providers.dart';
 
 import '../../widgets/common_dialogs/confirmation_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../widgets/common_widgets/loading_indicator.dart';
-import 'menu_management_screen_viewmodel.dart';
 import 'widgets/dialogs/category_form_dialog.dart';
 import 'widgets/dialogs/menu_form_dialog.dart';
 import '../../widgets/common_dialogs/base_dialog.dart';
@@ -23,57 +23,42 @@ import 'widgets/panels/action_buttons_panel.dart';
 import 'widgets/panels/menu_list_panel.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 
+// 更新の成功/失敗は共有状態ではなく、呼び出し直後にtry/catchで即時Toast表示する
+String _describeError(Object error) {
+  if (error is ApiException) return error.message;
+  return '予期しないエラーが発生しました: $error';
+}
+
 class MenuManagementScreen extends StatelessWidget {
   final String storeId;
   const MenuManagementScreen({super.key, required this.storeId});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => MenuManagementScreenViewModel(
-          storeId: storeId, menuService: MenuService()),
-      child: const _MenuManagementView(),
-    );
+    return _MenuManagementView(storeId: storeId);
   }
 }
 
-class _MenuManagementView extends StatefulWidget {
-  const _MenuManagementView();
+class _MenuManagementView extends ConsumerStatefulWidget {
+  final String storeId;
+  const _MenuManagementView({required this.storeId});
 
   @override
-  State<_MenuManagementView> createState() => _MenuManagementViewState();
+  ConsumerState<_MenuManagementView> createState() =>
+      _MenuManagementViewState();
 }
 
-class _MenuManagementViewState extends State<_MenuManagementView>
+class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
     with TickerProviderStateMixin {
   late TabController _tabController;
-
-  late final MenuManagementScreenViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
-    // context が安全な initState で ViewModel の参照を先に取得
-    _viewModel = context.read<MenuManagementScreenViewModel>();
-
-    _tabController =
-        TabController(length: _viewModel.categories.length, vsync: this);
-
+    // データロード前はカテゴリー数0でTabControllerを生成しておき、
+    // 実データ到着時にref.listen(build内)で作り直す (既存挙動を踏襲)
+    _tabController = TabController(length: 0, vsync: this);
     _addTabListener();
-
-    // 保存された参照を使用し、リスナー追加
-    _viewModel.addListener(_onViewModelUpdated);
-
-    // 初期エラーメッセージ処理のためPost-frameコールバックを使用
-    if (_viewModel.errorMessage != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ToastWidget.show(context, _viewModel.errorMessage!,
-              type: ToastType.error);
-          _viewModel.clearErrorMessage();
-        }
-      });
-    }
   }
 
   // Listener 追加ロジック
@@ -88,73 +73,51 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     });
   }
 
-  void _onViewModelUpdated() {
-    // ViewModel のカテゴリーリストの長さが TabController の長さと異なる場合 (カテゴリー 追加/削除 時)
-    // TabController を再生成する
-    if (_viewModel.categories.length != _tabController.length) {
-      if (mounted) {
-        setState(() {
-          // 現在 index を維持する
-          final currentIndex = _tabController.index.clamp(
-              0,
-              _viewModel.categories.isNotEmpty
-                  ? _viewModel.categories.length - 1
-                  : 0);
-
-          // 以前コントローラーを廃棄
-          _tabController.dispose();
-
-          // 新しい長さでコントローラー再生成
-          _tabController = TabController(
-              length: _viewModel.categories.length,
-              vsync: this,
-              initialIndex: currentIndex);
-
-          // 再生成したコントローラーにリスナーを付け直す
-          _addTabListener();
-        });
-      }
-    }
-
-    if (_viewModel.errorMessage != null && mounted) {
-      ToastWidget.show(context, _viewModel.errorMessage!,
-          type: ToastType.error);
-      _viewModel.clearErrorMessage();
-    }
-  }
-
   @override
   void dispose() {
-    // context.read の代わりに保存しておいた _viewModel 変数を安全に使用
-    _viewModel.removeListener(_onViewModelUpdated);
     _tabController.dispose();
     super.dispose();
   }
 
+  MenuManagementData? get _data => ref
+      .read(menuItemsNotifierProvider(storeId: widget.storeId))
+      .valueOrNull;
+  List<String> get _categories => _data?.categories ?? const <String>[];
+  Map<String, List<MenuListItem>> get _categorizedMenu =>
+      _data?.categorizedMenu ?? const {};
+
   Future<void> _showAddCategoryDialog() async {
     final newCategory = await showDialog<String>(
       context: context,
-      builder: (_) =>
-          CategoryFormDialog(existingCategories: _viewModel.categories),
+      builder: (_) => CategoryFormDialog(existingCategories: _categories),
     );
     if (newCategory != null) {
-      // context.read の代わりに保存しておいた _viewModel 変数を安全に使用
-      _viewModel.addCategory(newCategory);
-      _tabController.animateTo(_viewModel.categories.length - 1);
+      ref
+          .read(menuItemsNotifierProvider(storeId: widget.storeId).notifier)
+          .addCategory(newCategory);
+      _tabController.animateTo(_tabController.length - 1);
     }
   }
 
   Future<void> _showEditCategoryDialog(int index) async {
-    final oldCategory = _viewModel.categories[index];
+    final categories = _categories;
+    final oldCategory = categories[index];
     final newCategory = await showDialog<String>(
       context: context,
       builder: (_) => CategoryFormDialog(
-          initialValue: oldCategory, existingCategories: _viewModel.categories),
+          initialValue: oldCategory, existingCategories: categories),
     );
     if (newCategory == 'DELETE_ACTION') {
       _showDeleteCategoryDialog(index);
     } else if (newCategory != null && newCategory != oldCategory) {
-      _viewModel.editCategory(oldCategory, newCategory);
+      try {
+        await ref
+            .read(menuItemsNotifierProvider(storeId: widget.storeId).notifier)
+            .editCategory(widget.storeId, oldCategory, newCategory);
+      } catch (e) {
+        if (!mounted) return;
+        ToastWidget.show(context, _describeError(e), type: ToastType.error);
+      }
     }
   }
 
@@ -165,8 +128,16 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         content: 'このカテゴリーと含まれる全てのメニューを削除しますか？');
     if (confirmed == true) {
       if (!mounted) return;
-      _viewModel.deleteCategory(index);
-      ToastWidget.show(context, 'カテゴリーが削除されました', type: ToastType.success);
+      try {
+        await ref
+            .read(menuItemsNotifierProvider(storeId: widget.storeId).notifier)
+            .deleteCategory(widget.storeId, index);
+        if (!mounted) return;
+        ToastWidget.show(context, 'カテゴリーが削除されました', type: ToastType.success);
+      } catch (e) {
+        if (!mounted) return;
+        ToastWidget.show(context, _describeError(e), type: ToastType.error);
+      }
     }
   }
 
@@ -174,8 +145,8 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => MenuFormDialog(
-          storeId: _viewModel.storeId,
-          category: _viewModel.categories[_tabController.index]),
+          storeId: widget.storeId,
+          category: _categories[_tabController.index]),
     );
 
     if (result != null) {
@@ -183,7 +154,9 @@ class _MenuManagementViewState extends State<_MenuManagementView>
       final imageBytes = result['imageFile'] as Uint8List?;
 
       // メニュー保存
-      final savedMenu = await _viewModel.addMenu(newMenu);
+      final savedMenu = await ref
+          .read(menuItemsNotifierProvider(storeId: widget.storeId).notifier)
+          .addMenu(widget.storeId, newMenu);
 
       if (!mounted) return;
 
@@ -199,7 +172,16 @@ class _MenuManagementViewState extends State<_MenuManagementView>
             '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
         final imageFile = await File(path).writeAsBytes(imageBytes);
 
-        await _viewModel.updateMenuWithImage(savedMenu, imageFile);
+        try {
+          await ref
+              .read(
+                  menuItemsNotifierProvider(storeId: widget.storeId).notifier)
+              .updateMenuWithImage(savedMenu, imageFile);
+        } catch (e) {
+          if (!mounted) return;
+          ToastWidget.show(context, _describeError(e), type: ToastType.error);
+          return;
+        }
       }
 
       if (!mounted) return;
@@ -208,13 +190,13 @@ class _MenuManagementViewState extends State<_MenuManagementView>
   }
 
   Future<void> _showEditMenuDialog(int categoryIndex, int menuIndex) async {
-    final category = _viewModel.categories[categoryIndex];
-    final menuItem = _viewModel.categorizedMenu[category]![menuIndex];
+    final category = _categories[categoryIndex];
+    final menuItem = _categorizedMenu[category]![menuIndex];
 
     final result = await showDialog<dynamic>(
       context: context,
       builder: (_) => MenuFormDialog(
-          menuItem: menuItem, storeId: _viewModel.storeId, category: category),
+          menuItem: menuItem, storeId: widget.storeId, category: category),
     );
 
     if (result == 'DELETE_ACTION') {
@@ -227,22 +209,30 @@ class _MenuManagementViewState extends State<_MenuManagementView>
       final imageBytes = result['imageFile'] as Uint8List?;
       final imageRemoved = result['imageRemoved'] as bool? ?? false;
 
+      final notifier = ref
+          .read(menuItemsNotifierProvider(storeId: widget.storeId).notifier);
+
       if (imageBytes != null) {
         // 新しいイメージ選択 → アップロード
         final tempDir = await getTemporaryDirectory();
         final path =
             '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
         final imageFile = await File(path).writeAsBytes(imageBytes);
-        await _viewModel.updateMenuWithImage(updatedMenu, imageFile);
+        try {
+          await notifier.updateMenuWithImage(updatedMenu, imageFile);
+        } catch (e) {
+          if (!mounted) return;
+          ToastWidget.show(context, _describeError(e), type: ToastType.error);
+        }
       } else if (imageRemoved) {
         // イメージ削除　→ 空の文字列で更新
         final menuWithoutImage = updatedMenu.copyWith(menuImageUrl: '');
-        _viewModel.editMenu(menuWithoutImage);
+        notifier.editMenu(widget.storeId, menuWithoutImage);
         if (!mounted) return;
         ToastWidget.show(context, '画像が削除されました', type: ToastType.success);
       } else {
         // テキスト情報のみ更新
-        _viewModel.editMenu(updatedMenu);
+        notifier.editMenu(widget.storeId, updatedMenu);
       }
     }
   }
@@ -251,10 +241,17 @@ class _MenuManagementViewState extends State<_MenuManagementView>
     final confirmed = await showConfirmationDialog(
         context: context, title: 'メニュー削除', content: '本当にこのメニューを削除しますか？');
     if (confirmed == true) {
-      final category = _viewModel.categories[categoryIndex];
-      _viewModel.deleteMenu(category, menuIndex);
-      if (!mounted) return;
-      ToastWidget.show(context, 'メニューが削除されました', type: ToastType.success);
+      final category = _categories[categoryIndex];
+      try {
+        await ref
+            .read(menuItemsNotifierProvider(storeId: widget.storeId).notifier)
+            .deleteMenu(widget.storeId, category, menuIndex);
+        if (!mounted) return;
+        ToastWidget.show(context, 'メニューが削除されました', type: ToastType.success);
+      } catch (e) {
+        if (!mounted) return;
+        ToastWidget.show(context, _describeError(e), type: ToastType.error);
+      }
     }
   }
 
@@ -264,9 +261,16 @@ class _MenuManagementViewState extends State<_MenuManagementView>
         title: 'メニュー初期化',
         content: '全てのメニューを削除状態にしますか？\nこの操作は「保存」を押すと確定されます。');
     if (confirmed == true) {
-      _viewModel.deleteAllMenus();
-      if (!mounted) return;
-      ToastWidget.show(context, '全てのメニューが削除状態になりました', type: ToastType.info);
+      try {
+        await ref
+            .read(menuItemsNotifierProvider(storeId: widget.storeId).notifier)
+            .deleteAllMenus(widget.storeId);
+        if (!mounted) return;
+        ToastWidget.show(context, '全てのメニューが削除状態になりました', type: ToastType.info);
+      } catch (e) {
+        if (!mounted) return;
+        ToastWidget.show(context, _describeError(e), type: ToastType.error);
+      }
     }
   }
 
@@ -382,6 +386,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
   }
 
   Future<void> _showCategorySelectionDialog(String selectedLang) async {
+    final categories = _categories;
     final selectedCategory = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -425,10 +430,10 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                 ),
                 child: Column(
                   children: [
-                    ..._viewModel.categories.asMap().entries.map((entry) {
+                    ...categories.asMap().entries.map((entry) {
                       final index = entry.key;
                       final category = entry.value;
-                      final isLast = index == _viewModel.categories.length - 1;
+                      final isLast = index == categories.length - 1;
 
                       return Column(
                         children: [
@@ -499,14 +504,14 @@ class _MenuManagementViewState extends State<_MenuManagementView>
 
     // フィルタリングされたカテゴリーのみ対象にする
     final categoriesToProcess =
-        selectedCategory != null ? [selectedCategory] : _viewModel.categories;
+        selectedCategory != null ? [selectedCategory] : _categories;
 
     for (final cat in categoriesToProcess) {
       // Categories don't have stored translations in this model, so use original
       // Use original text for category (or implement category translation storage later)
       titleTranslations[cat] = cat;
 
-      final menus = _viewModel.categorizedMenu[cat] ?? [];
+      final menus = _categorizedMenu[cat] ?? [];
       for (final menu in menus) {
         // Title
         if (menu.titleTranslations.containsKey(targetLang)) {
@@ -600,10 +605,9 @@ class _MenuManagementViewState extends State<_MenuManagementView>
 
     // フィルタリングされたカテゴリーのみ対象にする
     final categoriesToProcess =
-        selectedCategory != null ? [selectedCategory] : _viewModel.categories;
+        selectedCategory != null ? [selectedCategory] : _categories;
 
-    final allMenus =
-        _viewModel.categorizedMenu.values.expand((l) => l).toList();
+    final allMenus = _categorizedMenu.values.expand((l) => l).toList();
     final imageFutures = <Future<void>>[];
     final Map<String, pw.ImageProvider> menuImages = {};
 
@@ -633,7 +637,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
       return descTranslations?[original] ?? original;
     }
 
-    pw.Widget _buildTitleWidget(String fullText,
+    pw.Widget buildTitleWidget(String fullText,
         {double fontSize = 14, bool isBold = false}) {
       final parts = fullText.split(' / ');
       if (parts.length > 1) {
@@ -714,7 +718,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
             pw.SizedBox(height: 20),
             pw.SizedBox(height: 20),
             ...categoriesToProcess.map((category) {
-              final menus = _viewModel.categorizedMenu[category]
+              final menus = _categorizedMenu[category]
                       ?.where((m) => m.menuStatus == 'available')
                       .toList() ??
                   [];
@@ -732,7 +736,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                               pw.BorderSide(width: 1, color: PdfColors.grey)),
                     ),
                     width: double.infinity,
-                    child: _buildTitleWidget(
+                    child: buildTitleWidget(
                       getTitleText(category),
                       fontSize: 18,
                       isBold: true,
@@ -776,7 +780,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                                       pw.MainAxisAlignment.spaceBetween,
                                   children: [
                                     pw.Expanded(
-                                      child: _buildTitleWidget(
+                                      child: buildTitleWidget(
                                         getTitleText(menu.title),
                                         fontSize: 14,
                                         isBold: true,
@@ -827,7 +831,38 @@ class _MenuManagementViewState extends State<_MenuManagementView>
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<MenuManagementScreenViewModel>();
+    final menuAsync =
+        ref.watch(menuItemsNotifierProvider(storeId: widget.storeId));
+    final saveStatus = ref.watch(menuSaveStatusProvider);
+
+    // カテゴリー数変化時のTabController再生成 + ロードエラーの1回だけのToast表示。
+    // 既存の _onViewModelUpdated(addListener) と同じ役割
+    ref.listen(menuItemsNotifierProvider(storeId: widget.storeId),
+        (previous, next) {
+      final categories = next.valueOrNull?.categories ?? const <String>[];
+      if (categories.length != _tabController.length) {
+        setState(() {
+          // 現在 index を維持する
+          final currentIndex = _tabController.index.clamp(
+              0, categories.isNotEmpty ? categories.length - 1 : 0);
+
+          _tabController.dispose();
+          _tabController = TabController(
+              length: categories.length, vsync: this, initialIndex: currentIndex);
+          _addTabListener();
+        });
+      }
+
+      if (next.hasError) {
+        ToastWidget.show(context, _describeError(next.error!),
+            type: ToastType.error);
+      }
+    });
+
+    final categories = menuAsync.valueOrNull?.categories ?? const <String>[];
+    final categorizedMenu = menuAsync.valueOrNull?.categorizedMenu ?? const {};
+    // 初回ロード中(=まだ一度もデータを取得できていない間)のみローディング表示
+    final isLoading = menuAsync.isLoading && !menuAsync.hasValue;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -852,7 +887,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
               elevation: 0,
               centerTitle: false,
               actions: [
-                _SaveStatusIndicator(status: vm.saveStatus),
+                _SaveStatusIndicator(status: saveStatus),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.print, color: AppColors.textPrimary),
@@ -872,8 +907,8 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                         bottom: 150,
                         child: MenuListPanel(
                           tabController: _tabController,
-                          categories: vm.categories,
-                          categorizedMenu: vm.categorizedMenu,
+                          categories: categories,
+                          categorizedMenu: categorizedMenu,
                           onEditCategory: _showEditCategoryDialog,
                           onEditMenu: _showEditMenuDialog,
                         ),
@@ -885,7 +920,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                         right: 0,
                         bottom: 0,
                         child: ActionButtonsPanelMobile(
-                          isCategoryEmpty: vm.categories.isEmpty,
+                          isCategoryEmpty: categories.isEmpty,
                           onAddCategory: _showAddCategoryDialog,
                           onAddMenu: _showAddMenuDialog,
                           // onSaveChanges: _saveChanges,
@@ -894,7 +929,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                       ),
 
                       // ローディング表示
-                      if (vm.isLoading) const LoadingIndicator(),
+                      if (isLoading) const LoadingIndicator(),
                     ],
                   ),
                 ),
@@ -918,7 +953,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
               elevation: 0,
               centerTitle: false,
               actions: [
-                _SaveStatusIndicator(status: vm.saveStatus),
+                _SaveStatusIndicator(status: saveStatus),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.print, color: AppColors.textPrimary),
@@ -940,8 +975,8 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                             flex: 2,
                             child: MenuListPanel(
                               tabController: _tabController,
-                              categories: vm.categories,
-                              categorizedMenu: vm.categorizedMenu,
+                              categories: categories,
+                              categorizedMenu: categorizedMenu,
                               onEditCategory: _showEditCategoryDialog,
                               onEditMenu: _showEditMenuDialog,
                             ),
@@ -951,7 +986,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                           Expanded(
                             flex: 1,
                             child: ActionButtonsPanel(
-                              isCategoryEmpty: vm.categories.isEmpty,
+                              isCategoryEmpty: categories.isEmpty,
                               onAddCategory: _showAddCategoryDialog,
                               onAddMenu: _showAddMenuDialog,
                               // onSaveChanges: _saveChanges,
@@ -960,7 +995,7 @@ class _MenuManagementViewState extends State<_MenuManagementView>
                           ),
                         ],
                       ),
-                      if (vm.isLoading) const LoadingIndicator(),
+                      if (isLoading) const LoadingIndicator(),
                     ],
                   ),
                 ),

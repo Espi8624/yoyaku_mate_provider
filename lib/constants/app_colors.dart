@@ -78,4 +78,30 @@ class AppColors {
 
   static const Color notSubmittedBackground = Color(0xFFEEEEEE);
   static const Color notSubmitted = Color(0xFF616161);
+
+  // --- シフト表パレット ---
+
+  /// シフトブロック用の配色。スタッフごとにインデックスで循環割り当てし、
+  /// 週間シフト表グリッド上で誰の枠かを視覚的に区別する
+  static const List<Color> shiftBlockPalette = [
+    Color(0xFF5B8DEF), // 青
+    Color(0xFF4CAF93), // 緑
+    Color(0xFFB080E0), // 紫
+    Color(0xFFE0954F), // 橙
+    Color(0xFFE0709E), // 桃
+    Color(0xFF4FADC7), // 青緑
+  ];
+
+  /// 同時間帯に複数人重なった際にまとめて表示するカード用の配色。
+  /// shiftBlockPalette(個人ごとの色)とは独立した色群で、特定の誰かの色と
+  /// 混同されないよう彩度を抑えたトーンにしている。メンバー構成のハッシュ値で
+  /// インデックスを選ぶため、同じ組み合わせは常に同じ色、組み合わせが変われば
+  /// 別の色になり、単一の固定色で埋め尽くされるのを防ぐ
+  static const List<Color> groupShiftBlockPalette = [
+    Color(0xFF56637A), // スレート
+    Color(0xFF7A5C56), // ブラウン
+    Color(0xFF5C7A6C), // オリーブグリーン
+    Color(0xFF6C5C7A), // プラム
+    Color(0xFF7A6C56), // カーキ
+  ];
 }

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
 
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 
-class SideNavigationBar extends StatelessWidget {
+class SideNavigationBar extends ConsumerWidget {
+  // 0=待機リスト, 1=メニュー管理, 2=統計, 3=スタッフ, 4=プロフィール (Manager/Staff共通)
+  static const int _profileIndex = 4;
+
   final bool isExpanded;
   final int selectedIndex;
   final Function(int) onItemTapped;
@@ -21,12 +24,9 @@ class SideNavigationBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // context.watch を使用し、ProfileViewModel の変化を感知
-    final profileVM = context.watch<ProfileScreenViewModel>();
-
-    final userProfile = profileVM.userProfile;
-    final storeProfile = profileVM.storeProfile;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userProfile = ref.watch(userProfileProvider).valueOrNull;
+    final storeProfile = ref.watch(selectedStoreProfileProvider);
 
     // 基本値
     final String userName = userProfile?.name ?? '...';
@@ -76,10 +76,8 @@ class SideNavigationBar extends StatelessWidget {
                 if (isExpanded) ...[
                   InkWell(
                     onTap: () {
-                      // Manager: 0=Wait, 1=Menu, 2=Stats, 3=Staff, 4=Profile
-                      // Staff:   0=Wait, 1=Menu, 2=Stats, 3=Profile
-                      final profileIndex = userRole == 'manager' ? 4 : 3;
-                      onItemTapped(profileIndex);
+                      // 0=Wait, 1=Menu, 2=Stats, 3=Staff, 4=Profile (Manager/Staff共通)
+                      onItemTapped(_profileIndex);
                       onToggle();
                     },
                     splashColor: AppColors.accentPrimary.withOpacity(0.05),
@@ -90,8 +88,7 @@ class SideNavigationBar extends StatelessWidget {
                       padding: const EdgeInsets.all(12.0),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: selectedIndex ==
-                                (userRole == 'manager' ? 4 : 3)
+                        boxShadow: selectedIndex == _profileIndex
                             ? [
                                 BoxShadow(
                                   color:
@@ -173,8 +170,7 @@ class SideNavigationBar extends StatelessWidget {
                 ] else ...[
                   InkWell(
                     onTap: () {
-                      final profileIndex = userRole == 'manager' ? 4 : 3;
-                      onItemTapped(profileIndex);
+                      onItemTapped(_profileIndex);
                     },
                     splashColor: AppColors.accentPrimary.withOpacity(0.05),
                     highlightColor: AppColors.accentPrimary.withOpacity(0.02),
@@ -184,8 +180,7 @@ class SideNavigationBar extends StatelessWidget {
                       padding: const EdgeInsets.all(4.0),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: selectedIndex ==
-                                (userRole == 'manager' ? 4 : 3)
+                        boxShadow: selectedIndex == _profileIndex
                             ? [
                                 BoxShadow(
                                   color:
@@ -292,26 +287,25 @@ class SideNavigationBar extends StatelessWidget {
                       ),
                 const SizedBox(height: 12),
 
-                if (userRole == 'manager') ...[
-                  isExpanded
-                      ? _NavItem(
-                          icon: Icons.people_alt_rounded,
-                          label: 'スタッフ',
-                          selected: selectedIndex == 3, // Corrected from 2
-                          onTap: () {
-                            onItemTapped(3);
-                            onToggle();
-                          },
-                        )
-                      : _NavIcon(
-                          icon: Icons.people_alt_rounded,
-                          selected: selectedIndex == 3, // Corrected from 2
-                          label: 'スタッフ',
-                          onTap: () => onItemTapped(3),
-                          isExpanded: isExpanded,
-                        ),
-                  const SizedBox(height: 12),
-                ],
+                // スタッフメニューはManager/Staff共通で表示
+                isExpanded
+                    ? _NavItem(
+                        icon: Icons.people_alt_rounded,
+                        label: 'スタッフ',
+                        selected: selectedIndex == 3,
+                        onTap: () {
+                          onItemTapped(3);
+                          onToggle();
+                        },
+                      )
+                    : _NavIcon(
+                        icon: Icons.people_alt_rounded,
+                        selected: selectedIndex == 3,
+                        label: 'スタッフ',
+                        onTap: () => onItemTapped(3),
+                        isExpanded: isExpanded,
+                      ),
+                const SizedBox(height: 12),
 
                 // const Divider(
                 //   height: 1,

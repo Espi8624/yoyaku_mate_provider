@@ -1,59 +1,57 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
-import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_screen_viewmodel.dart';
 
-class WaitingStatusArea extends StatefulWidget {
+// 純粋な表示ウィジェット。待機件数などはRiverpodを直接見ずに親から受け取る
+// (WaitingListPanelと同じ方針)。展開/縮小のみページローカルなephemeral UI状態
+// のためHookWidgetのuseStateで管理する。
+class WaitingStatusArea extends HookWidget {
   final bool isInitiallyExpanded;
-  const WaitingStatusArea({super.key, this.isInitiallyExpanded = false});
+  final int waitingCount;
+  final String lastEntryTimeFormatted;
+  final String totalEstimatedWaitTimeFormatted;
 
-  @override
-  State<WaitingStatusArea> createState() => _WaitingStatusAreaState();
-}
-
-class _WaitingStatusAreaState extends State<WaitingStatusArea> {
-  late bool _isExpanded;
-
-  @override
-  void initState() {
-    super.initState();
-    _isExpanded = widget.isInitiallyExpanded;
-  }
-
-  // mobile layoutで拡張/縮小ステータスをtoggle
-  void _toggleExpansion() {
-    if (MediaQuery.of(context).size.width < 700) {
-      setState(() {
-        _isExpanded = !_isExpanded;
-      });
-    }
-  }
+  const WaitingStatusArea({
+    super.key,
+    this.isInitiallyExpanded = false,
+    required this.waitingCount,
+    required this.lastEntryTimeFormatted,
+    required this.totalEstimatedWaitTimeFormatted,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<WaitingScreenViewModel>();
+    final isExpanded = useState(isInitiallyExpanded);
     final isMobile = MediaQuery.of(context).size.width < 700;
+
+    // mobile layoutで拡張/縮小ステータスをtoggle
+    void toggleExpansion() {
+      if (isMobile) {
+        isExpanded.value = !isExpanded.value;
+      }
+    }
 
     // desktopの場合
     if (!isMobile) {
-      return _buildDesktopExpandedContent(vm);
+      return _buildDesktopExpandedContent();
     }
 
     // mobileでは拡張/縮小ステータスによって適切なUIを表示
     return GestureDetector(
-      onTap: _toggleExpansion,
+      onTap: toggleExpansion,
       child: AnimatedCrossFade(
         duration: const Duration(milliseconds: 300),
-        firstChild: _buildCollapsedContent(vm),
-        secondChild: _buildMobileExpandedContent(vm),
-        crossFadeState:
-            _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+        firstChild: _buildCollapsedContent(),
+        secondChild: _buildMobileExpandedContent(),
+        crossFadeState: isExpanded.value
+            ? CrossFadeState.showSecond
+            : CrossFadeState.showFirst,
       ),
     );
   }
 
   // mobile縮小UI
-  Widget _buildCollapsedContent(WaitingScreenViewModel vm) {
+  Widget _buildCollapsedContent() {
     return Padding(
       padding: const EdgeInsets.only(top: 30),
       child: Container(
@@ -80,7 +78,7 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                Text(vm.waitingCount.toString(),
+                Text(waitingCount.toString(),
                     style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -101,7 +99,7 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
   }
 
   // desktop拡張UI
-  Widget _buildDesktopExpandedContent(WaitingScreenViewModel vm) {
+  Widget _buildDesktopExpandedContent() {
     return Container(
       height: double.infinity,
       // Padding removed from here to allow different widths
@@ -130,17 +128,17 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary)),
                 const SizedBox(height: 16),
-                _StatusInfo(label: "直前入場時間", value: vm.lastEntryTimeFormatted),
+                _StatusInfo(label: "直前入場時間", value: lastEntryTimeFormatted),
                 const SizedBox(height: 8),
                 _StatusInfo(
-                    label: "予想待機時間", value: vm.totalEstimatedWaitTimeFormatted),
+                    label: "予想待機時間", value: totalEstimatedWaitTimeFormatted),
               ],
             ),
           ),
           const Spacer(), // Pushes the bottom info to the bottom
           Padding(
             padding: const EdgeInsets.all(12), // Reduced padding for wider card
-            child: _buildBottomInfo(vm),
+            child: _buildBottomInfo(),
           ),
         ],
       ),
@@ -148,7 +146,7 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
   }
 
   // mobile拡張UI
-  Widget _buildMobileExpandedContent(WaitingScreenViewModel vm) {
+  Widget _buildMobileExpandedContent() {
     return Padding(
       padding: const EdgeInsets.only(top: 30), // 影が切れないように余白を確保
       child: Container(
@@ -180,19 +178,19 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
               ],
             ),
             const SizedBox(height: 24),
-            _StatusInfo(label: "直前入場時間", value: vm.lastEntryTimeFormatted),
+            _StatusInfo(label: "直前入場時間", value: lastEntryTimeFormatted),
             const SizedBox(height: 8),
             _StatusInfo(
-                label: "予想待機時間", value: vm.totalEstimatedWaitTimeFormatted),
+                label: "予想待機時間", value: totalEstimatedWaitTimeFormatted),
             const SizedBox(height: 24),
-            _buildBottomInfo(vm),
+            _buildBottomInfo(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBottomInfo(WaitingScreenViewModel vm) {
+  Widget _buildBottomInfo() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -212,7 +210,7 @@ class _WaitingStatusAreaState extends State<WaitingStatusArea> {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                vm.waitingCount.toString(),
+                waitingCount.toString(),
                 style: const TextStyle(
                   fontSize: 50,
                   fontWeight: FontWeight.bold,

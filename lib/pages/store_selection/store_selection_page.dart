@@ -1,44 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
+import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/join_store_dialog.dart';
 import 'package:yoyaku_mate_provider/constants/staff_status.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
-
-import 'package:yoyaku_mate_provider/pages/store_selection/store_selection_viewmodel.dart';
-import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
-class StoreSelectionView extends StatelessWidget {
+// 店舗一覧・選択画面。StoreSelectionViewModel(ProfileScreenViewModelの薄いラッパー)は廃止し、
+// session_providers.dart の myStoresProvider/userProfileProvider/StoreActions を直接使用する
+class StoreSelectionView extends ConsumerWidget {
   const StoreSelectionView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => StoreSelectionViewModel(
-        profileService: context.read<ProviderProfileService>(),
-        profileVM: context.read<ProfileScreenViewModel>(),
-      ),
-      child: const _StoreSelectionContent(),
-    );
-  }
-}
-
-class _StoreSelectionContent extends StatelessWidget {
-  const _StoreSelectionContent();
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<StoreSelectionViewModel>();
-    final stores = vm.stores;
-    // userNameを取得する
-    final userProfile = context.select<ProfileScreenViewModel, String?>(
-        (pVm) => pVm.userProfile?.name);
-    final userName = userProfile ?? 'ユーザー';
+  Widget build(BuildContext context, WidgetRef ref) {
+    final storesAsync = ref.watch(myStoresProvider);
+    final stores = storesAsync.valueOrNull ?? const <StoreProfile>[];
+    final userName = ref.watch(userProfileProvider).valueOrNull?.name ?? 'ユーザー';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -68,8 +50,8 @@ class _StoreSelectionContent extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          _buildStoreList(context, vm, stores, userName),
-          if (vm.isLoading)
+          _buildStoreList(context, ref, stores, userName),
+          if (storesAsync.isLoading && !storesAsync.hasValue)
             const Center(
               child: CircularProgressIndicator(color: AppColors.accentPrimary),
             ),
@@ -78,18 +60,17 @@ class _StoreSelectionContent extends StatelessWidget {
     );
   }
 
-  Widget _buildStoreList(BuildContext context, StoreSelectionViewModel vm,
+  Widget _buildStoreList(BuildContext context, WidgetRef ref,
       List<StoreProfile> stores, String userName) {
     Future<void> navigateToSignUp() async {
-      final role =
-          context.read<ProfileScreenViewModel>().userProfile?.role ?? 'manager';
+      final role = ref.read(userProfileProvider).valueOrNull?.role ?? 'manager';
       if (role == 'staff') {
-        _showJoinStoreDialog(context, vm);
+        _showJoinStoreDialog(context, ref);
       } else {
         await context.push('/add-store');
         // Return from AddStorePage -> Refresh List
         if (context.mounted) {
-          await vm.refreshStores();
+          ref.invalidate(myStoresProvider);
         }
       }
     }
@@ -101,7 +82,7 @@ class _StoreSelectionContent extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${userName}様、ようこそ！',
+              '$userName様、ようこそ！',
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -123,7 +104,7 @@ class _StoreSelectionContent extends StatelessWidget {
                       ),
                     )
                   : RefreshIndicator(
-                      onRefresh: vm.refreshStores,
+                      onRefresh: () => ref.refresh(myStoresProvider.future),
                       child: ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: stores.length,
@@ -141,16 +122,14 @@ class _StoreSelectionContent extends StatelessWidget {
                                 return;
                               }
 
-                              final success = await vm.selectStore(store.id);
+                              ref
+                                  .read(storeActionsProvider.notifier)
+                                  .selectStore(store.id);
 
                               if (!context.mounted) return;
-
-                              if (success) {
-                                ToastWidget.show(
-                                    context, '${store.name}が選択されました.',
-                                    type: ToastType.success);
-                                // selectStoreが返すstoreをそのままStoreProfileに変換してローカルリスト(myStores)に追加する
-                              }
+                              ToastWidget.show(
+                                  context, '${store.name}が選択されました.',
+                                  type: ToastType.success);
                             },
                           );
                         },
@@ -181,8 +160,7 @@ class _StoreSelectionContent extends StatelessWidget {
     );
   }
 
-  Future<void> _showJoinStoreDialog(
-      BuildContext context, StoreSelectionViewModel vm) async {
+  Future<void> _showJoinStoreDialog(BuildContext context, WidgetRef ref) async {
     final storeId = await showJoinStoreDialog(context: context);
 
     if (storeId == null || storeId.isEmpty) {
@@ -191,17 +169,17 @@ class _StoreSelectionContent extends StatelessWidget {
 
     if (!context.mounted) return;
 
-    final success = await vm.joinStore(storeId);
-
-    if (!context.mounted) return;
-
-    if (success) {
+    try {
+      await ref.read(storeActionsProvider.notifier).joinStore(storeId);
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(vm.successMessage ?? '参加申請を送信しました。')),
+        const SnackBar(content: Text('参加申請を送信しました。承認をお待ちください。')),
       );
-    } else if (vm.errorMessage != null) {
+    } catch (e) {
+      if (!context.mounted) return;
+      final message = e is ApiException ? e.message : e.toString();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('エラー: ${vm.errorMessage}')),
+        SnackBar(content: Text('エラー: $message')),
       );
     }
   }

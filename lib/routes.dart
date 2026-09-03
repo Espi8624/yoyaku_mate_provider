@@ -5,9 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yoyaku_mate_provider/login_page.dart';
 import 'package:yoyaku_mate_provider/main.dart';
-import 'package:provider/provider.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_page.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_viewmodel.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_prompt_page.dart';
 import 'package:yoyaku_mate_provider/pages/store_selection/add_store_page.dart';
 import 'package:yoyaku_mate_provider/verify_email_page.dart';
@@ -66,11 +64,7 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/signup',
       builder: (context, state) {
-        // UrlからQuery Parametersを抽出
-        return ChangeNotifierProvider(
-          create: (_) => SignUpViewModel(),
-          child: const SignUpPage(),
-        );
+        return const SignUpPage();
       },
     ),
     // 会員加入完了ページ

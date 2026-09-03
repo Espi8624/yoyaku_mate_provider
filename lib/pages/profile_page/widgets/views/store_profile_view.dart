@@ -2,14 +2,15 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 
 import '../../../../constants/app_colors.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
+import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
-import '../../profile_screen_viewmodel.dart';
 import '../dialogs/edit_profile_dialog.dart';
 import '../dialogs/edit_address_dialog.dart';
 import '../profile_header.dart';
@@ -22,11 +23,16 @@ import '../sections/operation_settings_section.dart';
 import '../sections/waiting_settings_section.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 
+String _describeError(Object error) {
+  if (error is ApiException) return error.message;
+  return '予期しないエラーが発生しました: $error';
+}
+
 /// 店舗プロフィール表示・編集用ビュー
 ///
 /// 店舗の基本情報の表示、編集、営業許可証のアップロードなどを行います。
 /// isReadOnlyフラグがtrueの場合（スタッフなど）、編集機能は無効化されます。
-class StoreProfileView extends StatelessWidget {
+class StoreProfileView extends ConsumerWidget {
   final bool isReadOnly;
 
   const StoreProfileView({
@@ -37,13 +43,14 @@ class StoreProfileView extends StatelessWidget {
   /// 汎用的な編集ダイアログを表示するメソッド
   /// [EditProfileDialog] を使用して、指定されたフィールド[fieldKey]を更新します。
   Future<void> _showEditDialog(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
+    required String storeId,
     required String title,
     required String fieldKey,
     required String initialValue,
   }) async {
     if (isReadOnly) return;
-    final vm = context.read<ProfileScreenViewModel>();
 
     final newValue = await showDialog<String>(
       context: context,
@@ -52,20 +59,24 @@ class StoreProfileView extends StatelessWidget {
     );
 
     if (newValue != null && newValue.isNotEmpty) {
-      final success =
-          await vm.updateProfileField(storeFieldKey: fieldKey, value: newValue);
-      if (!context.mounted) return;
-      if (success) {
+      try {
+        await ref
+            .read(storeActionsProvider.notifier)
+            .updateStoreProfileField(storeId, fieldKey, newValue);
+        if (!context.mounted) return;
         ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
+      } catch (e) {
+        if (!context.mounted) return;
+        ToastWidget.show(context, _describeError(e), type: ToastType.error);
       }
     }
   }
 
   /// 営業許可証の画像をアップロードするメソッド
-  /// デバイスのギャラリーから画像を選択し、[ProfileScreenViewModel]を通じてアップロードします。
-  Future<void> _handleImageUpload(BuildContext context) async {
+  /// デバイスのギャラリーから画像を選択し、[StoreActions]を通じてアップロードします。
+  Future<void> _handleImageUpload(
+      BuildContext context, WidgetRef ref, String storeId) async {
     if (isReadOnly) return;
-    final vm = context.read<ProfileScreenViewModel>();
 
     final picker = ImagePicker();
     final XFile? pickedFile = await picker.pickImage(
@@ -93,21 +104,20 @@ class StoreProfileView extends StatelessWidget {
 
       if (confirm != true) return;
 
-      final success = await vm.uploadStoreLicense(imageFile);
-
-      if (context.mounted) {
-        if (success) {
+      try {
+        await ref
+            .read(storeActionsProvider.notifier)
+            .uploadStoreLicense(storeId, imageFile);
+        if (context.mounted) {
           ToastWidget.show(
             context,
             '正常にアップロードされました。',
             type: ToastType.success,
           );
-        } else if (vm.errorMessage != null) {
-          ToastWidget.show(
-            context,
-            vm.errorMessage!,
-            type: ToastType.error,
-          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ToastWidget.show(context, _describeError(e), type: ToastType.error);
         }
       }
     }
@@ -115,8 +125,8 @@ class StoreProfileView extends StatelessWidget {
 
   /// 住所編集用ダイアログを表示するメソッド
   /// [EditAddressDialog] を使用して、郵便番号検索による住所更新を行います。
-  Future<void> _handleAddressEdit(
-      BuildContext context, StoreProfile profile) async {
+  Future<void> _handleAddressEdit(BuildContext context, WidgetRef ref,
+      String storeId, StoreProfile profile) async {
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (_) => EditAddressDialog(
@@ -129,21 +139,21 @@ class StoreProfileView extends StatelessWidget {
     );
 
     if (result != null && context.mounted) {
-      final vm = context.read<ProfileScreenViewModel>();
-
-      // 取得した住所情報(ZipCode, 都道府県, 市区町村, 住所, 建物名)を一括更新します。
-      final success = await vm.updateStoreAddress(
-        zipCode: result['zip_code']!,
-        prefecture: result['prefecture']!,
-        city: result['city']!,
-        address: result['address']!,
-        building: result['building']!,
-      );
-
-      if (!context.mounted) return;
-
-      if (success) {
+      try {
+        // 取得した住所情報(ZipCode, 都道府県, 市区町村, 住所, 建物名)を一括更新します。
+        await ref.read(storeActionsProvider.notifier).updateStoreAddress(
+              storeId,
+              zipCode: result['zip_code']!,
+              prefecture: result['prefecture']!,
+              city: result['city']!,
+              address: result['address']!,
+              building: result['building']!,
+            );
+        if (!context.mounted) return;
         ToastWidget.show(context, '住所が更新されました', type: ToastType.success);
+      } catch (e) {
+        if (!context.mounted) return;
+        ToastWidget.show(context, _describeError(e), type: ToastType.error);
       }
     }
   }
@@ -245,13 +255,19 @@ class StoreProfileView extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<ProfileScreenViewModel>();
-    final storeProfile = vm.storeProfile;
-    final storeLicense = vm.storeLicense;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final storeProfile = ref.watch(selectedStoreProfileProvider);
 
-    if (storeProfile == null || storeLicense == null) {
-      if (vm.isLoading) {
+    if (storeProfile == null) {
+      return const Center(child: Text("店舗情報がありません。"));
+    }
+
+    final storeId = storeProfile.id;
+    final storeLicenseAsync = ref.watch(storeLicenseProvider(storeId: storeId));
+    final storeLicense = storeLicenseAsync.valueOrNull;
+
+    if (storeLicense == null) {
+      if (storeLicenseAsync.isLoading) {
         return const Center(
             child: CircularProgressIndicator(color: AppColors.accentPrimary));
       }
@@ -274,11 +290,14 @@ class StoreProfileView extends StatelessWidget {
                 onTapImage: isReadOnly
                     ? null
                     : () {
-                        vm.uploadStoreImage();
+                        ref
+                            .read(storeActionsProvider.notifier)
+                            .uploadStoreImage(storeId);
                       },
                 onTapName: isReadOnly
                     ? null
-                    : () => _showEditDialog(context,
+                    : () => _showEditDialog(context, ref,
+                        storeId: storeId,
                         title: '店舗名',
                         fieldKey: 'store_name',
                         initialValue: storeProfile.name),
@@ -361,7 +380,8 @@ class StoreProfileView extends StatelessWidget {
                             icon: const Icon(Icons.upload_file),
                             label:
                                 Text(hasLicenseImage ? "画像を再アップロード" : "画像を登録"),
-                            onPressed: () => _handleImageUpload(context),
+                            onPressed: () =>
+                                _handleImageUpload(context, ref, storeId),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.accentPrimary,
                               foregroundColor: AppColors.textPrimaryLight,
@@ -394,7 +414,8 @@ class StoreProfileView extends StatelessWidget {
                     showTrailingIcon: !isReadOnly,
                     onTap: isReadOnly
                         ? null
-                        : () => _handleAddressEdit(context, storeProfile),
+                        : () => _handleAddressEdit(
+                            context, ref, storeId, storeProfile),
                   ),
                   ProfileSettingItem(
                     title: '電話番号',
@@ -402,7 +423,8 @@ class StoreProfileView extends StatelessWidget {
                     showTrailingIcon: !isReadOnly,
                     onTap: isReadOnly
                         ? null
-                        : () => _showEditDialog(context,
+                        : () => _showEditDialog(context, ref,
+                            storeId: storeId,
                             title: '電話番号',
                             fieldKey: 'phone_number',
                             initialValue: storeProfile.phone_number),
@@ -450,9 +472,7 @@ class StoreProfileView extends StatelessWidget {
                 ),
                 onPressed: () {
                   // 現在の店舗選択を解除
-                  final profileVM = Provider.of<ProfileScreenViewModel>(context,
-                      listen: false);
-                  profileVM.clearStoreSelection();
+                  ref.read(storeActionsProvider.notifier).clearSelection();
                 },
                 style: OutlinedButton.styleFrom(
                   backgroundColor: AppColors.accentPrimary,

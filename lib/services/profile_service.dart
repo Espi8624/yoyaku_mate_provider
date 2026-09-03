@@ -459,48 +459,9 @@ class ProviderProfileService {
     }
   }
 
-  // 自分自身の勤務可能な曜日・時間帯を取得
-  Future<Map<String, dynamic>> fetchMyAvailability(String storeId) async {
-    final token = await _getIdToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/stores/$storeId/staff/me/availability'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final decoded = json.decode(utf8.decode(response.bodyBytes));
-      return decoded == null ? {} : decoded as Map<String, dynamic>;
-    } else {
-      throw ApiException(
-          'Failed to fetch my availability. Status: ${response.statusCode}, Body: ${response.body}');
-    }
-  }
-
-  // 自分自身の勤務可能な曜日・時間帯を更新
-  Future<void> updateMyAvailability(
-      String storeId, Map<String, List<String>> availability) async {
-    final token = await _getIdToken();
-    final response = await http.patch(
-      Uri.parse('$baseUrl/api/stores/$storeId/staff/me/availability'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'availability': availability}),
-    );
-
-    if (response.statusCode != 200) {
-      throw ApiException(
-          'Failed to update my availability. Status: ${response.statusCode}, Body: ${response.body}');
-    }
-  }
-
-  // スタッフの勤務可能な曜日・時間帯を更新 (マネージャー用)
+  // スタッフの勤務不可時間帯を更新 (マネージャー用)
   Future<void> updateStoreStaffAvailability(String storeId, String staffId,
-      Map<String, List<String>> availability) async {
+      Map<String, List<Map<String, dynamic>>> availability) async {
     final token = await _getIdToken();
     final response = await http.patch(
       Uri.parse('$baseUrl/api/stores/$storeId/staff/$staffId/availability'),

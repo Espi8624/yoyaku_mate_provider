@@ -9,12 +9,15 @@ class BusinessHoursDialog extends StatefulWidget {
   final Map<String, Map<String, String>> initialHours;
   final bool initialIs24Hours;
   final String initialResetTime;
+  // 定休日(曜日ラベル、例: '月')の一覧。該当曜日の行は淡色表示にする
+  final List<String> closedWeekdayLabels;
 
   const BusinessHoursDialog({
     super.key,
     required this.initialHours,
     this.initialIs24Hours = false,
     this.initialResetTime = "06:00",
+    this.closedWeekdayLabels = const [],
   });
 
   @override
@@ -187,6 +190,8 @@ class _BusinessHoursDialogState extends State<BusinessHoursDialog> {
                         return _TimePickerRow(
                           dayLabel: _dayLabels[index],
                           hours: _businessHours[dayKey]!,
+                          isClosed: widget.closedWeekdayLabels
+                              .contains(_dayLabels[index]),
                           onChanged: (newHours) =>
                               setState(() => _businessHours[dayKey] = newHours),
                         );
@@ -253,79 +258,91 @@ class _BusinessHoursDialogState extends State<BusinessHoursDialog> {
 class _TimePickerRow extends StatelessWidget {
   final String dayLabel;
   final Map<String, int> hours;
+  // 定休日かどうか(trueの場合、行全体を淡色表示にする)
+  final bool isClosed;
   final ValueChanged<Map<String, int>> onChanged;
 
-  const _TimePickerRow(
-      {required this.dayLabel, required this.hours, required this.onChanged});
+  const _TimePickerRow({
+    required this.dayLabel,
+    required this.hours,
+    this.isClosed = false,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6.0),
-      padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Day Label Circle
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              dayLabel,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+    return Opacity(
+      opacity: isClosed ? 0.4 : 1.0,
+      child: IgnorePointer(
+        ignoring: isClosed,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 6.0),
+          padding: const EdgeInsets.all(12.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 12),
-
-          // Time Pickers
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // Start Time
-                _buildTimeGroup(
-                  hours['startHour']!,
-                  hours['startMinute']!,
-                  (val) => onChanged({...hours, 'startHour': val}),
-                  (val) => onChanged({...hours, 'startMinute': val}),
+          child: Row(
+            children: [
+              // Day Label Circle
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  shape: BoxShape.circle,
                 ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child:
-                      Text('~', style: TextStyle(color: Colors.grey.shade400)),
+                alignment: Alignment.center,
+                child: Text(
+                  dayLabel,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
+              ),
+              const SizedBox(width: 12),
 
-                // End Time
-                _buildTimeGroup(
-                  hours['endHour']!,
-                  hours['endMinute']!,
-                  (val) => onChanged({...hours, 'endHour': val}),
-                  (val) => onChanged({...hours, 'endMinute': val}),
+              // Time Pickers
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Start Time
+                    _buildTimeGroup(
+                      hours['startHour']!,
+                      hours['startMinute']!,
+                      (val) => onChanged({...hours, 'startHour': val}),
+                      (val) => onChanged({...hours, 'startMinute': val}),
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text('~',
+                          style: TextStyle(color: Colors.grey.shade400)),
+                    ),
+
+                    // End Time
+                    _buildTimeGroup(
+                      hours['endHour']!,
+                      hours['endMinute']!,
+                      (val) => onChanged({...hours, 'endHour': val}),
+                      (val) => onChanged({...hours, 'endMinute': val}),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

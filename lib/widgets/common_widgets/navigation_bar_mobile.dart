@@ -4,13 +4,11 @@ import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 class NavigationBarMobile extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
-  final bool isManager;
 
   const NavigationBarMobile({
     super.key,
     required this.selectedIndex,
     required this.onItemTapped,
-    this.isManager = false,
   });
 
   @override
@@ -38,10 +36,9 @@ class NavigationBarMobile extends StatelessWidget {
             _buildNavItem(
                 1, Icons.table_view_rounded, Icons.table_view_rounded),
             _buildNavItem(2, Icons.bar_chart_rounded, Icons.bar_chart_rounded),
-            if (isManager)
-              _buildNavItem(
-                  3, Icons.people_alt_outlined, Icons.people_alt_rounded),
-            _buildNavItem(isManager ? 4 : 3, Icons.settings, Icons.settings),
+            _buildNavItem(
+                3, Icons.people_alt_outlined, Icons.people_alt_rounded),
+            _buildNavItem(4, Icons.settings, Icons.settings),
           ],
         ),
       ),

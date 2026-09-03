@@ -1,11 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/provider_profile.dart'; // 必要なモデルが存在し、エクスポートされていることを確認
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/profile_screen_viewmodel.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_wizard_steps.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_business_hours_step.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
@@ -13,14 +13,14 @@ import 'package:yoyaku_mate_provider/services/profile_service.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-class AddStorePage extends StatefulWidget {
+class AddStorePage extends ConsumerStatefulWidget {
   const AddStorePage({super.key});
 
   @override
-  State<AddStorePage> createState() => _AddStorePageState();
+  ConsumerState<AddStorePage> createState() => _AddStorePageState();
 }
 
-class _AddStorePageState extends State<AddStorePage> {
+class _AddStorePageState extends ConsumerState<AddStorePage> {
   bool _isLoading = false;
 
   // Controllers
@@ -109,8 +109,7 @@ class _AddStorePageState extends State<AddStorePage> {
   }
 
   void _populateUserData() {
-    final profileVM = context.read<ProfileScreenViewModel>();
-    final userProfile = profileVM.userProfile;
+    final userProfile = ref.read(userProfileProvider).valueOrNull;
 
     if (userProfile != null) {
       final rawName =
@@ -158,8 +157,7 @@ class _AddStorePageState extends State<AddStorePage> {
       }
 
       final firebaseUid = currentUser.uid;
-      final profileVM = context.read<ProfileScreenViewModel>();
-      final userProfile = profileVM.userProfile;
+      final userProfile = ref.read(userProfileProvider).valueOrNull;
 
       final idToken = await currentUser.getIdToken(true);
       if (idToken == null) {
@@ -218,7 +216,7 @@ class _AddStorePageState extends State<AddStorePage> {
       final storeJson = createdProfileMap['store'] as Map<String, dynamic>?;
       if (storeJson != null) {
         final newStoreProfile = StoreProfile.fromJson(storeJson);
-        profileVM.addStore(newStoreProfile);
+        ref.read(storeActionsProvider.notifier).addStore(newStoreProfile);
       }
 
       if (!mounted) return;

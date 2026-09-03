@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Clipboard
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/waiting_list.dart';
-import 'package:yoyaku_mate_provider/services/waiting_service.dart';
-import 'package:yoyaku_mate_provider/services/store_settings_service.dart';
+import 'package:yoyaku_mate_provider/providers/session_providers.dart';
+import 'package:yoyaku_mate_provider/services/api_exception.dart';
+import 'package:yoyaku_mate_provider/pages/waiting_page/waiting_providers.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/loading_indicator.dart';
@@ -14,11 +18,9 @@ import 'widgets/qr_code_button.dart';
 import 'widgets/waiting_action_buttons.dart';
 import 'widgets/waiting_list_panel.dart';
 import 'widgets/waiting_status_area.dart';
-import 'waiting_screen_viewmodel.dart';
 import '../../widgets/common_widgets/toast_widget.dart';
 import '../../widgets/common_widgets/notes_display_with_translation.dart';
 import 'package:yoyaku_mate_provider/constants/api_config.dart';
-
 
 class WaitingScreen extends StatelessWidget {
   final String storeId;
@@ -26,34 +28,141 @@ class WaitingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) {
-        return WaitingScreenViewModel(
-          storeId: storeId,
-          waitingService: WaitingService(),
-          settingsService: context.read<StoreSettingsService>(),
-        );
-      },
-      child: const _WaitingView(),
-    );
+    return _WaitingView(storeId: storeId);
   }
 }
 
-class _WaitingView extends StatelessWidget {
-  const _WaitingView();
+class _WaitingView extends HookConsumerWidget {
+  final String storeId;
+  const _WaitingView({required this.storeId});
+
+  // エラーメッセージを人が読める形に整形する (ApiExceptionはmessageのみ表示)
+  String _describeError(Object error) {
+    if (error is ApiException) return error.message;
+    var message = error.toString();
+    const prefix = 'Exception: ';
+    if (message.startsWith(prefix)) message = message.substring(prefix.length);
+    return message.trim();
+  }
+
+  // 他端末での重複ログインを検知した場合、強制ログアウトダイアログを表示する
+  Future<bool> _handleDuplicateLogin(BuildContext context, Object error) async {
+    if (!error.toString().contains("DUPLICATE_LOGIN")) return false;
+    if (!context.mounted) return true;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text("ログアウト通知"),
+        content: const Text("他の端末でログインされたため、ログアウトします。"),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (ctx.mounted) {
+                ctx.go('/login');
+              }
+            },
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+    return true;
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<WaitingScreenViewModel>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    // フィルタ選択はページローカルなephemeral UI状態のためHooksで管理
+    final selectedFilter = useState('all');
+
+    // アプリのフォアグラウンド復帰を検知してリストを再取得＆SSE再接続
+    // ref.invalidateはInheritedWidget(ProviderScope)への依存登録を伴うため、
+    // Hookの初期化中(initHook)に直接呼ぶとアサーションエラーになる。
+    // (ホットリスタート直後はAppLifecycleStateが既にresumedのまま初回buildを迎えるため、
+    //  useEffectの初回発火がinitHookのタイミングと重なり再現する)
+    // postFrameCallbackでフレーム確定後まで呼び出しを遅延させることで回避する
+    final lifecycleState = useAppLifecycleState();
+    useEffect(() {
+      if (lifecycleState == AppLifecycleState.resumed) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.invalidate(waitingListNotifierProvider(storeId: storeId));
+        });
+      }
+      return null;
+    }, [lifecycleState]);
+
+    final waitingAsync = ref.watch(waitingListNotifierProvider(storeId: storeId));
+    final settings = ref.watch(storeSettingsProvider(storeId: storeId)).valueOrNull;
+
+    final estimatedWaitTimePerTeam =
+        (settings?.waitingPolicy.estimatedWaitTime ?? 0) > 0
+            ? settings!.waitingPolicy.estimatedWaitTime!
+            : 10; // デフォルト10分
+    final enableMenuSelection = settings?.waitingPolicy.enableMenuSelection ?? false;
+    final requireOneMenuPerPerson =
+        settings?.waitingPolicy.requireOneMenuPerPerson ?? false;
+
+    final data = waitingAsync.valueOrNull;
+    final waitingList = data?.items ?? const <WaitingList>[];
+    final qrToken = data?.qrToken;
+    final isLoading = waitingAsync.isLoading && data == null;
+    final error = (waitingAsync.hasError && data == null)
+        ? _describeError(waitingAsync.error!)
+        : null;
+
+    // 既存 filteredWaitingList と同一ロジック
+    List<WaitingList> filteredWaitingList() {
+      switch (selectedFilter.value) {
+        case 'all':
+          return waitingList;
+        case 'waiting':
+          return waitingList
+              .where((item) => item.status == 'waiting' || item.status == 'notified')
+              .toList();
+        case 'completed':
+          return waitingList.where((item) => item.status == 'completed').toList();
+        case 'cancelled':
+          return waitingList.where((item) => item.status == 'cancelled').toList();
+        default:
+          // no_show データは完全に除外
+          return waitingList.where((item) => item.status != 'no_show').toList();
+      }
+    }
+
+    final waitingCount = waitingList.where((item) => item.status == 'waiting').length;
+
+    // 最後入場時間計算ロジック (既存 lastEntryTimeFormatted と同一)
+    String lastEntryTimeFormatted() {
+      DateTime? lastEntryTime;
+      for (var item in waitingList) {
+        if (item.entryTime != null) {
+          if (lastEntryTime == null || item.entryTime!.isAfter(lastEntryTime)) {
+            lastEntryTime = item.entryTime;
+          }
+        }
+      }
+      if (lastEntryTime == null) return "--:--";
+      final jst = lastEntryTime.toUtc().add(const Duration(hours: 9));
+      return "${jst.hour.toString().padLeft(2, '0')}:${jst.minute.toString().padLeft(2, '0')}";
+    }
+
+    String totalEstimatedWaitTimeFormatted() {
+      if (waitingList.isEmpty) return "0分";
+      return "${waitingCount * estimatedWaitTimePerTeam}分";
+    }
+
+    Future<void> refresh() =>
+        ref.refresh(waitingListNotifierProvider(storeId: storeId).future);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         const double mobileBreakpoint = 700;
         final bool isMobile = constraints.maxWidth < mobileBreakpoint;
-        String qrCodeData =
-            "${ApiConfig.webBaseUrl}/waiting-screen-flow?store_id=${vm.storeId}";
-        if (vm.qrToken != null) {
-          qrCodeData += "&v_token=${vm.qrToken}";
+        String qrCodeData = "${ApiConfig.webBaseUrl}/waiting-screen-flow?store_id=$storeId";
+        if (qrToken != null) {
+          qrCodeData += "&v_token=$qrToken";
         }
 
         if (isMobile) {
@@ -74,9 +183,8 @@ class _WaitingView extends StatelessWidget {
               centerTitle: false,
               actions: [
                 IconButton(
-                    icon:
-                        const Icon(Icons.monitor, color: AppColors.textPrimary),
-                    onPressed: () => _showMonitorUrlDialog(context, vm)),
+                    icon: const Icon(Icons.monitor, color: AppColors.textPrimary),
+                    onPressed: () => _showMonitorUrlDialog(context)),
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: QRCodeButton(data: qrCodeData),
@@ -90,17 +198,15 @@ class _WaitingView extends StatelessWidget {
                     clipBehavior: Clip.none, // 影が切れないようにする
                     children: [
                       // 待機目録リスト
-                      if (vm.error != null)
+                      if (error != null)
                         Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(vm.error!,
-                                  style:
-                                      const TextStyle(color: AppColors.error)),
+                              Text(error, style: const TextStyle(color: AppColors.error)),
                               const SizedBox(height: 16),
                               ElevatedButton(
-                                onPressed: vm.loadWaitingList,
+                                onPressed: refresh,
                                 child: const Text('再試行'),
                               ),
                             ],
@@ -109,20 +215,19 @@ class _WaitingView extends StatelessWidget {
                       else
                         Positioned.fill(
                           child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 16.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildFilterBar(context, vm),
+                                _buildFilterBar(selectedFilter),
                                 Expanded(
                                   child: WaitingListPanel(
-                                    waitingList: vm.filteredWaitingList,
-                                    onRefresh: vm.loadWaitingList,
+                                    waitingList: filteredWaitingList(),
+                                    onRefresh: refresh,
                                     onItemAction: (item) =>
-                                        _showStatusBasedDialog(context, item),
+                                        _showStatusBasedDialog(context, ref, item),
                                     bottomPadding: 85,
-                                    qrToken: vm.qrToken,
+                                    qrToken: qrToken,
                                   ),
                                 ),
                               ],
@@ -139,22 +244,27 @@ class _WaitingView extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.only(
-                                  right: 16.0, bottom: 16.0),
+                              padding:
+                                  const EdgeInsets.only(right: 16.0, bottom: 16.0),
                               child: FloatingActionButton(
-                                onPressed: () => _showAddWaitingDialog(context),
+                                onPressed: () => _showAddWaitingDialog(
+                                    context, ref, enableMenuSelection, requireOneMenuPerPerson),
                                 backgroundColor: AppColors.accentPrimary,
-                                child:
-                                    const Icon(Icons.add, color: Colors.white),
+                                child: const Icon(Icons.add, color: Colors.white),
                               ),
                             ),
-                            const WaitingStatusArea(),
+                            WaitingStatusArea(
+                              waitingCount: waitingCount,
+                              lastEntryTimeFormatted: lastEntryTimeFormatted(),
+                              totalEstimatedWaitTimeFormatted:
+                                  totalEstimatedWaitTimeFormatted(),
+                            ),
                           ],
                         ),
                       ),
 
                       // Loading Indicator Overlay
-                      if (vm.isLoading) const LoadingIndicator(),
+                      if (isLoading) const LoadingIndicator(),
                     ],
                   ),
                 ),
@@ -181,7 +291,7 @@ class _WaitingView extends StatelessWidget {
                 Tooltip(
                   message: "更新",
                   child: ElevatedButton(
-                    onPressed: vm.loadWaitingList,
+                    onPressed: refresh,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.textPrimary,
                       foregroundColor: Colors.white,
@@ -193,8 +303,9 @@ class _WaitingView extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 WaitingActionButtons(
-                  onAddWaiting: () => _showAddWaitingDialog(context),
-                  onShowMonitor: () => _showMonitorUrlDialog(context, vm),
+                  onAddWaiting: () => _showAddWaitingDialog(
+                      context, ref, enableMenuSelection, requireOneMenuPerPerson),
+                  onShowMonitor: () => _showMonitorUrlDialog(context),
                 ),
                 const SizedBox(width: 8),
                 QRCodeButton(data: qrCodeData),
@@ -207,18 +318,16 @@ class _WaitingView extends StatelessWidget {
                 Expanded(
                   child: Stack(
                     children: [
-                      if (vm.error != null)
+                      if (error != null)
                         Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(vm.error!,
-                                  style:
-                                      const TextStyle(color: AppColors.error)),
+                              Text(error, style: const TextStyle(color: AppColors.error)),
                               const SizedBox(height: 16),
                               ElevatedButton(
-                                onPressed: vm.loadWaitingList,
-                                child: const Text('再試行'),
+                                onPressed: refresh,
+                                child: const Text('Retry'),
                               ),
                             ],
                           ),
@@ -234,32 +343,36 @@ class _WaitingView extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildFilterBar(context, vm),
+                                    _buildFilterBar(selectedFilter),
                                     Expanded(
                                       child: WaitingListPanel(
-                                        waitingList: vm.filteredWaitingList,
-                                        onRefresh: vm.loadWaitingList,
+                                        waitingList: filteredWaitingList(),
+                                        onRefresh: refresh,
                                         onItemAction: (item) =>
-                                            _showStatusBasedDialog(
-                                                context, item),
-                                        qrToken: vm.qrToken,
+                                            _showStatusBasedDialog(context, ref, item),
+                                        qrToken: qrToken,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              const Expanded(
+                              Expanded(
                                 flex: 1,
                                 child: WaitingStatusArea(
-                                    isInitiallyExpanded: true),
+                                  isInitiallyExpanded: true,
+                                  waitingCount: waitingCount,
+                                  lastEntryTimeFormatted: lastEntryTimeFormatted(),
+                                  totalEstimatedWaitTimeFormatted:
+                                      totalEstimatedWaitTimeFormatted(),
+                                ),
                               ),
                             ],
                           ),
                         ),
 
                       // Loading Indicator Overlay
-                      if (vm.isLoading) const LoadingIndicator(),
+                      if (isLoading) const LoadingIndicator(),
                     ],
                   ),
                 ),
@@ -271,25 +384,36 @@ class _WaitingView extends StatelessWidget {
     );
   }
 
-  Future<void> _showAddWaitingDialog(BuildContext context) async {
-    final vm = context.read<WaitingScreenViewModel>();
+  Future<void> _showAddWaitingDialog(BuildContext context, WidgetRef ref,
+      bool enableMenuSelection, bool requireOneMenuPerPerson) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => AddWaitingDialog(
-        storeId: vm.storeId,
-        enableMenuSelection: vm.enableMenuSelection,
-        requireOneMenuPerPerson: vm.requireOneMenuPerPerson,
+        storeId: storeId,
+        enableMenuSelection: enableMenuSelection,
+        requireOneMenuPerPerson: requireOneMenuPerPerson,
       ),
     );
-    if (result != null && context.mounted) {
-      await vm.addWaitingItem(context, result);
+    if (result == null || !context.mounted) return;
+
+    try {
+      await ref
+          .read(waitingListNotifierProvider(storeId: storeId).notifier)
+          .addWaitingItem(result);
+      if (context.mounted) {
+        ToastWidget.show(context, '待機が正常に追加されました', type: ToastType.success);
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      if (await _handleDuplicateLogin(context, e)) return;
+      if (context.mounted) {
+        ToastWidget.show(context, '追加失敗: ${_describeError(e)}', type: ToastType.error);
+      }
     }
   }
 
-  Future<void> _showMonitorUrlDialog(
-      BuildContext context, WaitingScreenViewModel vm) async {
-    final String url =
-        "${ApiConfig.webBaseUrl}/board?store_id=${vm.storeId}";
+  Future<void> _showMonitorUrlDialog(BuildContext context) async {
+    final String url = "${ApiConfig.webBaseUrl}/board?store_id=$storeId";
 
     await showDialog(
       context: context,
@@ -352,8 +476,7 @@ class _WaitingView extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon:
-                        const Icon(Icons.copy, color: AppColors.textSecondary),
+                    icon: const Icon(Icons.copy, color: AppColors.textSecondary),
                     tooltip: 'URLをコピー',
                     onPressed: () async {
                       await Clipboard.setData(ClipboardData(text: url));
@@ -375,21 +498,43 @@ class _WaitingView extends StatelessWidget {
   }
 
   Future<void> _showCancelConfirmationDialog(
-      BuildContext context, WaitingList item) async {
+      BuildContext context, WidgetRef ref, WaitingList item) async {
     final confirmed = await showConfirmationDialog(
       context: context,
       title: '待機取消',
       content: 'このお客様の待機を取消しますか？\nこの操作は取り消しできません。',
       cancelText: null, // キャンセルボタンを削除し、削除ボタンを中央に配置
     );
-    if (confirmed == true && context.mounted) {
-      await context
-          .read<WaitingScreenViewModel>()
-          .updateWaitingStatus(context, item.waitingId, 'cancelled');
+    if (confirmed != true || !context.mounted) return;
+    await _updateStatus(context, ref, item.waitingId, 'cancelled');
+  }
+
+  // ステータス更新 + 成功/失敗Toast表示 (既存の各アクションボタンから共通利用)
+  Future<void> _updateStatus(
+      BuildContext context, WidgetRef ref, String waitingId, String newStatus) async {
+    try {
+      await ref
+          .read(waitingListNotifierProvider(storeId: storeId).notifier)
+          .updateWaitingStatus(waitingId, newStatus);
+
+      String message = '';
+      if (newStatus == 'notified') message = 'お客様を呼び出しました';
+      if (newStatus == 'completed') message = '入店処理が完了しました';
+      if (newStatus == 'cancelled') message = '待機を取り消しました';
+      if (context.mounted && message.isNotEmpty) {
+        ToastWidget.show(context, message, type: ToastType.success);
+      }
+    } on ApiException catch (e) {
+      if (!context.mounted) return;
+      if (await _handleDuplicateLogin(context, e)) return;
+      if (context.mounted) {
+        ToastWidget.show(context, 'ステータスアップデート失敗: ${e.message}',
+            type: ToastType.error);
+      }
     }
   }
 
-  Widget _buildFilterBar(BuildContext context, WaitingScreenViewModel vm) {
+  Widget _buildFilterBar(ValueNotifier<String> selectedFilter) {
     final filters = [
       {'label': 'すべて', 'value': 'all'},
       {'label': '待機中', 'value': 'waiting'},
@@ -402,7 +547,7 @@ class _WaitingView extends StatelessWidget {
       padding: const EdgeInsets.only(left: 8.0),
       child: Row(
         children: filters.map((f) {
-          final isSelected = vm.selectedFilter == f['value'];
+          final isSelected = selectedFilter.value == f['value'];
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: ChoiceChip(
@@ -410,7 +555,7 @@ class _WaitingView extends StatelessWidget {
               selected: isSelected,
               onSelected: (selected) {
                 if (selected) {
-                  vm.setFilter(f['value']!);
+                  selectedFilter.value = f['value']!;
                 }
               },
               selectedColor: AppColors.accentPrimary,
@@ -431,13 +576,13 @@ class _WaitingView extends StatelessWidget {
     );
   }
 
-  void _showStatusBasedDialog(BuildContext context, WaitingList item) {
+  void _showStatusBasedDialog(BuildContext context, WidgetRef ref, WaitingList item) {
     switch (item.status) {
       case 'waiting':
-        _showNotificationDialog(context, item);
+        _showNotificationDialog(context, ref, item);
         break;
       case 'notified':
-        _showEntryConfirmationDialog(context, item);
+        _showEntryConfirmationDialog(context, ref, item);
         break;
       default:
         _showInfoDialog(context, item);
@@ -492,8 +637,7 @@ class _WaitingView extends StatelessWidget {
   }
 
   Future<void> _showNotificationDialog(
-      BuildContext context, WaitingList item) async {
-    final vm = context.read<WaitingScreenViewModel>();
+      BuildContext context, WidgetRef ref, WaitingList item) async {
     final notesText =
         (item.notes != null && item.notes!.isNotEmpty) ? item.notes! : null;
 
@@ -547,7 +691,7 @@ class _WaitingView extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
-                        _showCancelConfirmationDialog(context, item);
+                        _showCancelConfirmationDialog(context, ref, item);
                       },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -562,8 +706,8 @@ class _WaitingView extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        vm.updateWaitingStatus(ctx, item.waitingId, 'notified');
                         Navigator.of(ctx).pop();
+                        _updateStatus(context, ref, item.waitingId, 'notified');
                       },
                       style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accentPrimary,
@@ -582,8 +726,7 @@ class _WaitingView extends StatelessWidget {
   }
 
   Future<void> _showEntryConfirmationDialog(
-      BuildContext context, WaitingList item) async {
-    final vm = context.read<WaitingScreenViewModel>();
+      BuildContext context, WidgetRef ref, WaitingList item) async {
     final contactText = (item.contact != null && item.contact!.isNotEmpty)
         ? item.contact!
         : null;
@@ -647,7 +790,7 @@ class _WaitingView extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
-                        _showCancelConfirmationDialog(context, item);
+                        _showCancelConfirmationDialog(context, ref, item);
                       },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -661,9 +804,8 @@ class _WaitingView extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        vm.updateWaitingStatus(
-                            ctx, item.waitingId, 'completed');
                         Navigator.of(ctx).pop();
+                        _updateStatus(context, ref, item.waitingId, 'completed');
                       },
                       style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accentPrimary,
