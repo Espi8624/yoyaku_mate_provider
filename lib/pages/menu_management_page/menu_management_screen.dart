@@ -873,7 +873,7 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
         // mobile layout
         if (isMobile) {
           return Scaffold(
-            backgroundColor: const Color(0xFFF5F7FA),
+            backgroundColor: AppColors.background,
             appBar: AppBar(
               title: const Text(
                 'メニュー管理',
@@ -939,7 +939,7 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
         } else {
           // desktop layout
           return Scaffold(
-            backgroundColor: const Color(0xFFF5F7FA),
+            backgroundColor: AppColors.background,
             appBar: AppBar(
               title: const Text(
                 'メニュー管理',

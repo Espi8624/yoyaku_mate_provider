@@ -10,6 +10,7 @@ import 'package:yoyaku_mate_provider/constants/staff_status.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
+import 'package:yoyaku_mate_provider/services/session_service.dart';
 
 // 店舗一覧・選択画面。StoreSelectionViewModel(ProfileScreenViewModelの薄いラッパー)は廃止し、
 // session_providers.dart の myStoresProvider/userProfileProvider/StoreActions を直接使用する
@@ -41,6 +42,8 @@ class StoreSelectionView extends ConsumerWidget {
                 confirmText: 'はい。',
               );
               if (confirmed == true) {
+                // - サーバー側の端末セッションも破棄してから認証を切る
+                await SessionService.instance.clear();
                 await FirebaseAuth.instance.signOut();
               }
             },

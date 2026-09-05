@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
+import 'package:yoyaku_mate_provider/services/api_client.dart';
 import 'package:yoyaku_mate_provider/models/shift_change_request.dart';
 import 'package:yoyaku_mate_provider/models/shift_table.dart';
 import 'api_exception.dart';
@@ -31,7 +31,7 @@ class ShiftTableService {
   Future<ShiftTable?> fetchShiftTable(
       String storeId, String weekStartDate) async {
     final token = await _getIdToken();
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate'),
       headers: _headers(token),
     );
@@ -51,7 +51,7 @@ class ShiftTableService {
   // 指定週の空のシフト表を作成 (マネージャー専用)
   Future<void> createShiftTable(String storeId, String weekStartDate) async {
     final token = await _getIdToken();
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse('$baseUrl/api/stores/$storeId/shift-tables'),
       headers: _headers(token),
       body: jsonEncode({'week_start_date': weekStartDate}),
@@ -74,7 +74,7 @@ class ShiftTableService {
     required String endTime,
   }) async {
     final token = await _getIdToken();
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse(
           '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/shifts'),
       headers: _headers(token),
@@ -104,7 +104,7 @@ class ShiftTableService {
     required String endTime,
   }) async {
     final token = await _getIdToken();
-    final response = await http.patch(
+    final response = await apiClient.patch(
       Uri.parse(
           '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/shifts/$shiftId'),
       headers: _headers(token),
@@ -127,7 +127,7 @@ class ShiftTableService {
   Future<void> deleteShift(
       String storeId, String weekStartDate, String shiftId) async {
     final token = await _getIdToken();
-    final response = await http.delete(
+    final response = await apiClient.delete(
       Uri.parse(
           '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/shifts/$shiftId'),
       headers: _headers(token),
@@ -148,7 +148,7 @@ class ShiftTableService {
     required String mode,
   }) async {
     final token = await _getIdToken();
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse(
           '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/auto-generate'),
       headers: _headers(token),
@@ -166,7 +166,7 @@ class ShiftTableService {
   Future<List<ShiftChangeRequest>> fetchChangeRequests(
       String storeId, String weekStartDate) async {
     final token = await _getIdToken();
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
           '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/change-requests'),
       headers: _headers(token),
@@ -198,7 +198,7 @@ class ShiftTableService {
     required String toEndTime,
   }) async {
     final token = await _getIdToken();
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse(
           '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/change-requests'),
       headers: _headers(token),
@@ -224,7 +224,7 @@ class ShiftTableService {
   Future<void> resolveChangeRequests(
       String storeId, String weekStartDate) async {
     final token = await _getIdToken();
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse(
           '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/change-requests/resolve'),
       headers: _headers(token),
@@ -246,7 +246,7 @@ class ShiftTableService {
     List<ChangeRequestResolution> resolutions,
   ) async {
     final token = await _getIdToken();
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse(
           '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/change-requests/apply'),
       headers: _headers(token),
@@ -270,7 +270,7 @@ class ShiftTableService {
   Future<void> deleteChangeRequest(
       String storeId, String weekStartDate, String requestId) async {
     final token = await _getIdToken();
-    final response = await http.delete(
+    final response = await apiClient.delete(
       Uri.parse(
           '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/change-requests/$requestId'),
       headers: _headers(token),

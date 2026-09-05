@@ -168,6 +168,10 @@ class ProfileActions extends _$ProfileActions {
   @override
   void build() {}
 
+  // pickImage連打でPHPickerViewControllerが二重に起動し、
+  // ネイティブ側の画面がフリーズするのを防ぐためのガード
+  bool _isPickingImage = false;
+
   Future<void> updateUserProfileFields(Map<String, dynamic> updates) async {
     final mongoUserId = ref.read(userProfileProvider).valueOrNull?.id;
     if (mongoUserId == null || mongoUserId.isEmpty) {
@@ -200,24 +204,32 @@ class ProfileActions extends _$ProfileActions {
   }
 
   Future<void> uploadUserImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      requestFullMetadata: false, // iOSシミュレーター停止バグ防止
-    );
-    if (pickedFile == null) return;
+    if (_isPickingImage) return; // 連打による二重起動を無視
+    _isPickingImage = true;
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        requestFullMetadata: false, // iOSシミュレーター停止バグ防止
+      );
+      if (pickedFile == null) return;
 
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) throw const ApiException('User not logged in.');
-    final idToken = await currentUser.getIdToken(true);
-    if (idToken == null) throw const ApiException('Could not get auth token.');
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) throw const ApiException('User not logged in.');
+      final idToken = await currentUser.getIdToken(true);
+      if (idToken == null) {
+        throw const ApiException('Could not get auth token.');
+      }
 
-    final service = ref.read(profileServiceProvider);
-    await service.uploadUserImage(File(pickedFile.path), idToken);
-    ref.invalidate(userProfileProvider);
+      final service = ref.read(profileServiceProvider);
+      await service.uploadUserImage(File(pickedFile.path), idToken);
+      ref.invalidate(userProfileProvider);
+    } finally {
+      _isPickingImage = false;
+    }
   }
 }
 
@@ -227,6 +239,10 @@ class ProfileActions extends _$ProfileActions {
 class StoreActions extends _$StoreActions {
   @override
   void build() {}
+
+  // pickImage連打でPHPickerViewControllerが二重に起動し、
+  // ネイティブ側の画面がフリーズするのを防ぐためのガード
+  bool _isPickingImage = false;
 
   void selectStore(String storeId) {
     ref.read(selectedStoreIdProvider.notifier).select(storeId);
@@ -275,24 +291,32 @@ class StoreActions extends _$StoreActions {
   }
 
   Future<void> uploadStoreImage(String storeId) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      requestFullMetadata: false,
-    );
-    if (pickedFile == null) return;
+    if (_isPickingImage) return; // 連打による二重起動を無視
+    _isPickingImage = true;
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        requestFullMetadata: false,
+      );
+      if (pickedFile == null) return;
 
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) throw const ApiException('User not logged in.');
-    final idToken = await currentUser.getIdToken(true);
-    if (idToken == null) throw const ApiException('Could not get auth token.');
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) throw const ApiException('User not logged in.');
+      final idToken = await currentUser.getIdToken(true);
+      if (idToken == null) {
+        throw const ApiException('Could not get auth token.');
+      }
 
-    final service = ref.read(profileServiceProvider);
-    await service.uploadStoreImage(File(pickedFile.path), storeId, idToken);
-    ref.invalidate(myStoresProvider);
+      final service = ref.read(profileServiceProvider);
+      await service.uploadStoreImage(File(pickedFile.path), storeId, idToken);
+      ref.invalidate(myStoresProvider);
+    } finally {
+      _isPickingImage = false;
+    }
   }
 
   Future<void> uploadStoreLicense(String storeId, File imageFile) async {

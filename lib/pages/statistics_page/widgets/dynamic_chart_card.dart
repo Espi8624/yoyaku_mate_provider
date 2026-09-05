@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 
 class DynamicChartCard extends StatelessWidget {
   final List<dynamic>? chartData;
@@ -53,13 +54,13 @@ class DynamicChartCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 _buildLegendItem(
-                  color: const Color(0xFF212529),
+                  color: AppColors.statChartDark,
                   label: '今回',
                   isCircle: false,
                 ),
                 const SizedBox(width: 16),
                 _buildLegendItem(
-                  color: const Color(0xFFFF6B6B),
+                  color: AppColors.statAlertRed,
                   label: '前回',
                   isCircle: true,
                 ),
@@ -95,7 +96,7 @@ class DynamicChartCard extends StatelessWidget {
                                   child: Text(
                                     chartData![index]['label'].toString(),
                                     style: const TextStyle(
-                                      color: Color(0xFFADB5BD),
+                                      color: AppColors.statAxisLabel,
                                       fontSize: 10,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -132,7 +133,7 @@ class DynamicChartCard extends StatelessWidget {
                           barRods: [
                             BarChartRodData(
                               toY: val,
-                              color: const Color(0xFF212529),
+                              color: AppColors.statChartDark,
                               width: 8,
                               borderRadius: const BorderRadius.vertical(
                                   top: Radius.circular(6)),
@@ -218,7 +219,7 @@ class DynamicChartCard extends StatelessWidget {
                                   TextSpan(
                                     text: '前回: ${prevVal.toInt()}人',
                                     style: const TextStyle(
-                                      color: Color(0xFFADB5BD),
+                                      color: AppColors.statAxisLabel,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -249,10 +250,9 @@ class DynamicChartCard extends StatelessWidget {
                             getDotPainter: (spot, percent, barData, index) {
                               return FlDotCirclePainter(
                                 radius: 2.0,
-                                color: const Color(
-                                    0xFFFF6B6B), // Reddish-orange from image
+                                color: AppColors.statAlertRed,
                                 strokeWidth: 1.0,
-                                strokeColor: const Color(0xFFFF6B6B),
+                                strokeColor: AppColors.statAlertRed,
                               );
                             },
                           ),
@@ -299,7 +299,7 @@ class DynamicChartCard extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            color: Color(0xFF868E96),
+            color: AppColors.statChartMuted,
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),

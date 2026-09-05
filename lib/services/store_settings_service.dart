@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
+import 'package:yoyaku_mate_provider/services/api_client.dart';
 import '../models/store_settings.dart';
 
 class StoreSettingsService {
@@ -21,7 +21,7 @@ class StoreSettingsService {
   }
 
   Future<StoreSettings> fetchStoreSettings(String storeId) async {
-    final response = await http.get(Uri.parse('$baseUrl/api/store_settings?store_id=$storeId'));
+    final response = await apiClient.get(Uri.parse('$baseUrl/api/store_settings?store_id=$storeId'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       // サーバー応答が {status: success, data: {...}} 形式の場合
@@ -33,7 +33,7 @@ class StoreSettingsService {
 
   Future<void> updateStoreSettings(StoreSettings settings) async {
     final token = await _getIdToken();
-    final response = await http.put(
+    final response = await apiClient.put(
       Uri.parse('$baseUrl/api/store_settings?store_id=${settings.storeId}'),
       headers: {
         'Content-Type': 'application/json',

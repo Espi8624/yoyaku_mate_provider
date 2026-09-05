@@ -131,23 +131,23 @@ class _StatisticsView extends HookConsumerWidget {
     // Determine Highlight Data based on Selection
     String highlightTitle = '来店数';
     int highlightValue = visitorStats?['today'] ?? 0;
-    Color highlightColor = const Color(0xFF212529);
+    Color highlightColor = AppColors.statChartDark;
     IconData? highlightIcon;
 
     if (selectedMetric.value == 'cancelled') {
       highlightTitle = 'キャンセル数';
       highlightValue = totalCancelled;
-      highlightColor = const Color(0xFFFA5252);
+      highlightColor = AppColors.statDangerRed;
       highlightIcon = Icons.cancel_outlined;
     } else if (selectedMetric.value == 'no_show') {
       highlightTitle = 'No-Show数';
       highlightValue = totalNoShow;
-      highlightColor = const Color(0xFFFF6B6B);
+      highlightColor = AppColors.statAlertRed;
       highlightIcon = Icons.person_off_outlined;
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Softer background
+      backgroundColor: AppColors.background, // Softer background
       appBar: AppBar(
         title: const Text(
           '統計',
@@ -318,8 +318,8 @@ class _StatisticsView extends HookConsumerWidget {
                         '平均待ち時間',
                         avgWaitTime,
                         Icons.timer_outlined,
-                        const Color(0xFF4C6EF5), // Indigo
-                        const Color(0xFFE7F5FF),
+                        AppColors.statIndigo, // Indigo
+                        AppColors.statIndigoBg,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -328,8 +328,8 @@ class _StatisticsView extends HookConsumerWidget {
                         'No-Show率',
                         '${noShowRate.toStringAsFixed(1)}%',
                         Icons.person_off_outlined,
-                        const Color(0xFFFA5252), // Red
-                        const Color(0xFFFFF5F5),
+                        AppColors.statDangerRed, // Red
+                        AppColors.statDangerRedBg,
                       ),
                     ),
                   ],
@@ -349,7 +349,7 @@ class _StatisticsView extends HookConsumerWidget {
                   height: 48,
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFF0F3),
+                    color: AppColors.statTabTrackBg,
                     borderRadius: BorderRadius.circular(32),
                   ),
                   child: Stack(
@@ -394,8 +394,8 @@ class _StatisticsView extends HookConsumerWidget {
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: selectedMetric == 'visitor'
-                                        ? const Color(0xFF212529)
-                                        : const Color(0xFF868E96),
+                                        ? AppColors.statChartDark
+                                        : AppColors.statChartMuted,
                                   ),
                                 ),
                               ),
@@ -414,8 +414,8 @@ class _StatisticsView extends HookConsumerWidget {
                                         ? FontWeight.w600
                                         : FontWeight.w500,
                                     color: selectedMetric == 'cancelled'
-                                        ? const Color(0xFF212529)
-                                        : const Color(0xFF868E96),
+                                        ? AppColors.statChartDark
+                                        : AppColors.statChartMuted,
                                   ),
                                 ),
                               ),
@@ -434,8 +434,8 @@ class _StatisticsView extends HookConsumerWidget {
                                         ? FontWeight.w600
                                         : FontWeight.w500,
                                     color: selectedMetric == 'no_show'
-                                        ? const Color(0xFF212529)
-                                        : const Color(0xFF868E96),
+                                        ? AppColors.statChartDark
+                                        : AppColors.statChartMuted,
                                   ),
                                 ),
                               ),
@@ -590,7 +590,7 @@ class _StatisticsView extends HookConsumerWidget {
       style: const TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF343A40),
+        color: AppColors.statSectionTitle,
       ),
     );
   }
@@ -621,8 +621,8 @@ class _StatisticsView extends HookConsumerWidget {
                   overrideColor.withOpacity(0.8),
                 ]
               : [
-                  const Color(0xFF2E2E2E), // Dark Gray
-                  const Color(0xFF1A1A1A), // Black
+                  AppColors.statDarkCardGradientStart, // Dark Gray
+                  AppColors.statDarkCardGradientEnd, // Black
                 ],
         ),
         boxShadow: [
@@ -670,13 +670,13 @@ class _StatisticsView extends HookConsumerWidget {
                             horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: isPositive
-                              ? const Color(0xFF1B4D3E) // Dark Green bg
-                              : const Color(0xFF4A1B1B), // Dark Red bg
+                              ? AppColors.statPositiveBg // Dark Green bg
+                              : AppColors.statNegativeBg, // Dark Red bg
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: isPositive
-                                ? const Color(0xFF4CD964)
-                                : const Color(0xFFFF3B30),
+                                ? AppColors.statPositiveGreen
+                                : AppColors.statNegativeRed,
                             width: 1,
                           ),
                         ),
@@ -688,16 +688,16 @@ class _StatisticsView extends HookConsumerWidget {
                                   : Icons.arrow_downward_rounded,
                               size: 14,
                               color: isPositive
-                                  ? const Color(0xFF4CD964)
-                                  : const Color(0xFFFF3B30),
+                                  ? AppColors.statPositiveGreen
+                                  : AppColors.statNegativeRed,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               '${wowRate.abs().toStringAsFixed(1)}%',
                               style: TextStyle(
                                 color: isPositive
-                                    ? const Color(0xFF4CD964)
-                                    : const Color(0xFFFF3B30),
+                                    ? AppColors.statPositiveGreen
+                                    : AppColors.statNegativeRed,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
@@ -791,7 +791,7 @@ class _StatisticsView extends HookConsumerWidget {
         decoration: BoxDecoration(
           color: isDisabled
               ? Colors.grey.withOpacity(0.1)
-              : (isSelected ? const Color(0xFF2E2E2E) : Colors.white),
+              : (isSelected ? AppColors.statDarkCardGradientStart : Colors.white),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
               color: isSelected ? Colors.transparent : Colors.grey.shade300),
@@ -840,7 +840,7 @@ class _StatisticsView extends HookConsumerWidget {
           Text(
             title,
             style: const TextStyle(
-              color: Color(0xFF868E96),
+              color: AppColors.statChartMuted,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -851,7 +851,7 @@ class _StatisticsView extends HookConsumerWidget {
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF212529),
+              color: AppColors.statChartDark,
             ),
           ),
         ],

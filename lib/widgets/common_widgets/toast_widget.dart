@@ -205,7 +205,7 @@ class _ToastWidgetState extends State<_ToastWidget>
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF333333),
+                          color: AppColors.toastText,
                           height: 1.2,
                           fontFamily: 'Pretendard', // あれば良し、なければデフォルト
                         ),

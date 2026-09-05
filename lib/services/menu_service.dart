@@ -4,6 +4,7 @@ import 'dart:io';
 // import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:yoyaku_mate_provider/services/api_client.dart';
 import 'package:http_parser/http_parser.dart';
 import '../models/menu_list.dart';
 import 'api_exception.dart';
@@ -53,7 +54,7 @@ class MenuService {
   //     var request = http.MultipartRequest('POST', uri);
   //     request.files.add(http.MultipartFile.fromBytes('image', imageBytes,
   //         filename: filename));
-  //     final response = await request.send();
+  //     final response = await apiClient.send(request);
   //     final responseBody = await response.stream.bytesToString();
 
   //     if (response.statusCode == 200) {
@@ -94,7 +95,7 @@ class MenuService {
         ),
       );
 
-      final response = await request.send();
+      final response = await apiClient.send(request);
       final responseBody = await response.stream.bytesToString();
       final jsonResponse = json.decode(responseBody);
 

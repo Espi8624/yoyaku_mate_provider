@@ -15,6 +15,7 @@ import '../dialogs/edit_profile_dialog.dart';
 import '../profile_header.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
+import 'package:yoyaku_mate_provider/services/session_service.dart';
 
 String _describeError(Object error) {
   if (error is ApiException) return error.message;
@@ -239,6 +240,8 @@ class PersonalProfileView extends ConsumerWidget {
                     confirmText: 'はい。',
                   );
                   if (confirmed == true) {
+                    // - サーバー側の端末セッションも破棄してから認証を切る
+                    await SessionService.instance.clear();
                     await FirebaseAuth.instance.signOut();
                   }
                 },

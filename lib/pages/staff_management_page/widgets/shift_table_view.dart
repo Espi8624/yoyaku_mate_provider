@@ -10,6 +10,8 @@ import 'package:yoyaku_mate_provider/pages/staff_management_page/shift_table_pro
 import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_management_providers.dart';
 import 'package:yoyaku_mate_provider/providers/session_providers.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/mini_status_card.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 // --- 日付/時間ユーティリティ ---
@@ -382,49 +384,49 @@ class _AutoAssignModeDialog extends HookWidget {
   Widget build(BuildContext context) {
     final selectedMode = useState('fill_gaps');
 
-    return AlertDialog(
-      title: const Text('自動配置'),
+    return BaseDialog(
+      title: '自動配置',
       content: RadioGroup<String>(
         groupValue: selectedMode.value,
         onChanged: (v) => selectedMode.value = v ?? selectedMode.value,
-        child: const Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'この週には既にシフトが登録されています。どのように配置しますか?',
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
-            SizedBox(height: 8),
-            RadioListTile<String>(
+            const SizedBox(height: 8),
+            const RadioListTile<String>(
               contentPadding: EdgeInsets.zero,
               dense: true,
               title: Text('既存のシフトは維持し、不足分だけ追加'),
               value: 'fill_gaps',
             ),
-            RadioListTile<String>(
+            const RadioListTile<String>(
               contentPadding: EdgeInsets.zero,
               dense: true,
               title: Text('既存のシフトを全て消去して最初から配置'),
               value: 'replace_all',
             ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                onPressed: () =>
+                    Navigator.of(context).pop(selectedMode.value),
+                child: const Text('確認'),
+              ),
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('キャンセル'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(selectedMode.value),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accentPrimary,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('確認'),
-        ),
-      ],
     );
   }
 }
@@ -1046,8 +1048,8 @@ class _ChangeRequestListDialog extends ConsumerWidget {
         ? allRequests
         : allRequests.where((r) => r.staffId == filterStaffId).toList();
 
-    return AlertDialog(
-      title: Text(filterStaffId == null ? '修正依頼一覧' : '自分の修正依頼'),
+    return BaseDialog(
+      title: filterStaffId == null ? '修正依頼一覧' : '自分の修正依頼',
       content: SizedBox(
         width: 360,
         child: requests.isEmpty
@@ -1056,28 +1058,20 @@ class _ChangeRequestListDialog extends ConsumerWidget {
                 child: Text('修正依頼はありません',
                     style: TextStyle(color: AppColors.textTertiary)),
               )
-            : SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (final req in requests)
-                      _ChangeRequestTile(
-                        request: req,
-                        storeId: storeId,
-                        weekStartDate: weekStartDate,
-                        storeSettings: storeSettings,
-                        canDelete: canDelete,
-                      ),
-                  ],
-                ),
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final req in requests)
+                    _ChangeRequestTile(
+                      request: req,
+                      storeId: storeId,
+                      weekStartDate: weekStartDate,
+                      storeSettings: storeSettings,
+                      canDelete: canDelete,
+                    ),
+                ],
               ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('閉じる'),
-        ),
-      ],
     );
   }
 }
@@ -1092,35 +1086,38 @@ class _ConflictResolutionDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (conflict.type) {
       case ChangeRequestConflict.typeSelfOverlap:
-        return AlertDialog(
-          title: const Text('確認'),
-          content: Text(
-            '${conflict.staffName}さんは既に別の時間帯にシフトが入っています。\n'
-            '${_dayLabel(conflict.toDay)} ${conflict.toStartTime}-${conflict.toEndTime}'
-            'へ移動すると時間が重複しますが、本当によろしいですか?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('いいえ'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(ChangeRequestResolution(
-                requestId: conflict.requestId,
-                action: ChangeRequestResolution.actionConfirmOverlap,
-              )),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentPrimary,
-                foregroundColor: Colors.white,
+        return BaseDialog(
+          title: '確認',
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${conflict.staffName}さんは既に別の時間帯にシフトが入っています。\n'
+                '${_dayLabel(conflict.toDay)} ${conflict.toStartTime}-${conflict.toEndTime}'
+                'へ移動すると時間が重複しますが、本当によろしいですか?',
               ),
-              child: const Text('はい'),
-            ),
-          ],
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () =>
+                    Navigator.of(context).pop(ChangeRequestResolution(
+                  requestId: conflict.requestId,
+                  action: ChangeRequestResolution.actionConfirmOverlap,
+                )),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('はい'),
+              ),
+            ],
+          ),
         );
 
       case ChangeRequestConflict.typeCapacity:
-        return AlertDialog(
-          title: const Text('定員が埋まっています'),
+        return BaseDialog(
+          title: '定員が埋まっています',
           content: SizedBox(
             width: 320,
             child: Column(
@@ -1149,24 +1146,27 @@ class _ConflictResolutionDialog extends StatelessWidget {
                       ),
                     ),
                   ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () =>
+                        Navigator.of(context).pop(ChangeRequestResolution(
+                      requestId: conflict.requestId,
+                      action: ChangeRequestResolution.actionSkip,
+                    )),
+                    child: const Text('この依頼を見送る'),
+                  ),
+                ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(ChangeRequestResolution(
-                requestId: conflict.requestId,
-                action: ChangeRequestResolution.actionSkip,
-              )),
-              child: const Text('この依頼を見送る'),
-            ),
-          ],
         );
 
       case ChangeRequestConflict.typeRequestConflict:
       default:
-        return AlertDialog(
-          title: const Text('衝突する依頼があります'),
+        return BaseDialog(
+          title: '衝突する依頼があります',
           content: SizedBox(
             width: 320,
             child: Column(
@@ -1195,18 +1195,21 @@ class _ConflictResolutionDialog extends StatelessWidget {
                       ),
                     ),
                   ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () =>
+                        Navigator.of(context).pop(ChangeRequestResolution(
+                      requestId: conflict.requestId,
+                      action: ChangeRequestResolution.actionSkip,
+                    )),
+                    child: const Text('今回は見送る'),
+                  ),
+                ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(ChangeRequestResolution(
-                requestId: conflict.requestId,
-                action: ChangeRequestResolution.actionSkip,
-              )),
-              child: const Text('今回は見送る'),
-            ),
-          ],
         );
     }
   }
@@ -1254,20 +1257,8 @@ class _ChangeRequestTile extends HookConsumerWidget {
       }
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: request.isPending
-            ? AppColors.warning.withValues(alpha: 0.08)
-            : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: request.isPending
-              ? AppColors.warning.withValues(alpha: 0.3)
-              : Colors.grey.shade200,
-        ),
-      ),
+    return MiniStatusCard(
+      tone: request.isPending ? MiniCardTone.pending : MiniCardTone.neutral,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1280,13 +1271,11 @@ class _ChangeRequestTile extends HookConsumerWidget {
                       const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),
-              Text(
-                request.isPending ? '未対応' : '対応済み',
-                style: TextStyle(
-                  fontSize: 11,
-                  color:
-                      request.isPending ? AppColors.warning : AppColors.success,
-                ),
+              MiniStatusBadge(
+                tone: request.isPending
+                    ? MiniCardTone.pending
+                    : MiniCardTone.approved,
+                label: request.isPending ? '未対応' : '対応済み',
               ),
               if (canDelete)
                 SizedBox(
@@ -1716,86 +1705,90 @@ class _ShiftFormDialog extends HookWidget {
       ));
     }
 
-    return AlertDialog(
-      title: Text(initialShift == null ? 'シフト追加' : 'シフト編集'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DropdownButtonFormField<String>(
-              initialValue: staffId.value,
-              decoration: const InputDecoration(labelText: 'スタッフ'),
-              items: [
-                for (final s in approvedStaff)
-                  DropdownMenuItem(
-                    value: s['_id'] as String,
-                    child: Text(s['user_name'] ?? '不明'),
-                  ),
-              ],
-              onChanged: (v) => staffId.value = v,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: day.value,
-              decoration: const InputDecoration(labelText: '曜日'),
-              items: [
-                for (int i = 0; i < Weekday.values.length; i++)
-                  DropdownMenuItem(
-                    value: Weekday.values[i],
-                    child: Text(Weekday.labels[i]),
-                  ),
-              ],
-              onChanged: (v) => day.value = v ?? day.value,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<int>(
-              initialValue: slotIndex.value.clamp(0, slots.length - 1),
-              decoration: const InputDecoration(labelText: '直'),
-              items: [
-                for (final slot in slots)
-                  DropdownMenuItem(
-                    value: slot.index,
-                    child: Text(
-                        '${slot.index + 1}直 (${slot.startTime}-${slot.endTime})'),
-                  ),
-              ],
-              onChanged: (v) => slotIndex.value = v ?? slotIndex.value,
-            ),
-            if (errorText.value != null) ...[
-              const SizedBox(height: 8),
-              Text(errorText.value!,
-                  style: const TextStyle(color: AppColors.error, fontSize: 12)),
+    return BaseDialog(
+      title: initialShift == null ? 'シフト追加' : 'シフト編集',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DropdownButtonFormField<String>(
+            initialValue: staffId.value,
+            decoration: const InputDecoration(labelText: 'スタッフ'),
+            items: [
+              for (final s in approvedStaff)
+                DropdownMenuItem(
+                  value: s['_id'] as String,
+                  child: Text(s['user_name'] ?? '不明'),
+                ),
             ],
+            onChanged: (v) => staffId.value = v,
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: day.value,
+            decoration: const InputDecoration(labelText: '曜日'),
+            items: [
+              for (int i = 0; i < Weekday.values.length; i++)
+                DropdownMenuItem(
+                  value: Weekday.values[i],
+                  child: Text(Weekday.labels[i]),
+                ),
+            ],
+            onChanged: (v) => day.value = v ?? day.value,
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int>(
+            initialValue: slotIndex.value.clamp(0, slots.length - 1),
+            decoration: const InputDecoration(labelText: '直'),
+            items: [
+              for (final slot in slots)
+                DropdownMenuItem(
+                  value: slot.index,
+                  child: Text(
+                      '${slot.index + 1}直 (${slot.startTime}-${slot.endTime})'),
+                ),
+            ],
+            onChanged: (v) => slotIndex.value = v ?? slotIndex.value,
+          ),
+          if (errorText.value != null) ...[
+            const SizedBox(height: 8),
+            Text(errorText.value!,
+                style: const TextStyle(color: AppColors.error, fontSize: 12)),
           ],
-        ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPrimary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              onPressed: submit,
+              child: const Text('保存'),
+            ),
+          ),
+          if (initialShift != null) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                onPressed: () => Navigator.of(context).pop(_ShiftFormResult(
+                  staffId: staffId.value ?? '',
+                  day: day.value,
+                  startTime: initialShift!.startTime,
+                  endTime: initialShift!.endTime,
+                  delete: true,
+                )),
+                child: const Text('削除',
+                    style: TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ],
       ),
-      actions: [
-        if (initialShift != null)
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(_ShiftFormResult(
-              staffId: staffId.value ?? '',
-              day: day.value,
-              startTime: initialShift!.startTime,
-              endTime: initialShift!.endTime,
-              delete: true,
-            )),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('削除'),
-          ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('キャンセル'),
-        ),
-        ElevatedButton(
-          onPressed: submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accentPrimary,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('保存'),
-        ),
-      ],
     );
   }
 }
@@ -1858,62 +1851,59 @@ class _ShiftChangeRequestDialog extends HookWidget {
       ));
     }
 
-    return AlertDialog(
-      title: const Text('シフト修正依頼'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '現在: ${_dayLabel(shift.day)} ${shift.startTime}-${shift.endTime}',
-              style:
-                  const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: toDay.value,
-              decoration: const InputDecoration(labelText: '希望する曜日'),
-              items: [
-                for (int i = 0; i < Weekday.values.length; i++)
-                  DropdownMenuItem(
-                    value: Weekday.values[i],
-                    child: Text(Weekday.labels[i]),
-                  ),
-              ],
-              onChanged: (v) => toDay.value = v ?? toDay.value,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<int>(
-              initialValue: slotIndex.value.clamp(0, slots.length - 1),
-              decoration: const InputDecoration(labelText: '希望する直'),
-              items: [
-                for (final slot in slots)
-                  DropdownMenuItem(
-                    value: slot.index,
-                    child: Text(
-                        '${slot.index + 1}直 (${slot.startTime}-${slot.endTime})'),
-                  ),
-              ],
-              onChanged: (v) => slotIndex.value = v ?? slotIndex.value,
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('キャンセル'),
-        ),
-        ElevatedButton(
-          onPressed: submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accentPrimary,
-            foregroundColor: Colors.white,
+    return BaseDialog(
+      title: 'シフト修正依頼',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '現在: ${_dayLabel(shift.day)} ${shift.startTime}-${shift.endTime}',
+            style:
+                const TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
-          child: const Text('依頼する'),
-        ),
-      ],
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: toDay.value,
+            decoration: const InputDecoration(labelText: '希望する曜日'),
+            items: [
+              for (int i = 0; i < Weekday.values.length; i++)
+                DropdownMenuItem(
+                  value: Weekday.values[i],
+                  child: Text(Weekday.labels[i]),
+                ),
+            ],
+            onChanged: (v) => toDay.value = v ?? toDay.value,
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int>(
+            initialValue: slotIndex.value.clamp(0, slots.length - 1),
+            decoration: const InputDecoration(labelText: '希望する直'),
+            items: [
+              for (final slot in slots)
+                DropdownMenuItem(
+                  value: slot.index,
+                  child: Text(
+                      '${slot.index + 1}直 (${slot.startTime}-${slot.endTime})'),
+                ),
+            ],
+            onChanged: (v) => slotIndex.value = v ?? slotIndex.value,
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPrimary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              onPressed: submit,
+              child: const Text('依頼する'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1934,8 +1924,8 @@ class _ShiftPickerDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('編集するスタッフを選択'),
+    return BaseDialog(
+      title: '編集するスタッフを選択',
       content: SizedBox(
         width: 320,
         child: ConstrainedBox(
@@ -1964,12 +1954,6 @@ class _ShiftPickerDialog extends StatelessWidget {
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('キャンセル'),
-        ),
-      ],
     );
   }
 }
