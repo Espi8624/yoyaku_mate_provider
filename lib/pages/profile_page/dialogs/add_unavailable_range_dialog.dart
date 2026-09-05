@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../../constants/app_colors.dart';
+import '../../../widgets/common_dialogs/base_dialog.dart';
 
 String _formatTimeOfDay(TimeOfDay t) =>
     '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
@@ -49,8 +50,8 @@ class AddUnavailableRangeDialog extends HookWidget {
       });
     }
 
-    return AlertDialog(
-      title: const Text('勤務不可時間を追加'),
+    return BaseDialog(
+      title: '勤務不可時間を追加',
       content: RadioGroup<String>(
         groupValue: mode.value,
         onChanged: (v) => mode.value = v ?? mode.value,
@@ -101,23 +102,22 @@ class AddUnavailableRangeDialog extends HookWidget {
               Text(errorText.value!,
                   style: const TextStyle(color: AppColors.error, fontSize: 12)),
             ],
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                onPressed: submit,
+                child: const Text('追加'),
+              ),
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('キャンセル'),
-        ),
-        ElevatedButton(
-          onPressed: submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accentPrimary,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('追加'),
-        ),
-      ],
     );
   }
 }

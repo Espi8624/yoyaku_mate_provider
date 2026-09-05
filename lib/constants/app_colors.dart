@@ -4,7 +4,7 @@ class AppColors {
   // --- 基本パレット ---
 
   /// 背景色
-  static const Color background = Color(0xFFF8F9FA);
+  static const Color background = Color(0xFFF5F7FA);
 
   /// 基本ブラック
   static const Color primaryBlack = Color(0xFF161616);
@@ -104,4 +104,52 @@ class AppColors {
     Color(0xFF6C5C7A), // プラム
     Color(0xFF7A6C56), // カーキ
   ];
+
+  // --- 統計・チャートパレット ---
+  // statistics_screen / dynamic_chart_card 専用。ダークカード上での視認性を
+  // 優先した配色のため、上記セマンティックパレット(success/error等)とは別に管理する。
+
+  /// 強調テキスト・当日データのバー色
+  static const Color statChartDark = Color(0xFF212529);
+
+  /// 補助テキスト・前回データのラベル色
+  static const Color statChartMuted = Color(0xFF868E96);
+
+  /// チャート軸ラベル(より薄いグレー)
+  static const Color statAxisLabel = Color(0xFFADB5BD);
+
+  /// セクションタイトル
+  static const Color statSectionTitle = Color(0xFF343A40);
+
+  /// キャンセル関連の強調色
+  static const Color statDangerRed = Color(0xFFFA5252);
+  static const Color statDangerRedBg = Color(0xFFFFF5F5);
+
+  /// No-Show関連の強調色・前回チャートライン
+  static const Color statAlertRed = Color(0xFFFF6B6B);
+
+  /// 平均待ち時間アイコン色
+  static const Color statIndigo = Color(0xFF4C6EF5);
+  static const Color statIndigoBg = Color(0xFFE7F5FF);
+
+  /// 指標選択タブのトラック背景
+  static const Color statTabTrackBg = Color(0xFFEFF0F3);
+
+  /// 来店者数カードのダークグラデーション
+  static const Color statDarkCardGradientStart = Color(0xFF2E2E2E);
+  static const Color statDarkCardGradientEnd = Color(0xFF1A1A1A);
+
+  /// 前週比の増減バッジ
+  static const Color statPositiveBg = Color(0xFF1B4D3E);
+  static const Color statNegativeBg = Color(0xFF4A1B1B);
+  static const Color statPositiveGreen = Color(0xFF4CD964);
+  static const Color statNegativeRed = Color(0xFFFF3B30);
+
+  // --- コンポーネント専用色 ---
+
+  /// トーストメッセージのテキスト色
+  static const Color toastText = Color(0xFF333333);
+
+  /// QRスキャナーのカットアウト外側を覆う半透明オーバーレイ(黒 31%)
+  static const Color qrScannerOverlay = Color(0x50000000);
 }

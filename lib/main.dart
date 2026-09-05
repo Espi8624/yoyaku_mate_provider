@@ -21,6 +21,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:yoyaku_mate_provider/routes.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/navigation_bar_mobile.dart';
+import 'package:yoyaku_mate_provider/services/session_service.dart';
+import 'package:yoyaku_mate_provider/widgets/common_widgets/session_revoked_listener.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,31 +85,35 @@ class MyApp extends StatelessWidget {
         ),
       ),
       builder: (context, child) {
-        return Stack(
-          children: [
-            if (child != null) child,
-            // ステータスバーの視認性向上のためのグラデーション
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: IgnorePointer(
-                child: Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withOpacity(0.08),
-                        Colors.transparent,
-                      ],
+        // - 他端末ログインによるセッション無効化は、どの画面を開いていても
+        //   同じ挙動になるようアプリのルートで1箇所だけ購読する
+        return SessionRevokedListener(
+          child: Stack(
+            children: [
+              if (child != null) child,
+              // ステータスバーの視認性向上のためのグラデーション
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.08),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -180,6 +186,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
+                  // - サーバー側の端末セッションも破棄してから認証を切る
+                  await SessionService.instance.clear();
                   await FirebaseAuth.instance.signOut();
                 },
                 child: const Text('ログアウト'),
@@ -247,6 +255,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         onItemTapped: _onItemTapped,
                         onToggle: _toggleSidebar,
                         onLogout: () async {
+                          // - サーバー側の端末セッションも破棄してから認証を切る
+                          await SessionService.instance.clear();
                           await FirebaseAuth.instance.signOut();
                         },
                       ),

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yoyaku_mate_provider/services/api_client.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/waiting_list.dart';
 
@@ -35,7 +35,7 @@ class WaitingService {
   // 初期データ取得 (以前と同じ)
   Future<List<WaitingList>> fetchWaitingCustomers(String storeId) async {
     try {
-      final response = await http.get(
+      final response = await apiClient.get(
         Uri.parse('$_baseUrl/api/waiting-list?store_id=$storeId'),
         headers: {'Content-Type': 'application/json'},
       );
@@ -171,15 +171,6 @@ class WaitingService {
     return token;
   }
 
-  // Helper to get Login Token
-  Future<String?> _getLoginToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('login_token');
-    // print(
-    //     '--- [WaitingService] Read Token: ${token != null ? token.substring(0, 5) + "..." : "NULL"} ---');
-    return token;
-  }
-
   // 新規待機追加 (冪等性サポートのためのクライアント生成IDおよび登録時間パラメータを追加)
   Future<WaitingList> createWaitingListItem({
     required int partySize,
@@ -212,12 +203,6 @@ class WaitingService {
       try {
         final token = await _getIdToken();
         headers['Authorization'] = 'Bearer $token';
-
-        // Add Login Token
-        final loginToken = await _getLoginToken();
-        if (loginToken != null) {
-          headers['X-Login-Token'] = loginToken;
-        }
       } catch (e) {
         // print('未認証、Authヘッダーなしで続行');
       }
@@ -226,7 +211,7 @@ class WaitingService {
       final uri = Uri.parse('$_baseUrl/api/waiting-list').replace(
           queryParameters: vToken != null ? {'v_token': vToken} : null);
 
-      final response = await http.post(
+      final response = await apiClient.post(
         uri,
         headers: headers,
         body: json.encode(requestBody),
@@ -250,17 +235,13 @@ class WaitingService {
   }) async {
     try {
       final token = await _getIdToken();
-      final loginToken = await _getLoginToken(); // Get Login Token
 
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
-      if (loginToken != null) {
-        headers['X-Login-Token'] = loginToken;
-      }
 
-      final response = await http.patch(
+      final response = await apiClient.patch(
         Uri.parse('$_baseUrl/api/waiting-list?action=status'),
         headers: headers,
         body: json.encode({
@@ -284,17 +265,13 @@ class WaitingService {
   Future<void> clearWaitingList(String storeId) async {
     try {
       final token = await _getIdToken();
-      final loginToken = await _getLoginToken(); // Get Login Token
 
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
-      if (loginToken != null) {
-        headers['X-Login-Token'] = loginToken;
-      }
 
-      final response = await http.post(
+      final response = await apiClient.post(
         Uri.parse('$_baseUrl/api/waiting-list?action=clear&store_id=$storeId'),
         headers: headers,
         body: '{}',
@@ -314,18 +291,13 @@ class WaitingService {
   Future<Map<String, String>> fetchQRToken(String storeId) async {
     try {
       final token = await _getIdToken();
-      final loginToken =
-          await _getLoginToken(); // Get Login Token (Optional but good practice)
 
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
-      if (loginToken != null) {
-        headers['X-Login-Token'] = loginToken;
-      }
 
-      final response = await http.get(
+      final response = await apiClient.get(
         Uri.parse(
             '$_baseUrl/api/waiting-list?action=qr_token&store_id=$storeId'),
         headers: headers,

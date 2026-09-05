@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:yoyaku_mate_provider/services/api_client.dart';
 import 'package:http_parser/http_parser.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yoyaku_mate_provider/models/store_license.dart';
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
 import 'package:yoyaku_mate_provider/models/user_profile.dart';
@@ -30,7 +30,7 @@ class ProviderProfileService {
   // ユーザープロフィール取得
   Future<Map<String, dynamic>> fetchUserProfile(String firebaseUid) async {
     final token = await _getIdToken();
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('$baseUrl/api/provider_user/firebase_uid?uid=$firebaseUid'),
       headers: {
         'Content-Type': 'application/json',
@@ -42,28 +42,6 @@ class ProviderProfileService {
       final responseData = json.decode(utf8.decode(response.bodyBytes));
       // print('--- [ProfileService] fetchUserProfile Response ---');
       // print(responseData.keys.toList());
-
-      // Save Login Token from Profile Fetch
-      // Response is wrapped in { "status": "success", "data": { ... } }
-      if (responseData.containsKey('data') && responseData['data'] is Map) {
-        final data = responseData['data'];
-        if (data.containsKey('login_token')) {
-          final token = data['login_token'];
-          if (token != null && token.toString().isNotEmpty) {
-            // print(
-            //     '--- [ProfileService] Saving Login Token: ${token.substring(0, 5)}... ---');
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('login_token', token);
-          } else {
-            // print('--- [ProfileService] Login Token is empty/null! ---');
-          }
-        } else {
-          // print(
-          //     '--- [ProfileService] Response data missing login_token key! ---');
-        }
-      } else {
-        // print('--- [ProfileService] Response missing data key! ---');
-      }
 
       return responseData;
     } else {
@@ -82,7 +60,7 @@ class ProviderProfileService {
     // print('Token: Bearer ${token.substring(0, 30)}...');
     // -----------------------
 
-    final response = await http.get(
+    final response = await apiClient.get(
       url,
       headers: {
         'Content-Type': 'application/json',
@@ -112,7 +90,7 @@ class ProviderProfileService {
   Future<UserProfile> updateUserProfile(
       String mongoUserId, Map<String, dynamic> update) async {
     final token = await _getIdToken();
-    final response = await http.put(
+    final response = await apiClient.put(
       Uri.parse('$baseUrl/api/provider_user?user_id=$mongoUserId'),
       headers: {
         'Content-Type': 'application/json',
@@ -144,7 +122,7 @@ class ProviderProfileService {
         ),
       );
 
-      final response = await request.send();
+      final response = await apiClient.send(request);
       final responseBody = await response.stream.bytesToString();
       final jsonResponse = json.decode(responseBody);
 
@@ -178,7 +156,7 @@ class ProviderProfileService {
         ),
       );
 
-      final response = await request.send();
+      final response = await apiClient.send(request);
       final responseBody = await response.stream.bytesToString();
       final jsonResponse = json.decode(responseBody);
 
@@ -199,7 +177,7 @@ class ProviderProfileService {
   // 店舗プロフィール取得
   Future<Map<String, dynamic>> fetchStoreProfile(String storeId) async {
     final token = await _getIdToken();
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('$baseUrl/api/provider_store?store_id=$storeId'),
       headers: {
         'Content-Type': 'application/json',
@@ -217,7 +195,7 @@ class ProviderProfileService {
   // 店舗ライセンス情報取得
   Future<Map<String, dynamic>> fetchStoreLicense(String storeId) async {
     final token = await _getIdToken();
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('$baseUrl/api/provider_store/license?store_id=$storeId'),
       headers: {
         'Content-Type': 'application/json',
@@ -236,7 +214,7 @@ class ProviderProfileService {
   Future<StoreProfile> updateStoreProfile(
       String storeId, Map<String, dynamic> update) async {
     final token = await _getIdToken();
-    final response = await http.put(
+    final response = await apiClient.put(
       Uri.parse('$baseUrl/api/provider_store?store_id=$storeId'),
       headers: {
         'Content-Type': 'application/json',
@@ -256,7 +234,7 @@ class ProviderProfileService {
   // 会員加入
   Future<Map<String, dynamic>> signUp(
       ProviderProfile profile, String idToken) async {
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse('$baseUrl/api/auth/signup'),
       headers: {
         'Content-Type': 'application/json',
@@ -267,16 +245,6 @@ class ProviderProfileService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final responseData = jsonDecode(utf8.decode(response.bodyBytes));
-      // Save Login Token
-      if (responseData.containsKey('user') &&
-          responseData['user']['login_token'] != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-            'login_token', responseData['user']['login_token']);
-      } else if (responseData.containsKey('login_token')) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('login_token', responseData['login_token']);
-      }
       return responseData;
     } else {
       throw ApiException(
@@ -297,7 +265,7 @@ class ProviderProfileService {
       await http.MultipartFile.fromPath('licenseImage', imageFile.path),
     );
 
-    final response = await request.send();
+    final response = await apiClient.send(request);
     final responseBody = await response.stream.bytesToString();
 
     if (response.statusCode != 200) {
@@ -312,7 +280,7 @@ class ProviderProfileService {
 
   // 店舗存在確認
   Future<bool> checkStoreExists(String storeId) async {
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('$baseUrl/api/auth/check-store?store_id=$storeId'),
       headers: {'Content-Type': 'application/json'},
     );
@@ -327,7 +295,7 @@ class ProviderProfileService {
 
   // E-mail 中腹確認
   Future<bool> checkEmailAvailability(String email) async {
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse('$baseUrl/api/auth/check-email'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email}),
@@ -347,7 +315,7 @@ class ProviderProfileService {
 
   // 電話番号中腹確認
   Future<bool> checkPhoneAvailability(String phoneNumber) async {
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse('$baseUrl/api/auth/check-phone'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'phone_number': phoneNumber}),
@@ -363,7 +331,7 @@ class ProviderProfileService {
 
   Future<Map<String, dynamic>> addNewStore(
       ProviderProfile profile, String idToken) async {
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse('$baseUrl/api/stores/add'),
       headers: {
         'Content-Type': 'application/json',
@@ -383,7 +351,7 @@ class ProviderProfileService {
 
   Future<void> joinStore(String storeId) async {
     final token = await _getIdToken();
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse('$baseUrl/api/stores/join'),
       headers: {
         'Content-Type': 'application/json',
@@ -401,7 +369,7 @@ class ProviderProfileService {
   // 店舗スタッフリスト取得
   Future<List<dynamic>> fetchStoreStaff(String storeId) async {
     final token = await _getIdToken();
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('$baseUrl/api/stores/$storeId/staff'),
       headers: {
         'Content-Type': 'application/json',
@@ -425,7 +393,7 @@ class ProviderProfileService {
   Future<void> updateStoreStaffStatus(
       String storeId, String staffId, String status) async {
     final token = await _getIdToken();
-    final response = await http.patch(
+    final response = await apiClient.patch(
       Uri.parse('$baseUrl/api/stores/$storeId/staff/$staffId'),
       headers: {
         'Content-Type': 'application/json',
@@ -444,7 +412,7 @@ class ProviderProfileService {
   Future<void> updateStoreStaffPermissions(
       String storeId, String staffId, List<String> permissions) async {
     final token = await _getIdToken();
-    final response = await http.patch(
+    final response = await apiClient.patch(
       Uri.parse('$baseUrl/api/stores/$storeId/staff/$staffId/permissions'),
       headers: {
         'Content-Type': 'application/json',
@@ -463,7 +431,7 @@ class ProviderProfileService {
   Future<void> updateStoreStaffAvailability(String storeId, String staffId,
       Map<String, List<Map<String, dynamic>>> availability) async {
     final token = await _getIdToken();
-    final response = await http.patch(
+    final response = await apiClient.patch(
       Uri.parse('$baseUrl/api/stores/$storeId/staff/$staffId/availability'),
       headers: {
         'Content-Type': 'application/json',

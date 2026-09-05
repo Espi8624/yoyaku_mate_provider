@@ -5,14 +5,12 @@ class ActionButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isLoading;
   final String label;
-  final bool isLineButton;
 
   const ActionButton({
     super.key,
     this.onPressed,
     this.isLoading = false,
     this.label = '次へ',
-    this.isLineButton = false,
   });
 
   @override
@@ -22,8 +20,7 @@ class ActionButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              isLineButton ? const Color(0xFF00B900) : AppColors.textPrimary,
+          backgroundColor: AppColors.textPrimary,
           foregroundColor: Colors.white,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -45,8 +42,8 @@ class ActionButton extends StatelessWidget {
               Text(label,
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold)),
-              if (!isLineButton) const SizedBox(width: 8),
-              if (!isLineButton) const Icon(Icons.arrow_forward_ios, size: 16),
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_forward_ios, size: 16),
             ]
           ],
         ),

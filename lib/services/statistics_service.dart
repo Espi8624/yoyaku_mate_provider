@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:yoyaku_mate_provider/services/api_client.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class StatisticsService {
@@ -39,7 +39,7 @@ class StatisticsService {
 
     final url = Uri.parse('$baseUrl/api/statistics?$queryParams');
 
-    final response = await http.get(
+    final response = await apiClient.get(
       url,
       headers: {
         'Authorization': 'Bearer $idToken',

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/forgot_password_page.dart';
+import 'package:yoyaku_mate_provider/services/session_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -50,6 +51,9 @@ class _LoginPageState extends State<LoginPage> {
         }
         return;
       }
+
+      // - 端末セッションを発行する。1端末のみ許可のため、他端末のセッションはここで無効化される
+      await SessionService.instance.establish();
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         setState(() {

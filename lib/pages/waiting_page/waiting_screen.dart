@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Clipboard
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/waiting_list.dart';
 import 'package:yoyaku_mate_provider/providers/session_providers.dart';
@@ -43,33 +41,6 @@ class _WaitingView extends HookConsumerWidget {
     const prefix = 'Exception: ';
     if (message.startsWith(prefix)) message = message.substring(prefix.length);
     return message.trim();
-  }
-
-  // 他端末での重複ログインを検知した場合、強制ログアウトダイアログを表示する
-  Future<bool> _handleDuplicateLogin(BuildContext context, Object error) async {
-    if (!error.toString().contains("DUPLICATE_LOGIN")) return false;
-    if (!context.mounted) return true;
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text("ログアウト通知"),
-        content: const Text("他の端末でログインされたため、ログアウトします。"),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              if (ctx.mounted) {
-                ctx.go('/login');
-              }
-            },
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
-    return true;
   }
 
   @override
@@ -168,7 +139,7 @@ class _WaitingView extends HookConsumerWidget {
         if (isMobile) {
           // mobile layout
           return Scaffold(
-            backgroundColor: const Color(0xFFF5F7FA),
+            backgroundColor: AppColors.background,
             appBar: AppBar(
               title: const Text(
                 '待機リスト',
@@ -274,7 +245,7 @@ class _WaitingView extends HookConsumerWidget {
         } else {
           // desktop layout
           return Scaffold(
-            backgroundColor: const Color(0xFFF5F7FA),
+            backgroundColor: AppColors.background,
             appBar: AppBar(
               title: const Text(
                 '待機リスト',
@@ -405,7 +376,6 @@ class _WaitingView extends HookConsumerWidget {
       }
     } catch (e) {
       if (!context.mounted) return;
-      if (await _handleDuplicateLogin(context, e)) return;
       if (context.mounted) {
         ToastWidget.show(context, '追加失敗: ${_describeError(e)}', type: ToastType.error);
       }
@@ -526,7 +496,6 @@ class _WaitingView extends HookConsumerWidget {
       }
     } on ApiException catch (e) {
       if (!context.mounted) return;
-      if (await _handleDuplicateLogin(context, e)) return;
       if (context.mounted) {
         ToastWidget.show(context, 'ステータスアップデート失敗: ${e.message}',
             type: ToastType.error);

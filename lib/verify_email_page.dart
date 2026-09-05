@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
+import 'package:yoyaku_mate_provider/services/session_service.dart';
 
 class VerifyEmailPage extends StatefulWidget {
   const VerifyEmailPage({super.key});
@@ -105,6 +106,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () async {
+                    // - サーバー側の端末セッションも破棄してから認証を切る
+                    await SessionService.instance.clear();
                     await FirebaseAuth.instance.signOut();
                     if (!context.mounted) return;
                     context.go('/login');

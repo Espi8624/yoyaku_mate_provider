@@ -32,7 +32,7 @@ class _ProfileView extends HookConsumerWidget {
     final storeProfile = ref.watch(selectedStoreProfileProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
           "設定",
