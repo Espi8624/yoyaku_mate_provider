@@ -11,6 +11,8 @@ class StoreSettings {
   final String aiAdditionalInfo;
   // 曜日別の必要人数・1人あたりのシフト時間数。例: {'monday': DayStaffRequirement(2名, 4時間)}
   final Map<String, DayStaffRequirement> requiredStaffCount;
+  // マネージャーをシフト自動配置の対象から除外するか。未設定は false(除外しない=従来通り含める)
+  final bool excludeManagerFromShiftTable;
 
   StoreSettings({
     required this.storeId,
@@ -23,6 +25,7 @@ class StoreSettings {
     this.resetTime = '06:00',
     this.aiAdditionalInfo = '',
     this.requiredStaffCount = const {},
+    this.excludeManagerFromShiftTable = false,
   });
 
   factory StoreSettings.fromJson(Map<String, dynamic> json) {
@@ -45,6 +48,8 @@ class StoreSettings {
                   ?.map((k, v) => MapEntry(k,
                       DayStaffRequirement.fromJson(v as Map<String, dynamic>))) ??
               const {},
+      excludeManagerFromShiftTable:
+          json['settings']['exclude_manager_from_shift_table'] ?? false,
     );
   }
 
@@ -60,6 +65,7 @@ class StoreSettings {
           'ai_additional_info': aiAdditionalInfo,
           'required_staff_count': requiredStaffCount
               .map((k, v) => MapEntry(k, v.toJson())),
+          'exclude_manager_from_shift_table': excludeManagerFromShiftTable,
         },
       };
 
@@ -73,6 +79,7 @@ class StoreSettings {
     String? resetTime,
     String? aiAdditionalInfo,
     Map<String, DayStaffRequirement>? requiredStaffCount,
+    bool? excludeManagerFromShiftTable,
   }) {
     return StoreSettings(
       storeId: storeId ?? this.storeId,
@@ -85,6 +92,8 @@ class StoreSettings {
       resetTime: resetTime ?? this.resetTime,
       aiAdditionalInfo: aiAdditionalInfo ?? this.aiAdditionalInfo,
       requiredStaffCount: requiredStaffCount ?? this.requiredStaffCount,
+      excludeManagerFromShiftTable:
+          excludeManagerFromShiftTable ?? this.excludeManagerFromShiftTable,
     );
   }
 }

@@ -291,14 +291,12 @@ class _WeekNavigator extends StatelessWidget {
         '${weekStart.month}/${weekStart.day}(${Weekday.labels[0]}) - ${weekEnd.month}/${weekEnd.day}(${Weekday.labels[6]})';
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton(
-            onPressed: onPrevious,
-            icon: const Icon(Icons.chevron_left),
-          ),
+          _WeekNavArrowButton(icon: Icons.chevron_left, onPressed: onPrevious),
+          const SizedBox(width: 12),
           Text(
             label,
             style: const TextStyle(
@@ -307,11 +305,34 @@ class _WeekNavigator extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
-          IconButton(
-            onPressed: onNext,
-            icon: const Icon(Icons.chevron_right),
-          ),
+          const SizedBox(width: 12),
+          _WeekNavArrowButton(icon: Icons.chevron_right, onPressed: onNext),
         ],
+      ),
+    );
+  }
+}
+
+// 週送り「‹」「›」用の丸背景アイコンボタン。デフォルトのIconButtonは48x48の
+// タップ領域を確保するため縦に間延びして見えるので、コンパクトな円形に収める
+class _WeekNavArrowButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _WeekNavArrowButton({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 20),
+      color: Colors.white,
+      style: IconButton.styleFrom(
+        backgroundColor: AppColors.accentPrimary,
+        shape: const CircleBorder(),
+        minimumSize: const Size(32, 32),
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     );
   }
@@ -433,6 +454,15 @@ class _ShiftGridBody extends HookConsumerWidget {
     final verticalController = useScrollController();
     final horizontalController = useScrollController();
 
+    // 下部ボタンを「自動配置」/「修正依頼を確認」のどちらにするか判定するための件数
+    final pendingChangeRequestCount = ref
+            .watch(shiftChangeRequestsProvider(
+                storeId: storeId, weekStartDate: weekStartDate))
+            .valueOrNull
+            ?.where((r) => r.isPending)
+            .length ??
+        0;
+
     final hourRange = _computeHourRange(storeSettings, table.shifts);
     final gridHeight = (hourRange.endHour - hourRange.startHour) * _hourHeight;
 
@@ -469,10 +499,16 @@ class _ShiftGridBody extends HookConsumerWidget {
     // シフト編集ダイアログのスタッフ選択肢。マネージャーに割り当てられたシフトを
     // 編集しようとした際、選択肢にマネージャーが無いと DropdownButtonFormField が
     // initialValue不一致でクラッシュするため、承認済みスタッフに加えて含めておく
-    // (既に実名の項目がある場合は重複させない)
+    // (既に実名の項目がある場合は重複させない)。ただし「シフト表に含める」設定が
+    // オフの場合は、新規に選べないよう選択肢からは外す(表示名マッピングは上で
+    // 既に埋めているため、過去に割り当て済みのシフトは引き続き実名で表示される)
+    final excludeManager = storeSettings?.excludeManagerFromShiftTable ?? false;
     final dialogStaffOptions = [
       ...approvedStaff,
-      if (managerId != null && managerId.isNotEmpty && !managerHasStaffEntry)
+      if (!excludeManager &&
+          managerId != null &&
+          managerId.isNotEmpty &&
+          !managerHasStaffEntry)
         {'_id': managerId, 'user_name': staffNames[managerId]},
     ];
 
@@ -705,16 +741,32 @@ class _ShiftGridBody extends HookConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: approvedStaff.isEmpty ? null : runAutoAssign,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accentPrimary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                icon: const Icon(Icons.auto_awesome),
-                label: const Text('自動配置'),
-              ),
+              // 未対応の修正依頼がある間は、自動配置ボタンをその場で「確認」ボタンに
+              // 差し替える。自動配置と依頼適用を別々のボタンとして並べると、どちらを
+              // 先に押すべきか迷わせてしまうため、1つのボタンに一本化している
+              // (依頼が無くなれば自動的に元の自動配置ボタンへ戻る)
+              child: pendingChangeRequestCount > 0
+                  ? ElevatedButton.icon(
+                      onPressed: () => _runApplyChangeRequests(
+                          context, ref, storeId, weekStartDate),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.warning,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: Text('修正依頼を確認 ($pendingChangeRequestCount件)'),
+                    )
+                  : ElevatedButton.icon(
+                      onPressed: approvedStaff.isEmpty ? null : runAutoAssign,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentPrimary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('自動配置'),
+                    ),
             ),
           ),
       ],
@@ -759,8 +811,11 @@ class _ChangeRequestsSection extends ConsumerWidget {
               storeSettings: storeSettings,
             )
           : _StaffChangeRequestsBar(
+              storeId: storeId,
+              weekStartDate: weekStartDate,
               currentUserId: currentUserId,
               requests: requests,
+              storeSettings: storeSettings,
             ),
     );
   }
@@ -805,7 +860,7 @@ class _ManagerChangeRequestsBar extends ConsumerWidget {
             onPressed: requests.isEmpty
                 ? null
                 : () => _showChangeRequestListDialog(
-                    context, requests, storeSettings),
+                    context, storeId, weekStartDate, storeSettings),
             icon: const Icon(Icons.chat_bubble_outline, size: 18),
             label: Text(pendingCount > 0
                 ? '修正依頼 $pendingCount件'
@@ -828,14 +883,22 @@ class _ManagerChangeRequestsBar extends ConsumerWidget {
   }
 }
 
-// スタッフ向け: 自分が送った依頼の対応状況(送信自体は自分のシフトブロックをタップして行う)
+// スタッフ向け: 自分が送った依頼の対応状況(送信自体は自分のシフトブロックをタップして行う)。
+// 他スタッフの依頼内容が見えるとプライバシー上好ましくないため、「依頼中 N件」をタップすると
+// 自分の依頼だけに絞った一覧(閲覧のみ)を表示する
 class _StaffChangeRequestsBar extends StatelessWidget {
+  final String storeId;
+  final String weekStartDate;
   final String? currentUserId;
   final List<ShiftChangeRequest> requests;
+  final StoreSettings? storeSettings;
 
   const _StaffChangeRequestsBar({
+    required this.storeId,
+    required this.weekStartDate,
     required this.currentUserId,
     required this.requests,
+    required this.storeSettings,
   });
 
   @override
@@ -854,14 +917,30 @@ class _StaffChangeRequestsBar extends StatelessWidget {
         ),
         if (myRequests.isNotEmpty) ...[
           const SizedBox(width: 8),
-          Text(
-            myPendingCount > 0 ? '依頼中 $myPendingCount件' : '依頼は全て対応済みです',
-            style: TextStyle(
-              fontSize: 12,
-              color: myPendingCount > 0
-                  ? AppColors.warning
-                  : AppColors.textTertiary,
+          OutlinedButton(
+            onPressed: () => _showChangeRequestListDialog(
+              context,
+              storeId,
+              weekStartDate,
+              storeSettings,
+              filterStaffId: currentUserId,
+              canDelete: false,
             ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor:
+                  myPendingCount > 0 ? AppColors.warning : AppColors.textTertiary,
+              side: BorderSide(
+                color: myPendingCount > 0
+                    ? AppColors.warning.withValues(alpha: 0.4)
+                    : AppColors.border,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            child: Text(
+                myPendingCount > 0 ? '依頼中 $myPendingCount件' : '依頼は全て対応済みです'),
           ),
         ],
       ],
@@ -869,24 +948,129 @@ class _StaffChangeRequestsBar extends StatelessWidget {
   }
 }
 
-// マネージャー向け: 依頼一覧をまとめて表示するダイアログ
-void _showChangeRequestListDialog(BuildContext context,
-    List<ShiftChangeRequest> requests, StoreSettings? storeSettings) {
+// 依頼一覧をまとめて表示するダイアログ。マネージャーは全件+削除可、スタッフは
+// filterStaffId で自分の依頼だけに絞り、canDelete: false で削除不可の閲覧専用にする
+void _showChangeRequestListDialog(
+  BuildContext context,
+  String storeId,
+  String weekStartDate,
+  StoreSettings? storeSettings, {
+  String? filterStaffId,
+  bool canDelete = true,
+}) {
   showDialog(
     context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('修正依頼一覧'),
+    builder: (_) => _ChangeRequestListDialog(
+      storeId: storeId,
+      weekStartDate: weekStartDate,
+      storeSettings: storeSettings,
+      filterStaffId: filterStaffId,
+      canDelete: canDelete,
+    ),
+  );
+}
+
+// 「修正依頼を適用」のメインループ。衝突に当たるたびにダイアログで判断を聞き、
+// resolutionsに積み増しながら衝突が無くなる(done=true)まで呼び直す。
+// 途中でダイアログを閉じても、それまでに適用された分はサーバー側で既にコミット済み。
+// シフト表下部の「自動配置」ボタン(未対応の依頼がある間はこちらに差し替わる)から呼ぶ
+Future<void> _runApplyChangeRequests(
+    BuildContext context, WidgetRef ref, String storeId, String weekStartDate) async {
+  final resolutions = <ChangeRequestResolution>[];
+  while (true) {
+    final ChangeRequestApplyResult result;
+    try {
+      result = await ref
+          .read(shiftActionsProvider.notifier)
+          .applyChangeRequests(storeId, weekStartDate, resolutions);
+    } catch (e) {
+      if (!context.mounted) return;
+      ToastWidget.show(context, _describeShiftError(e, '修正依頼の適用失敗'),
+          type: ToastType.error);
+      return;
+    }
+
+    if (result.done) {
+      if (!context.mounted) return;
+      final message = result.skippedStaleCount > 0
+          ? '${result.appliedCount}件適用しました('
+              '${result.skippedStaleCount}件は既に処理済みでした)'
+          : '${result.appliedCount}件適用しました';
+      ToastWidget.show(context, message, type: ToastType.success);
+      return;
+    }
+
+    if (!context.mounted) return;
+    final decision = await showDialog<ChangeRequestResolution>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _ConflictResolutionDialog(conflict: result.conflict!),
+    );
+    // マネージャーがダイアログを閉じてウィザードを中断した場合、
+    // ここまでの適用分は既にコミット済みのままループを終了する
+    if (decision == null) return;
+    resolutions.add(decision);
+  }
+}
+
+// 依頼一覧ダイアログ本体(閲覧・個別削除のみ)。適用は下部の「自動配置」ボタンに
+// 一本化したため、ここには置かない。削除のたびに一覧が最新化されるよう、
+// 固定リストではなくProviderを直接watchする
+class _ChangeRequestListDialog extends ConsumerWidget {
+  final String storeId;
+  final String weekStartDate;
+  final StoreSettings? storeSettings;
+  // 指定があれば、そのスタッフの依頼だけに絞る(スタッフ本人向けの表示に使う。他スタッフの
+  // 依頼内容が見えるとプライバシー上好ましくないため)
+  final String? filterStaffId;
+  // false の場合、各行の削除ボタンを出さない(削除はマネージャー専用エンドポイントのため、
+  // スタッフに見せると403で失敗する)
+  final bool canDelete;
+
+  const _ChangeRequestListDialog({
+    required this.storeId,
+    required this.weekStartDate,
+    required this.storeSettings,
+    this.filterStaffId,
+    this.canDelete = true,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final allRequests = ref
+            .watch(shiftChangeRequestsProvider(
+                storeId: storeId, weekStartDate: weekStartDate))
+            .valueOrNull ??
+        const <ShiftChangeRequest>[];
+    final requests = filterStaffId == null
+        ? allRequests
+        : allRequests.where((r) => r.staffId == filterStaffId).toList();
+
+    return AlertDialog(
+      title: Text(filterStaffId == null ? '修正依頼一覧' : '自分の修正依頼'),
       content: SizedBox(
         width: 360,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final req in requests)
-                _ChangeRequestTile(request: req, storeSettings: storeSettings),
-            ],
-          ),
-        ),
+        child: requests.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('修正依頼はありません',
+                    style: TextStyle(color: AppColors.textTertiary)),
+              )
+            : SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final req in requests)
+                      _ChangeRequestTile(
+                        request: req,
+                        storeId: storeId,
+                        weekStartDate: weekStartDate,
+                        storeSettings: storeSettings,
+                        canDelete: canDelete,
+                      ),
+                  ],
+                ),
+              ),
       ),
       actions: [
         TextButton(
@@ -894,24 +1078,181 @@ void _showChangeRequestListDialog(BuildContext context,
           child: const Text('閉じる'),
         ),
       ],
-    ),
-  );
+    );
+  }
 }
 
-// 依頼一覧ダイアログの1件分の表示 (依頼者名・現在の割当→希望する割当・対応状況)
-class _ChangeRequestTile extends StatelessWidget {
-  final ShiftChangeRequest request;
-  final StoreSettings? storeSettings;
+// 衝突1件の解決を求めるダイアログ。conflict.type によって文言/選択肢が変わる
+class _ConflictResolutionDialog extends StatelessWidget {
+  final ChangeRequestConflict conflict;
 
-  const _ChangeRequestTile(
-      {required this.request, required this.storeSettings});
+  const _ConflictResolutionDialog({required this.conflict});
 
   @override
   Widget build(BuildContext context) {
+    switch (conflict.type) {
+      case ChangeRequestConflict.typeSelfOverlap:
+        return AlertDialog(
+          title: const Text('確認'),
+          content: Text(
+            '${conflict.staffName}さんは既に別の時間帯にシフトが入っています。\n'
+            '${_dayLabel(conflict.toDay)} ${conflict.toStartTime}-${conflict.toEndTime}'
+            'へ移動すると時間が重複しますが、本当によろしいですか?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('いいえ'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(ChangeRequestResolution(
+                requestId: conflict.requestId,
+                action: ChangeRequestResolution.actionConfirmOverlap,
+              )),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPrimary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('はい'),
+            ),
+          ],
+        );
+
+      case ChangeRequestConflict.typeCapacity:
+        return AlertDialog(
+          title: const Text('定員が埋まっています'),
+          content: SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_dayLabel(conflict.toDay)} ${conflict.toStartTime}-${conflict.toEndTime}'
+                  'は既に必要人数が埋まっています。誰と入れ替えますか?',
+                  style: const TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                for (final c in conflict.candidates)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            Navigator.of(context).pop(ChangeRequestResolution(
+                          requestId: conflict.requestId,
+                          action: ChangeRequestResolution.actionSwap,
+                          targetStaffId: c.staffId,
+                        )),
+                        child: Text('${c.staffName}さんと入れ替える'),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(ChangeRequestResolution(
+                requestId: conflict.requestId,
+                action: ChangeRequestResolution.actionSkip,
+              )),
+              child: const Text('この依頼を見送る'),
+            ),
+          ],
+        );
+
+      case ChangeRequestConflict.typeRequestConflict:
+      default:
+        return AlertDialog(
+          title: const Text('衝突する依頼があります'),
+          content: SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_dayLabel(conflict.toDay)} ${conflict.toStartTime}-${conflict.toEndTime}'
+                  'を複数人が希望しています。誰を優先しますか?',
+                  style: const TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                for (final c in conflict.candidates)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            Navigator.of(context).pop(ChangeRequestResolution(
+                          requestId: conflict.requestId,
+                          action: ChangeRequestResolution.actionPrioritize,
+                          targetStaffId: c.staffId,
+                        )),
+                        child: Text(c.staffName),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(ChangeRequestResolution(
+                requestId: conflict.requestId,
+                action: ChangeRequestResolution.actionSkip,
+              )),
+              child: const Text('今回は見送る'),
+            ),
+          ],
+        );
+    }
+  }
+}
+
+// 依頼一覧ダイアログの1件分の表示 (依頼者名・現在の割当→希望する割当・対応状況・削除ボタン)
+class _ChangeRequestTile extends HookConsumerWidget {
+  final ShiftChangeRequest request;
+  final String storeId;
+  final String weekStartDate;
+  final StoreSettings? storeSettings;
+  final bool canDelete;
+
+  const _ChangeRequestTile({
+    required this.request,
+    required this.storeId,
+    required this.weekStartDate,
+    required this.storeSettings,
+    this.canDelete = true,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDeleting = useState(false);
+
     final fromLabel = '${_dayLabel(request.fromDay)} '
         '${_slotLabelFor(request.fromDay, request.fromStartTime, request.fromEndTime, storeSettings)}';
     final toLabel = '${_dayLabel(request.toDay)} '
         '${_slotLabelFor(request.toDay, request.toStartTime, request.toEndTime, storeSettings)}';
+
+    Future<void> handleDelete() async {
+      isDeleting.value = true;
+      try {
+        await ref
+            .read(shiftActionsProvider.notifier)
+            .deleteChangeRequest(storeId, weekStartDate, request.id);
+        if (!context.mounted) return;
+        ToastWidget.show(context, '修正依頼を削除しました', type: ToastType.success);
+      } catch (e) {
+        if (!context.mounted) return;
+        ToastWidget.show(context, _describeShiftError(e, '修正依頼の削除失敗'),
+            type: ToastType.error);
+      } finally {
+        if (context.mounted) isDeleting.value = false;
+      }
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -947,6 +1288,24 @@ class _ChangeRequestTile extends StatelessWidget {
                       request.isPending ? AppColors.warning : AppColors.success,
                 ),
               ),
+              if (canDelete)
+                SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: isDeleting.value
+                      ? const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : IconButton(
+                          padding: EdgeInsets.zero,
+                          iconSize: 16,
+                          tooltip: '削除',
+                          icon: const Icon(Icons.delete_outline,
+                              color: AppColors.textTertiary),
+                          onPressed: handleDelete,
+                        ),
+                ),
             ],
           ),
           const SizedBox(height: 4),
