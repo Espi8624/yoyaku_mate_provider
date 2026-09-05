@@ -102,7 +102,8 @@ class StaffManagementView extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
               child: isManager
-                  ? _MyManagerCard(userProfile: currentUser)
+                  ? _MyManagerCard(
+                      userProfile: currentUser, storeSettings: storeSettings)
                   : (myStaffEntry != null
                       ? _StaffCard(
                           staff: myStaffEntry,
@@ -153,14 +154,37 @@ class StaffManagementView extends ConsumerWidget {
 
 // マネージャー自身の情報を表示する軽量カード
 // (マネージャーは store_staff_info のエンティティではないため、
-//  承認/拒否・権限・勤務可能時間の概念自体を持たず、操作UIも存在しない)
-class _MyManagerCard extends StatelessWidget {
+//  承認/拒否・権限・勤務可能時間の概念自体を持たない)。
+// 唯一の設定として、シフト自動配置・シフト編集の選択肢にマネージャー自身を
+// 含めるかどうかのトグルのみ持つ
+class _MyManagerCard extends ConsumerWidget {
   final UserProfile? userProfile;
+  final StoreSettings? storeSettings;
 
-  const _MyManagerCard({required this.userProfile});
+  const _MyManagerCard({required this.userProfile, required this.storeSettings});
+
+  Future<void> _toggleIncluded(
+      BuildContext context, WidgetRef ref, bool included) async {
+    final settings = storeSettings;
+    if (settings == null) return;
+    try {
+      await ref.read(storeActionsProvider.notifier).updateStoreSettings(
+            settings.copyWith(excludeManagerFromShiftTable: !included),
+          );
+      if (!context.mounted) return;
+      ToastWidget.show(context, '設定を更新しました', type: ToastType.success);
+    } catch (e) {
+      if (!context.mounted) return;
+      ToastWidget.show(
+        context,
+        _describeError(e, actionLabel: '設定更新失敗'),
+        type: ToastType.error,
+      );
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
@@ -170,44 +194,69 @@ class _MyManagerCard extends StatelessWidget {
       color: AppColors.cardBackground,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  userProfile?.name ?? '...',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userProfile?.name ?? '...',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      userProfile?.email ?? '',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  userProfile?.email ?? '',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.roleManager,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    '管理者',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimaryLight,
+                    ),
                   ),
                 ),
               ],
             ),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.roleManager,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text(
-                '管理者',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimaryLight,
+            const SizedBox(height: 12),
+            const Divider(height: 1, thickness: 0.5, color: AppColors.border),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'シフト表に含める',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
+                Switch(
+                  value: !(storeSettings?.excludeManagerFromShiftTable ?? false),
+                  onChanged: storeSettings == null
+                      ? null
+                      : (value) => _toggleIncluded(context, ref, value),
+                  activeColor: AppColors.accentPrimary,
+                ),
+              ],
             ),
           ],
         ),
@@ -321,36 +370,49 @@ class _StaffCard extends HookConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      staff['user_name'] ?? 'Unknown User',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        staff['user_name'] ?? 'Unknown User',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      staff['email'] ?? '',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                      const SizedBox(height: 4),
+                      Text(
+                        staff['email'] ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                _buildStatusDot(status),
+                const SizedBox(width: 8),
+                // 承認済み・操作可能な場合は、下部のアクション行を占有していた
+                // 「承認取り消し」ボタンをここに移し、カード全体の高さを詰める
+                (status == StaffStatus.approved && canManageStatusAndPermissions)
+                    ? _buildRevokeButton(context, ref)
+                    : _buildStatusDot(status),
               ],
             ),
 
             // 承認済み、かつステータス/権限の操作が許可されている場合のみ「権限設定」を表示
             if (status == StaffStatus.approved &&
                 canManageStatusAndPermissions) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+              const Divider(height: 1, thickness: 0.5, color: AppColors.border),
+              const SizedBox(height: 12),
               GestureDetector(
                 onTap: () => isExpanded.value = !isExpanded.value,
                 behavior: HitTestBehavior.opaque,
@@ -376,8 +438,7 @@ class _StaffCard extends HookConsumerWidget {
                 ),
               ),
               if (isExpanded.value) ...[
-                const SizedBox(height: 12),
-                const Divider(),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     const Text(
@@ -429,7 +490,8 @@ class _StaffCard extends HookConsumerWidget {
             // (「権限設定」とは独立して開閉可能)
             if (status == StaffStatus.approved && canEditAvailability) ...[
               const SizedBox(height: 12),
-              const Divider(),
+              const Divider(height: 1, thickness: 0.5, color: AppColors.border),
+              const SizedBox(height: 12),
               GestureDetector(
                 onTap: () => isAvailabilityExpanded.value =
                     !isAvailabilityExpanded.value,
@@ -471,24 +533,14 @@ class _StaffCard extends HookConsumerWidget {
               ],
             ],
 
-            // ステータス変更ボタンは操作許可がある場合のみ表示
-            if (canManageStatusAndPermissions) ...[
+            // ステータス変更ボタンは操作許可がある場合のみ表示。
+            // 承認済みの「承認取り消し」は上部の氏名行に移したため、ここには出さない
+            if (canManageStatusAndPermissions &&
+                status != StaffStatus.approved) ...[
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // 承認済みの場合: 拒否ボタンを表示 (承認取り消し)
-                  if (status == StaffStatus.approved)
-                    ElevatedButton(
-                      onPressed: () =>
-                          _changeStatus(context, ref, StaffStatus.rejected),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.rejected,
-                        foregroundColor: AppColors.textPrimaryLight,
-                      ),
-                      child: const Text('承認取り消し'),
-                    ),
-
                   // 承認待ちの場合: 拒否と承認ボタンを表示
                   if (status == StaffStatus.pending) ...[
                     OutlinedButton(
@@ -521,7 +573,7 @@ class _StaffCard extends HookConsumerWidget {
                         backgroundColor: AppColors.accentPrimary,
                         foregroundColor: Colors.white,
                       ),
-                      child: const Text('再承認'),
+                      child: const Text('承認'),
                     ),
                 ],
               ),
@@ -529,6 +581,23 @@ class _StaffCard extends HookConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  // 承認済みカードの氏名行に置く「承認取り消し」ボタン。従来は下部アクション行に
+  // 単独で表示していたが、カードの高さを詰めるためステータスドットの位置に移した
+  Widget _buildRevokeButton(BuildContext context, WidgetRef ref) {
+    return ElevatedButton(
+      onPressed: () => _changeStatus(context, ref, StaffStatus.rejected),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.rejected,
+        foregroundColor: AppColors.textPrimaryLight,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        textStyle: const TextStyle(fontSize: 12),
+      ),
+      child: const Text('取り消し'),
     );
   }
 

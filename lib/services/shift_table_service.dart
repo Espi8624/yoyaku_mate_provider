@@ -236,4 +236,50 @@ class ShiftTableService {
           statusCode: response.statusCode);
     }
   }
+
+  // その週の未処理の修正依頼を、古い順に実際のシフト表へ反映する (マネージャー専用)。
+  // 衝突に当たった場合は途中で止まり、その1件を結果に含めて返す。呼び出し側はマネージャーの
+  // 判断を resolutions に足して、衝突が無くなる(done=true)まで呼び直すウィザード方式
+  Future<ChangeRequestApplyResult> applyChangeRequests(
+    String storeId,
+    String weekStartDate,
+    List<ChangeRequestResolution> resolutions,
+  ) async {
+    final token = await _getIdToken();
+    final response = await http.post(
+      Uri.parse(
+          '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/change-requests/apply'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'resolutions': resolutions.map((r) => r.toJson()).toList(),
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(
+          '修正依頼の適用に失敗しました。Status: ${response.statusCode}, Body: ${response.body}',
+          statusCode: response.statusCode);
+    }
+    final decoded = json.decode(utf8.decode(response.bodyBytes));
+    return ChangeRequestApplyResult.fromJson(
+        decoded['data'] as Map<String, dynamic>);
+  }
+
+  // 修正依頼を1件削除する (マネージャー専用。衝突で見送られ、対応不要になった依頼を
+  // 手動で消す用)
+  Future<void> deleteChangeRequest(
+      String storeId, String weekStartDate, String requestId) async {
+    final token = await _getIdToken();
+    final response = await http.delete(
+      Uri.parse(
+          '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/change-requests/$requestId'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(
+          '修正依頼の削除に失敗しました。Status: ${response.statusCode}, Body: ${response.body}',
+          statusCode: response.statusCode);
+    }
+  }
 }

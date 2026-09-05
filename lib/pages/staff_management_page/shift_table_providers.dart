@@ -148,4 +148,32 @@ class ShiftActions extends _$ShiftActions {
     ref.invalidate(shiftChangeRequestsProvider(
         storeId: storeId, weekStartDate: weekStartDate));
   }
+
+  // 未処理の修正依頼を古い順に実際のシフト表へ反映する (マネージャー専用)。衝突に
+  // 当たった場合は、それまでの適用分だけコミットされた状態で結果に含めて返す
+  // (呼び出し側は resolutions を足して衝突が無くなるまで呼び直す)
+  Future<ChangeRequestApplyResult> applyChangeRequests(
+    String storeId,
+    String weekStartDate,
+    List<ChangeRequestResolution> resolutions,
+  ) async {
+    final service = ref.read(shiftTableServiceProvider);
+    final result = await service.applyChangeRequests(
+        storeId, weekStartDate, resolutions);
+    ref.invalidate(
+        shiftTableProvider(storeId: storeId, weekStartDate: weekStartDate));
+    ref.invalidate(shiftChangeRequestsProvider(
+        storeId: storeId, weekStartDate: weekStartDate));
+    return result;
+  }
+
+  // 修正依頼を1件削除する (マネージャー専用。衝突で見送られ、対応不要になった依頼を
+  // 手動で消す用)
+  Future<void> deleteChangeRequest(
+      String storeId, String weekStartDate, String requestId) async {
+    final service = ref.read(shiftTableServiceProvider);
+    await service.deleteChangeRequest(storeId, weekStartDate, requestId);
+    ref.invalidate(shiftChangeRequestsProvider(
+        storeId: storeId, weekStartDate: weekStartDate));
+  }
 }
