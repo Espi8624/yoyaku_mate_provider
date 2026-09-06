@@ -328,7 +328,7 @@ class _ShiftChangeRequestsProviderElement
       (origin as ShiftChangeRequestsProvider).weekStartDate;
 }
 
-String _$shiftActionsHash() => r'27da0c83931a9569214b2053cbb539ee5af53d1e';
+String _$shiftActionsHash() => r'101fd9715431915b2981aa990a39a6717f00fde4';
 
 /// See also [ShiftActions].
 @ProviderFor(ShiftActions)

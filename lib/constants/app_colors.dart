@@ -105,6 +105,10 @@ class AppColors {
     Color(0xFF7A6C56), // カーキ
   ];
 
+  /// シフトブロック上の補助ラベル(時間帯・人数)。主役である氏名より弱く見せるため、
+  /// textPrimaryLight を 70% の不透明度にしたトーン
+  static const Color shiftBlockSubLabel = Color(0xB3F8F9FA);
+
   // --- 統計・チャートパレット ---
   // statistics_screen / dynamic_chart_card 専用。ダークカード上での視認性を
   // 優先した配色のため、上記セマンティックパレット(success/error等)とは別に管理する。

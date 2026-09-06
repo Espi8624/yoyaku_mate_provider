@@ -23,10 +23,14 @@ class ShiftTable {
   final String storeId;
   final String weekStartDate; // 해당 주의 월요일 "YYYY-MM-DD"
   final List<Shift> shifts;
+  final bool hasUnpublishedChanges; // 초안에 미확정 변경이 남아 있는지
+  final DateTime? publishedAt;      // 마지막으로 스태프에게 공개한 일시
 }
 ```
 
 서버의 BSON/JSON 필드명과 그대로 일치시켜 변환 처리를 불필요하게 했다(`staff_availability` 구현과 동일한 방침).
+
+서버는 초안과 확정본을 따로 보관하지만, `shifts`에는 항상 「자신이 봐야 할 버전」이 담겨 돌아온다(매니저에게는 편집 중인 초안, 스태프에게는 확정본). 따라서 그리는 쪽은 둘을 구분할 필요가 없고, 그리드 코드는 역할과 무관하게 하나로 끝난다. `hasUnpublishedChanges`는 매니저용 응답에만 포함되며, 하단 버튼을 「확정해서 공개」/「자동배치」 중 무엇으로 할지 판정하는 데와 미확정 배너 표시에 사용한다(스태프에게는 항상 `false`). 판정식은 `ShiftTable.hasDraftToReview`에 모아두어, 하단 버튼과 헤더의 파기 버튼이 같은 조건을 공유한다.
 
 ---
 
@@ -40,7 +44,11 @@ Future<void> createShiftTable(String storeId, String weekStartDate)
 Future<void> addShift(String storeId, String weekStartDate, {required staffId, required day, required startTime, required endTime})
 Future<void> updateShift(String storeId, String weekStartDate, String shiftId, {...})
 Future<void> deleteShift(String storeId, String weekStartDate, String shiftId)
+Future<int> publishShiftTable(String storeId, String weekStartDate)
+Future<int> discardShiftTableDraft(String storeId, String weekStartDate)
 ```
+
+`publishShiftTable`은 초안을 확정해 스태프에게 공개하는 유일한 경로이며, 반환값은 이번 확정으로 처리 완료된 수정의뢰 건수다. 편집·자동배치·수정의뢰 적용은 모두 초안에만 반영되므로, 스태프의 시프트표가 바뀌는 것은 이 호출 시점뿐이다.
 
 `fetchShiftTable`은 HTTP `404`를 예외로 던지지 않고 `null`로 반환하는 것이 특징이며, 호출측(Riverpod provider)은 이를 그대로 "시프트표 미생성" 상태로 취급한다. `lib/providers/session_providers.dart`에 `shiftTableServiceProvider`로 등록.
 
@@ -60,10 +68,12 @@ class ShiftActions extends _$ShiftActions {
   Future<void> addShift(...)
   Future<void> updateShift(...)
   Future<void> deleteShift(...)
+  Future<int> publishShiftTable(...)
+  Future<int> discardShiftTableDraft(...)
 }
 ```
 
-`ShiftActions`는 상태를 갖지 않는 액션 전용 Notifier이며, 각 메서드는 성공 시 `shiftTableProvider(storeId:, weekStartDate:)`를 invalidate하여 선언적으로 재조회시킨다. `storeId` + `weekStartDate` family 키 덕분에 주를 전환할 때마다 별도의 조회 결과가 캐시된다.
+`ShiftActions`는 상태를 갖지 않는 액션 전용 Notifier이며, 각 메서드는 성공 시 `shiftTableProvider(storeId:, weekStartDate:)`를 invalidate하여 선언적으로 재조회시킨다. `publishShiftTable`만은 수정의뢰 상태도 동시에 바뀌므로 `shiftChangeRequestsProvider`도 함께 invalidate한다. `storeId` + `weekStartDate` family 키 덕분에 주를 전환할 때마다 별도의 조회 결과가 캐시된다.
 
 ---
 

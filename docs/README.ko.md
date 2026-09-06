@@ -50,6 +50,7 @@ docs/
 | 문서 | 설명 |
 |------|------|
 | [001-lessons-learned.md](./troubles/001-lessons-learned.ko.md) | SSE 재연결, 멱등성, 로컬 캐시, fl_chart 성능 개선 |
+| [002-m3-seed-color-teal.ko.md](./troubles/002-m3-seed-color-teal.ko.md) | 무채색을 시드로 준 ColorScheme이 청록색이 되어 색 미지정 위젯에 번진 문제 |
 
 ---
 

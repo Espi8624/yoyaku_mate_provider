@@ -48,6 +48,9 @@ class ShiftActions extends _$ShiftActions {
         shiftTableProvider(storeId: storeId, weekStartDate: weekStartDate));
   }
 
+  // NOTE: 現在UIからの導線は無い (シフトは自動配置で作り、以降は各ブロックの
+  // 編集/削除で調整する運用)。サーバー側のエンドポイントごと動く状態で残しているので、
+  // 「必要人数より1人多く入れたい」等で追加UIが要る時はここから繋げる
   Future<void> addShift(
     String storeId,
     String weekStartDate, {
@@ -139,17 +142,35 @@ class ShiftActions extends _$ShiftActions {
         storeId: storeId, weekStartDate: weekStartDate));
   }
 
-  // その週の未処理の修正依頼を全て処理済みにする (マネージャー専用。編集のたびではなく、
-  // 対応が一段落してから押す「確定」ボタン用)
-  Future<void> resolveChangeRequests(
-      String storeId, String weekStartDate) async {
+  // 下書きを確定してスタッフに公開する (マネージャー専用)。
+  // 戻り値は今回の確定で処理済みになった修正依頼の件数
+  Future<int> publishShiftTable(String storeId, String weekStartDate) async {
     final service = ref.read(shiftTableServiceProvider);
-    await service.resolveChangeRequests(storeId, weekStartDate);
+    final resolvedCount =
+        await service.publishShiftTable(storeId, weekStartDate);
+    // 確定で has_unpublished_changes と依頼のステータスが同時に変わるため両方を無効化する
+    ref.invalidate(
+        shiftTableProvider(storeId: storeId, weekStartDate: weekStartDate));
     ref.invalidate(shiftChangeRequestsProvider(
         storeId: storeId, weekStartDate: weekStartDate));
+    return resolvedCount;
   }
 
-  // 未処理の修正依頼を古い順に実際のシフト表へ反映する (マネージャー専用)。衝突に
+  // 下書きを破棄して確定版へ戻す (マネージャー専用)。
+  // 戻り値は未対応へ戻した修正依頼の件数
+  Future<int> discardShiftTableDraft(
+      String storeId, String weekStartDate) async {
+    final service = ref.read(shiftTableServiceProvider);
+    final revertedCount =
+        await service.discardShiftTableDraft(storeId, weekStartDate);
+    ref.invalidate(
+        shiftTableProvider(storeId: storeId, weekStartDate: weekStartDate));
+    ref.invalidate(shiftChangeRequestsProvider(
+        storeId: storeId, weekStartDate: weekStartDate));
+    return revertedCount;
+  }
+
+  // 未処理の修正依頼を古い順に下書きのシフト表へ反映する (マネージャー専用)。衝突に
   // 当たった場合は、それまでの適用分だけコミットされた状態で結果に含めて返す
   // (呼び出し側は resolutions を足して衝突が無くなるまで呼び直す)
   Future<ChangeRequestApplyResult> applyChangeRequests(

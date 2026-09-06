@@ -11,6 +11,7 @@ import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_managemen
 import 'package:yoyaku_mate_provider/providers/session_providers.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/mini_status_card.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
@@ -208,6 +209,38 @@ class ShiftTableView extends HookConsumerWidget {
         .where((s) => s['status'] == 'APPROVED')
         .toList();
 
+    // 表示中の確定版より新しい確定版がサーバーにあるか。
+    // SSE等の常時接続は張らず、アプリがフォアグラウンドへ戻った時だけ静かに確認する
+    // (シフト表は週単位で変わる・たまに開く画面なので、開いた瞬間に正しければ十分)
+    final hasPublishedUpdate = useState(false);
+    final displayedPublishedAt = shiftTableAsync.valueOrNull?.publishedAt;
+
+    // 週を切り替えると別の表になるため、前の週で立てた印は消す
+    useEffect(() {
+      hasPublishedUpdate.value = false;
+      return null;
+    }, [weekStartDate]);
+
+    useOnAppLifecycleStateChange((previous, current) async {
+      if (current != AppLifecycleState.resumed) return;
+      // マネージャーは自分が公開する側で、ボタンも未確定変更の表示に使っているため対象外
+      if (isManager || displayedPublishedAt == null) return;
+      try {
+        // Provider を invalidate すると画面が勝手に書き変わってしまうので、
+        // サービスを直接呼んで確認だけ行う (取得結果は表示に反映しない)
+        final latest = await ref
+            .read(shiftTableServiceProvider)
+            .fetchShiftTable(storeId, weekStartDate);
+        final latestPublishedAt = latest?.publishedAt;
+        if (latestPublishedAt == null) return;
+        if (latestPublishedAt.isAfter(displayedPublishedAt)) {
+          hasPublishedUpdate.value = true;
+        }
+      } catch (_) {
+        // 確認は補助的な機能。失敗しても画面には何も出さず、次回の復帰時に再試行する
+      }
+    });
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -217,6 +250,20 @@ class ShiftTableView extends HookConsumerWidget {
               weekStart.value.subtract(const Duration(days: 7)),
           onNext: () =>
               weekStart.value = weekStart.value.add(const Duration(days: 7)),
+          // 「確定版に合わせる」ボタン。マネージャーで未確定の変更がある時だけ
+          // 下書きの破棄になり、それ以外(スタッフ / 未確定なし)は単なる再取得になる
+          trailing: _SyncWithPublishedButton(
+            storeId: storeId,
+            weekStartDate: weekStartDate,
+            // 確定ボタンと同じ条件にする。片方だけ出ていると
+            // 「破棄はできるのに確定はできない」ような不整合な状態が生まれる
+            canDiscardDraft: isManager &&
+                (shiftTableAsync.valueOrNull?.hasDraftToReview ?? false),
+            hasPublishedVersion:
+                shiftTableAsync.valueOrNull?.publishedAt != null,
+            hasUpdate: hasPublishedUpdate.value,
+            onReloaded: () => hasPublishedUpdate.value = false,
+          ),
         ),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 24),
@@ -267,6 +314,20 @@ class ShiftTableView extends HookConsumerWidget {
   }
 }
 
+// 一括適用の結果を、実際に起きたことに沿って説明する
+// - 適用されなかった理由は「本人が出し直した」と「元のシフトが既に無い」で意味が全く違うため、
+//   まとめて「既に処理済み」と伝えると原因を誤解させる
+String _describeApplyResult(ChangeRequestApplyResult result) {
+  final notes = <String>[
+    if (result.supersededCount > 0) '${result.supersededCount}件は本人の新しい依頼に置き換え',
+    if (result.skippedStaleCount > 0) '${result.skippedStaleCount}件は元のシフトが変更済みで適用不可',
+  ];
+  final base = '${result.appliedCount}件適用しました';
+  final applied = notes.isEmpty ? base : '$base(${notes.join('、')})';
+  // 適用先はあくまで下書き。ここで完了したと思われないよう、確定が要ることを必ず添える
+  return '$applied\n「確定」を押すとスタッフに反映されます';
+}
+
 String _describeShiftError(Object error, String actionLabel) {
   if (error is ApiException) {
     return '$actionLabel: ${error.message}';
@@ -279,11 +340,14 @@ class _WeekNavigator extends StatelessWidget {
   final DateTime weekStart;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
+  // 右端に置くアクション(確定版に合わせるボタン)
+  final Widget trailing;
 
   const _WeekNavigator({
     required this.weekStart,
     required this.onPrevious,
     required this.onNext,
+    required this.trailing,
   });
 
   @override
@@ -295,22 +359,157 @@ class _WeekNavigator extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _WeekNavArrowButton(icon: Icons.chevron_left, onPressed: onPrevious),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+          // 右端のボタンと同じ幅を左にも確保し、週ラベルが中央からずれないようにする
+          const SizedBox(width: _weekNavTrailingWidth),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _WeekNavArrowButton(
+                    icon: Icons.chevron_left, onPressed: onPrevious),
+                const SizedBox(width: 12),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _WeekNavArrowButton(
+                    icon: Icons.chevron_right, onPressed: onNext),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-          _WeekNavArrowButton(icon: Icons.chevron_right, onPressed: onNext),
+          SizedBox(
+            width: _weekNavTrailingWidth,
+            child: Align(alignment: Alignment.centerRight, child: trailing),
+          ),
         ],
       ),
+    );
+  }
+}
+
+// 週選択ヘッダー右端のアクション領域の幅 (左右対称にするため左側にも同じ幅を空ける)
+const double _weekNavTrailingWidth = 40;
+
+// シフト表を「確定版に合わせる」ボタン。役割と状態で意味が変わる:
+//
+// - マネージャーで未確定の変更がある場合: 下書きを破棄して確定版へ戻す(破壊的)
+// - それ以外 (スタッフ / 未確定の変更なし): サーバーから再取得するだけ
+//
+// どちらも「確定版に合わせる」という一つの意味に収まるが、前者は編集内容を失うため、
+// アイコン・色を変えて見分けが付くようにし、実行前に確認ダイアログを挟む
+class _SyncWithPublishedButton extends ConsumerWidget {
+  final String storeId;
+  final String weekStartDate;
+  final bool canDiscardDraft;
+  // 確定版が既にあるか。破棄の確認文言を「公開中の内容に戻す」/「空に戻す」で
+  // 出し分けるために使う
+  final bool hasPublishedVersion;
+  // 表示中より新しい確定版がサーバーにある場合 true (赤ドットで知らせる)
+  final bool hasUpdate;
+  // 再取得が済んだことを呼び出し元に伝え、赤ドットを消してもらう
+  final VoidCallback onReloaded;
+
+  const _SyncWithPublishedButton({
+    required this.storeId,
+    required this.weekStartDate,
+    required this.canDiscardDraft,
+    required this.hasPublishedVersion,
+    required this.hasUpdate,
+    required this.onReloaded,
+  });
+
+  Future<void> _reload(BuildContext context, WidgetRef ref) async {
+    ref.invalidate(
+        shiftTableProvider(storeId: storeId, weekStartDate: weekStartDate));
+    ref.invalidate(shiftChangeRequestsProvider(
+        storeId: storeId, weekStartDate: weekStartDate));
+    onReloaded();
+    ToastWidget.show(
+      context,
+      hasUpdate ? 'シフト表が更新されました' : '最新の状態に更新しました',
+      type: ToastType.success,
+    );
+  }
+
+  Future<void> _discardDraft(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showConfirmationDialog(
+      context: context,
+      title: '下書きを破棄',
+      content: hasPublishedVersion
+          ? '確定後に加えた変更を全て破棄し、公開中のシフト表の内容に戻します。\n'
+              'この操作は取り消せません。'
+          : 'この週はまだ一度も確定していないため、シフト表は空の状態に戻ります。\n'
+              'この操作は取り消せません。',
+      confirmText: '破棄して戻す',
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+
+    try {
+      final revertedCount = await ref
+          .read(shiftActionsProvider.notifier)
+          .discardShiftTableDraft(storeId, weekStartDate);
+      if (!context.mounted) return;
+      ToastWidget.show(
+        context,
+        revertedCount > 0
+            ? '下書きを破棄しました($revertedCount件の修正依頼を未対応に戻しました)'
+            : '下書きを破棄しました',
+        type: ToastType.success,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ToastWidget.show(context, _describeShiftError(e, '下書きの破棄失敗'),
+          type: ToastType.error);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final button = IconButton(
+      onPressed: () => canDiscardDraft
+          ? _discardDraft(context, ref)
+          : _reload(context, ref),
+      icon: Icon(
+        canDiscardDraft ? Icons.settings_backup_restore : Icons.refresh,
+        size: 20,
+      ),
+      color: canDiscardDraft ? AppColors.warning : AppColors.textSecondary,
+      tooltip: canDiscardDraft
+          ? '下書きを破棄して確定版に戻す'
+          : (hasUpdate ? 'シフト表が更新されています。タップして再取得' : '最新の状態に更新'),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
+      splashRadius: 20,
+    );
+
+    if (!hasUpdate) return button;
+
+    // 更新がある時だけ左上に赤ドットを重ねる。Stackで重ねるだけなので
+    // ボタン自体の当たり判定・レイアウトには影響しない
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        button,
+        Positioned(
+          left: -2,
+          top: -2,
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: AppColors.error,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -328,7 +527,7 @@ class _WeekNavArrowButton extends StatelessWidget {
     return IconButton(
       onPressed: onPressed,
       icon: Icon(icon, size: 20),
-      color: Colors.white,
+      color: AppColors.textPrimaryLight,
       style: IconButton.styleFrom(
         backgroundColor: AppColors.accentPrimary,
         shape: const CircleBorder(),
@@ -363,7 +562,7 @@ class _EmptyShiftTable extends StatelessWidget {
               onPressed: onCreate,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentPrimary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textPrimaryLight,
               ),
               icon: const Icon(Icons.add),
               label: const Text('シフト表を作成'),
@@ -416,7 +615,7 @@ class _AutoAssignModeDialog extends HookWidget {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentPrimary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.textPrimaryLight,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 onPressed: () =>
@@ -456,14 +655,13 @@ class _ShiftGridBody extends HookConsumerWidget {
     final verticalController = useScrollController();
     final horizontalController = useScrollController();
 
-    // 下部ボタンを「自動配置」/「修正依頼を確認」のどちらにするか判定するための件数
-    final pendingChangeRequestCount = ref
-            .watch(shiftChangeRequestsProvider(
-                storeId: storeId, weekStartDate: weekStartDate))
-            .valueOrNull
-            ?.where((r) => r.isPending)
-            .length ??
-        0;
+    // 下書きに未確定の変更が残っているか。バナーと下部ボタンの出し分けに使う
+    final hasUnpublishedChanges = table.hasUnpublishedChanges;
+
+    // 下部ボタンを「確定して公開」にするか「自動配置」にするか。
+    // 未確定の変更がある間は次にすべきことが確定なので、そちらだけを出す
+    // (作ったばかりの空の表は除外。詳細は ShiftTable.hasDraftToReview を参照)
+    final showPublishButton = table.hasDraftToReview;
 
     final hourRange = _computeHourRange(storeSettings, table.shifts);
     final gridHeight = (hourRange.endHour - hourRange.startHour) * _hourHeight;
@@ -667,6 +865,9 @@ class _ShiftGridBody extends HookConsumerWidget {
           currentUserId: currentUserId,
           storeSettings: storeSettings,
         ),
+        // 今見えている表がスタッフにも見えているとは限らないため、下書き状態を明示する。
+        // これが無いと、編集しただけで反映済みだと誤解したまま画面を離れてしまう
+        if (isManager && hasUnpublishedChanges) const _UnpublishedChangesBanner(),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -738,35 +939,36 @@ class _ShiftGridBody extends HookConsumerWidget {
             ),
           ),
         ),
+        // 編集(自動配置含む)は全て下書きにしか効かないため、公開操作である「確定」を
+        // 常設の別ボタンとして並べる。片方をもう片方に差し替える形にすると、
+        // 「今このボタンを押すと公開されるのか」がその場で分からなくなる
         if (isManager)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: SizedBox(
               width: double.infinity,
-              // 未対応の修正依頼がある間は、自動配置ボタンをその場で「確認」ボタンに
-              // 差し替える。自動配置と依頼適用を別々のボタンとして並べると、どちらを
-              // 先に押すべきか迷わせてしまうため、1つのボタンに一本化している
-              // (依頼が無くなれば自動的に元の自動配置ボタンへ戻る)
-              child: pendingChangeRequestCount > 0
+              child: showPublishButton
                   ? ElevatedButton.icon(
-                      onPressed: () => _runApplyChangeRequests(
+                      onPressed: () => _runPublishShiftTable(
                           context, ref, storeId, weekStartDate),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.warning,
-                        foregroundColor: Colors.white,
+                        backgroundColor: AppColors.accentPrimary,
+                        foregroundColor: AppColors.textPrimaryLight,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: Text('修正依頼を確認 ($pendingChangeRequestCount件)'),
+                      icon: const Icon(Icons.publish_outlined, size: 18),
+                      label: const Text('確定して公開'),
                     )
                   : ElevatedButton.icon(
                       onPressed: approvedStaff.isEmpty ? null : runAutoAssign,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentPrimary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.textPrimaryLight,
+                        disabledBackgroundColor: AppColors.disabledBackground,
+                        disabledForegroundColor: AppColors.textTertiary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      icon: const Icon(Icons.auto_awesome),
+                      icon: const Icon(Icons.auto_awesome, size: 18),
                       label: const Text('自動配置'),
                     ),
             ),
@@ -823,7 +1025,9 @@ class _ChangeRequestsSection extends ConsumerWidget {
   }
 }
 
-// マネージャー向け: 依頼件数の確認ボタン + 未対応分をまとめて処理済みにする「確定」ボタン
+// マネージャー向け: 依頼一覧を開くボタン。
+// 適用の起点は「一覧ダイアログ内の適用ボタン」と「画面下部の確定ボタン」に集約しており、
+// ここには操作ボタンを並べない (同じことをする入口が3つあると迷わせるため)
 class _ManagerChangeRequestsBar extends ConsumerWidget {
   final String storeId;
   final String weekStartDate;
@@ -841,46 +1045,23 @@ class _ManagerChangeRequestsBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pendingCount = requests.where((r) => r.isPending).length;
 
-    Future<void> resolveAll() async {
-      try {
-        await ref
-            .read(shiftActionsProvider.notifier)
-            .resolveChangeRequests(storeId, weekStartDate);
-        if (!context.mounted) return;
-        ToastWidget.show(context, '修正依頼を処理済みにしました', type: ToastType.success);
-      } catch (e) {
-        if (!context.mounted) return;
-        ToastWidget.show(context, _describeShiftError(e, '修正依頼の処理失敗'),
-            type: ToastType.error);
-      }
-    }
-
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: requests.isEmpty
-                ? null
-                : () => _showChangeRequestListDialog(
-                    context, storeId, weekStartDate, storeSettings),
-            icon: const Icon(Icons.chat_bubble_outline, size: 18),
-            label: Text(pendingCount > 0
-                ? '修正依頼 $pendingCount件'
-                : (requests.isEmpty ? '修正依頼なし' : '修正依頼を確認')),
-          ),
-        ),
-        if (pendingCount > 0) ...[
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: resolveAll,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentPrimary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('確定'),
-          ),
-        ],
-      ],
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: requests.isEmpty
+            ? null
+            : () => _showChangeRequestListDialog(
+                  context,
+                  storeId,
+                  weekStartDate,
+                  storeSettings,
+                  applyRef: ref,
+                ),
+        icon: const Icon(Icons.chat_bubble_outline, size: 18),
+        label: Text(pendingCount > 0
+            ? '修正依頼 $pendingCount件'
+            : (requests.isEmpty ? '修正依頼なし' : '修正依頼を確認')),
+      ),
     );
   }
 }
@@ -952,15 +1133,19 @@ class _StaffChangeRequestsBar extends StatelessWidget {
 
 // 依頼一覧をまとめて表示するダイアログ。マネージャーは全件+削除可、スタッフは
 // filterStaffId で自分の依頼だけに絞り、canDelete: false で削除不可の閲覧専用にする
-void _showChangeRequestListDialog(
+// 依頼一覧ダイアログを開く。
+// - canApply 指定時は一覧内に「適用」ボタンを出す。適用中は衝突ダイアログが開くため、
+//   一覧を先に閉じてから呼び出し元のcontextで適用ループを回す (ダイアログの多重表示を避ける)
+Future<void> _showChangeRequestListDialog(
   BuildContext context,
   String storeId,
   String weekStartDate,
   StoreSettings? storeSettings, {
   String? filterStaffId,
   bool canDelete = true,
-}) {
-  showDialog(
+  WidgetRef? applyRef,
+}) async {
+  final shouldApply = await showDialog<bool>(
     context: context,
     builder: (_) => _ChangeRequestListDialog(
       storeId: storeId,
@@ -968,8 +1153,77 @@ void _showChangeRequestListDialog(
       storeSettings: storeSettings,
       filterStaffId: filterStaffId,
       canDelete: canDelete,
+      canApply: applyRef != null,
     ),
   );
+
+  if (shouldApply != true || applyRef == null) return;
+  if (!context.mounted) return;
+  await _runApplyChangeRequests(context, applyRef, storeId, weekStartDate);
+}
+
+// 下書きに未確定の変更が残っていることを知らせる帯。
+// 「確定」を押すまでスタッフには反映されない、という一点だけを伝える
+class _UnpublishedChangesBanner extends StatelessWidget {
+  const _UnpublishedChangesBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.pendingBackground,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.edit_note, size: 18, color: AppColors.pending),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '未確定の変更があります。確定するまでスタッフには反映されません',
+              style: TextStyle(fontSize: 12, color: AppColors.pending),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// 下書きを確定してスタッフに公開する。取り消せない公開操作なので、事前に確認を挟む
+Future<void> _runPublishShiftTable(BuildContext context, WidgetRef ref,
+    String storeId, String weekStartDate) async {
+  final confirmed = await showConfirmationDialog(
+    context: context,
+    title: 'シフト表を確定',
+    content: '現在の内容を全スタッフに公開します。\n'
+        '公開後もシフト表は編集できますが、変更を反映するには再度確定が必要です。',
+    confirmText: '確定して公開',
+    isDestructive: false,
+  );
+  if (confirmed != true) return;
+  if (!context.mounted) return;
+
+  try {
+    final resolvedCount = await ref
+        .read(shiftActionsProvider.notifier)
+        .publishShiftTable(storeId, weekStartDate);
+    if (!context.mounted) return;
+    ToastWidget.show(
+      context,
+      resolvedCount > 0
+          ? 'シフト表を公開しました($resolvedCount件の修正依頼を対応済みにしました)'
+          : 'シフト表を公開しました',
+      type: ToastType.success,
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+    ToastWidget.show(context, _describeShiftError(e, 'シフト表の確定失敗'),
+        type: ToastType.error);
+  }
 }
 
 // 「修正依頼を適用」のメインループ。衝突に当たるたびにダイアログで判断を聞き、
@@ -994,11 +1248,8 @@ Future<void> _runApplyChangeRequests(
 
     if (result.done) {
       if (!context.mounted) return;
-      final message = result.skippedStaleCount > 0
-          ? '${result.appliedCount}件適用しました('
-              '${result.skippedStaleCount}件は既に処理済みでした)'
-          : '${result.appliedCount}件適用しました';
-      ToastWidget.show(context, message, type: ToastType.success);
+      ToastWidget.show(context, _describeApplyResult(result),
+          type: ToastType.success);
       return;
     }
 
@@ -1029,12 +1280,16 @@ class _ChangeRequestListDialog extends ConsumerWidget {
   // スタッフに見せると403で失敗する)
   final bool canDelete;
 
+  // true の場合、一覧の下に「適用」ボタンを出す (マネージャー専用)
+  final bool canApply;
+
   const _ChangeRequestListDialog({
     required this.storeId,
     required this.weekStartDate,
     required this.storeSettings,
     this.filterStaffId,
     this.canDelete = true,
+    this.canApply = false,
   });
 
   @override
@@ -1047,9 +1302,27 @@ class _ChangeRequestListDialog extends ConsumerWidget {
     final requests = filterStaffId == null
         ? allRequests
         : allRequests.where((r) => r.staffId == filterStaffId).toList();
+    final pendingCount = requests.where((r) => r.isPending).length;
 
     return BaseDialog(
       title: filterStaffId == null ? '修正依頼一覧' : '自分の修正依頼',
+      // - 一覧を見て「そのまま反映する」流れが自然なため、適用ボタンはここに置く。
+      //   押すと一覧を閉じ、呼び出し元が適用ループ(衝突時は判断ダイアログ)を回す
+      footer: canApply && pendingCount > 0
+          ? SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentPrimary,
+                  foregroundColor: AppColors.textPrimaryLight,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                onPressed: () => Navigator.of(context).pop(true),
+                icon: const Icon(Icons.check_circle_outline, size: 18),
+                label: Text('上記の依頼を適用 ($pendingCount件)'),
+              ),
+            )
+          : null,
       content: SizedBox(
         width: 360,
         child: requests.isEmpty
@@ -1106,7 +1379,7 @@ class _ConflictResolutionDialog extends StatelessWidget {
                 )),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentPrimary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.textPrimaryLight,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: const Text('はい'),
@@ -1257,6 +1530,21 @@ class _ChangeRequestTile extends HookConsumerWidget {
       }
     }
 
+    // 未対応 / 反映済み(未確定) / 対応済み の3状態。中間状態を「対応済み」と同じ見た目に
+    // すると、確定していないのに片付いたと錯覚するため、あえて別トーンにする
+    final MiniCardTone tone;
+    final String statusLabel;
+    if (request.isApplied) {
+      tone = MiniCardTone.notSubmitted;
+      statusLabel = '反映済み(未確定)';
+    } else if (request.isResolved) {
+      tone = MiniCardTone.approved;
+      statusLabel = '対応済み';
+    } else {
+      tone = MiniCardTone.pending;
+      statusLabel = '未対応';
+    }
+
     return MiniStatusCard(
       tone: request.isPending ? MiniCardTone.pending : MiniCardTone.neutral,
       child: Column(
@@ -1271,12 +1559,7 @@ class _ChangeRequestTile extends HookConsumerWidget {
                       const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),
-              MiniStatusBadge(
-                tone: request.isPending
-                    ? MiniCardTone.pending
-                    : MiniCardTone.approved,
-                label: request.isPending ? '未対応' : '対応済み',
-              ),
+              MiniStatusBadge(tone: tone, label: statusLabel),
               if (canDelete)
                 SizedBox(
                   width: 28,
@@ -1526,7 +1809,8 @@ class _DayGrid extends StatelessWidget {
                   '${shift.startTime}-${shift.endTime}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, color: Colors.white70),
+                  style: const TextStyle(
+                      fontSize: 10, color: AppColors.shiftBlockSubLabel),
                 ),
                 Text(
                   staffNames[shift.staffId] ?? '不明',
@@ -1535,7 +1819,7 @@ class _DayGrid extends StatelessWidget {
                   style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white),
+                      color: AppColors.textPrimaryLight),
                 ),
               ],
             ),
@@ -1581,7 +1865,8 @@ class _DayGrid extends StatelessWidget {
                   '・${cluster.shifts.length}名',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, color: Colors.white70),
+                  style: const TextStyle(
+                      fontSize: 10, color: AppColors.shiftBlockSubLabel),
                 ),
                 for (final shift in cluster.shifts)
                   Padding(
@@ -1607,7 +1892,7 @@ class _DayGrid extends StatelessWidget {
                             style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white),
+                                color: AppColors.textPrimaryLight),
                           ),
                         ),
                       ],
@@ -1761,7 +2046,7 @@ class _ShiftFormDialog extends HookWidget {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentPrimary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textPrimaryLight,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               onPressed: submit,
@@ -1895,7 +2180,7 @@ class _ShiftChangeRequestDialog extends HookWidget {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentPrimary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textPrimaryLight,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               onPressed: submit,

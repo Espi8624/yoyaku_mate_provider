@@ -67,7 +67,7 @@ Future<String?> showJoinStoreDialog({
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentPrimary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textPrimaryLight,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

@@ -443,7 +443,7 @@ final selectedStoreIdProvider =
 );
 
 typedef _$SelectedStoreId = AutoDisposeNotifier<String?>;
-String _$profileActionsHash() => r'ca95b5786cec44d17e31bdf4c0134eb924968e27';
+String _$profileActionsHash() => r'a8e46a5c36f7467c96896e0030acb42c1098ef6e';
 
 /// See also [ProfileActions].
 @ProviderFor(ProfileActions)
@@ -459,7 +459,7 @@ final profileActionsProvider =
 );
 
 typedef _$ProfileActions = AutoDisposeNotifier<void>;
-String _$storeActionsHash() => r'4321241efd50bde9fba86308cbb22424caabddf2';
+String _$storeActionsHash() => r'7e3666ecacedad120070d7215038947c1948becb';
 
 /// See also [StoreActions].
 @ProviderFor(StoreActions)

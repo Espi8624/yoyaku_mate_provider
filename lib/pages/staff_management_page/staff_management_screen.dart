@@ -40,7 +40,7 @@ class StaffManagementScreen extends StatelessWidget {
               label: const Text('シフト表'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentPrimary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textPrimaryLight,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),

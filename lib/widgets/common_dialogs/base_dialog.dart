@@ -55,89 +55,91 @@ class _BaseDialogState extends State<BaseDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // Dialog は子を自前の Material で包み、その Material が子のサイズに追従する。
+    // ここで Center を挟むと Material が画面いっぱいに広がり、カードの外側でも
+    // 透明な Material がタップを吸収してしまうため、バリア(外側)タップで閉じられなくなる。
+    // Dialog 自身が中央寄せするので Center は不要
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(16.0),
       elevation: 0,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: widget.width ?? 600,
-            maxHeight: MediaQuery.of(context).size.height * 0.85,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            // Container(color:)はColoredBoxとして描画され、内部のListTile等が
-            // 参照するMaterial祖先とその間に割り込んでink splashを隠してしまうため、
-            // 背景色を保持しつつMaterialとして提供する
-            child: Material(
-              color: AppColors.cardBackground,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // AnimatedContainerで影が自然に出入りするようにする
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    decoration: BoxDecoration(
-                      color: AppColors.cardBackground,
-                      boxShadow: [
-                        // _isScrolledがtrueの場合のみ影を適用
-                        if (_isScrolled)
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 16, 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              widget.title,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
-                              ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: widget.width ?? 600,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          // Container(color:)はColoredBoxとして描画され、内部のListTile等が
+          // 参照するMaterial祖先とその間に割り込んでink splashを隠してしまうため、
+          // 背景色を保持しつつMaterialとして提供する
+          child: Material(
+            color: AppColors.cardBackground,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // AnimatedContainerで影が自然に出入りするようにする
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    boxShadow: [
+                      // _isScrolledがtrueの場合のみ影を適用
+                      if (_isScrolled)
+                        BoxShadow(
+                          color: AppColors.shadow.withValues(alpha: 0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 16, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.title,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
                             ),
                           ),
-                          IconButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.close,
-                                color: AppColors.textPrimary),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            splashRadius: 20,
-                          ),
-                        ],
-                      ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close,
+                              color: AppColors.textPrimary),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          splashRadius: 20,
+                        ),
+                      ],
                     ),
                   ),
+                ),
 
-                  // スクロール可能なコンテンツエリア
-                  Flexible(
-                    child: SingleChildScrollView(
-                      // SingleChildScrollViewにScrollControllerを繋げる
-                      controller: _scrollController,
-                      padding: widget.contentPadding ??
-                          EdgeInsets.fromLTRB(
-                              24, 8, 24, widget.footer != null ? 8 : 24),
-                      child: widget.content,
-                    ),
+                // スクロール可能なコンテンツエリア
+                Flexible(
+                  child: SingleChildScrollView(
+                    // SingleChildScrollViewにScrollControllerを繋げる
+                    controller: _scrollController,
+                    padding: widget.contentPadding ??
+                        EdgeInsets.fromLTRB(
+                            24, 8, 24, widget.footer != null ? 8 : 24),
+                    child: widget.content,
                   ),
+                ),
 
-                  // footer指定時、スクロール量に関わらず下部に固定表示する
-                  if (widget.footer != null)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                      child: widget.footer,
-                    ),
-                ],
-              ),
+                // footer指定時、スクロール量に関わらず下部に固定表示する
+                if (widget.footer != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                    child: widget.footer,
+                  ),
+              ],
             ),
           ),
         ),
