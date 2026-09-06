@@ -29,11 +29,19 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  if (kReleaseMode) {
-    await dotenv.load(fileName: ".env.production");
-  } else {
-    await dotenv.load(fileName: ".env.development");
-  }
+  // 接続先は --dart-define=APP_ENV=dev|prod で明示的に切り替える:
+  //   未指定            → ローカル (.env.development, localhost)
+  //   APP_ENV=dev       → 共有の開発用サーバー (.env.remote-dev, rusui-dev + Cloudflare)
+  //   APP_ENV=prod      → 本番 (.env.production)
+  // ただし、リリースビルドでAPP_ENV指定を忘れた場合に誤ってlocalhostへ
+  // 接続したまま出荷されるのを防ぐため、リリースビルドはデフォルトでprodにする
+  const appEnv = String.fromEnvironment('APP_ENV', defaultValue: '');
+  const String envFile = appEnv == 'dev'
+      ? '.env.remote-dev'
+      : appEnv == 'prod'
+          ? '.env.production'
+          : (kReleaseMode ? '.env.production' : '.env.development');
+  await dotenv.load(fileName: envFile);
 
   // Crashlytics Configuration
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
