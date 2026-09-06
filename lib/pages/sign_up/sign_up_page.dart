@@ -19,7 +19,6 @@ import 'package:yoyaku_mate_provider/pages/sign_up/steps/email_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/password_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/email_verification_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/phone_number_input_step.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/steps/verification_code_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/manager_info_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_name_step.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
@@ -64,10 +63,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   final TextEditingController staffFirstNameKanaController =
       TextEditingController();
 
-  final TextEditingController verificationCodeController =
-      TextEditingController();
-
   bool _isInitialized = false;
+  // 会員登録が正常に完了したかどうか (disposeでの途中離脱クリーンアップと区別するため)
+  bool _signupCompleted = false;
   ProviderSubscription<AsyncValue<UserProfile>>? _userProfileSubscription;
 
   @override
@@ -170,6 +168,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
   @override
   void dispose() {
+    // 会員登録を完了せずに画面を離脱した場合(OS戻る操作など)、
+    // 途中状態が残って次回再開時に認証周りが混乱しないよう完全に破棄する
+    if (!_signupCompleted) {
+      ref.read(signUpNotifierProvider.notifier).discardProgress();
+    }
+
     setSignUpInProgress(false);
     _pageController.removeListener(_pageControllerListener);
     _userProfileSubscription?.close();
@@ -193,7 +197,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     staffLastNameKanaController.dispose();
     staffFirstNameKanaController.dispose();
 
-    verificationCodeController.dispose();
     super.dispose();
   }
 
@@ -262,20 +265,15 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         ), // 5
         PhoneNumberInputStep(
           controller: managerPhoneController,
-          onSendCode: _sendPhoneCode,
+          onNext: _submitPhoneNumber,
         ), // 6
-        VerificationCodeInputStep(
-          controller: verificationCodeController,
-          onVerify: _verifyPhoneCode,
-          onResend: _resendPhoneCode,
-        ), // 7
         ManagerInfoStep(
           lastNameController: managerLastNameController,
           firstNameController: managerFirstNameController,
           lastNameKanaController: managerLastNameKanaController,
           firstNameKanaController: managerFirstNameKanaController,
-          onNext: _handleSignUp, // Step 8で完了
-        ), // 8
+          onNext: _handleSignUp, // Step 7で完了
+        ), // 7
       ];
     } else {
       // スタッフ用ページ
@@ -300,20 +298,15 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         ), // 5
         PhoneNumberInputStep(
           controller: staffPhoneController,
-          onSendCode: _sendPhoneCode,
+          onNext: _submitPhoneNumber,
         ), // 6
-        VerificationCodeInputStep(
-          controller: verificationCodeController,
-          onVerify: _verifyPhoneCode,
-          onResend: _resendPhoneCode,
-        ), // 7
         StaffNameStep(
           lastNameController: staffLastNameController,
           firstNameController: staffFirstNameController,
           lastNameKanaController: staffLastNameKanaController,
           firstNameKanaController: staffFirstNameKanaController,
-          onSubmit: _handleSignUp, // Step 8で完了
-        ), // 8
+          onSubmit: _handleSignUp, // Step 7で完了
+        ), // 7
       ];
     }
   }
@@ -420,46 +413,15 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     }
   }
 
-  Future<void> _sendPhoneCode() async {
+  // 電話番号認証は廃止。入力された電話番号を進捗として保存し、次のステップへ進む
+  Future<void> _submitPhoneNumber() async {
     final role = ref.read(signUpNotifierProvider).role;
     final notifier = ref.read(signUpNotifierProvider.notifier);
     final phoneController =
         role == 'manager' ? managerPhoneController : staffPhoneController;
-    final rawPhoneNumber = phoneController.text.trim();
 
-    final success = await notifier.sendPhoneCode(rawPhoneNumber, role ?? 'manager');
-    if (success && mounted) {
-      ToastWidget.show(context, '認証コードを送信しました。', type: ToastType.success);
-      _nextPage();
-    }
-  }
-
-  Future<void> _verifyPhoneCode() async {
-    final role = ref.read(signUpNotifierProvider).role;
-    final notifier = ref.read(signUpNotifierProvider.notifier);
-    final success = await notifier.verifyPhoneCode(verificationCodeController.text);
-    if (success && mounted) {
-      final phoneController =
-          role == 'manager' ? managerPhoneController : staffPhoneController;
-      notifier.savePhoneProgress(phoneController.text.trim());
-
-      ToastWidget.show(context, '電話番号認証が完了しました。', type: ToastType.success);
-      _nextPage();
-    }
-  }
-
-  Future<void> _resendPhoneCode() async {
-    final role = ref.read(signUpNotifierProvider).role;
-    final notifier = ref.read(signUpNotifierProvider.notifier);
-    final phoneController =
-        role == 'manager' ? managerPhoneController : staffPhoneController;
-    final success =
-        await notifier.sendPhoneCode(phoneController.text.trim(), role ?? 'manager');
-    if (success && mounted) {
-      if (success && mounted) {
-        ToastWidget.show(context, '認証コードを再送信しました。', type: ToastType.success);
-      }
-    }
+    await notifier.savePhoneProgress(phoneController.text.trim());
+    if (mounted) _nextPage();
   }
 
   Future<void> _handleSignUp() async {
@@ -509,6 +471,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       if (mounted) {
         // Refactor: 登録完了画面 または ホームへ (main.dart route logic will redirect to StoreSelection)
         // ここでは一旦完了画面へ
+        _signupCompleted = true;
         context.go('/signup-prompt');
       }
     }
@@ -545,12 +508,28 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   }
 
   Future<void> _handleBackButton() async {
+    final isEmailVerified = ref.read(signUpNotifierProvider).isEmailVerified;
+
+    // メール認証完了後(電話番号・情報入力ステップ)は、最初からやり直す
+    // 確認ダイアログを出さず、普通に1つ前のステップへ戻れるようにする
+    if (isEmailVerified && _currentPageIndex > 2) {
+      FocusScope.of(context).unfocus();
+      // メール認証待機ステップ(5)はメール認証済みならもう不要なのでスキップ
+      final prevIndex = _currentPageIndex == 6 ? 2 : _currentPageIndex - 1;
+      _pageController.animateToPage(prevIndex,
+          duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+      return;
+    }
+
     if (_currentPageIndex == 0) {
       context.go('/login');
     } else {
       final shouldGoBack = await _showCancelConfirmDialog();
       if (shouldGoBack && mounted) {
-        ref.read(signUpNotifierProvider.notifier).reset();
+        // ダイアログの「戻ると最初からやり直しになる」という説明どおりに
+        // 進捗・Firebaseセッションまで完全に破棄する
+        await ref.read(signUpNotifierProvider.notifier).discardProgress();
+        if (!mounted) return;
 
         managerEmailController.clear();
         managerPasswordController.clear();
@@ -569,7 +548,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         staffFirstNameController.clear();
         staffLastNameKanaController.clear();
         staffFirstNameKanaController.clear();
-        verificationCodeController.clear();
 
         _pageController.jumpToPage(0);
       }
