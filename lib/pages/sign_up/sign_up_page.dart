@@ -510,13 +510,14 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   Future<void> _handleBackButton() async {
     final isEmailVerified = ref.read(signUpNotifierProvider).isEmailVerified;
 
-    // メール認証完了後(電話番号・情報入力ステップ)は、最初からやり直す
-    // 確認ダイアログを出さず、普通に1つ前のステップへ戻れるようにする
-    if (isEmailVerified && _currentPageIndex > 2) {
+    // 情報入力ステップ(7)からは、確認ダイアログを出さず普通に1つ前の
+    // ステップ(電話番号入力, 6)へ戻れるようにする。
+    // 電話番号入力ステップ(6)自体まで戻った場合は、そこから更に戻れる
+    // 自然な「1つ前」が無い(3〜5はメール認証済みなら不要)ため、
+    // 従来通り最初からやり直す確認ダイアログを出す
+    if (isEmailVerified && _currentPageIndex > 6) {
       FocusScope.of(context).unfocus();
-      // メール認証待機ステップ(5)はメール認証済みならもう不要なのでスキップ
-      final prevIndex = _currentPageIndex == 6 ? 2 : _currentPageIndex - 1;
-      _pageController.animateToPage(prevIndex,
+      _pageController.animateToPage(_currentPageIndex - 1,
           duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
       return;
     }
