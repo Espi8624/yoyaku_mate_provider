@@ -107,7 +107,7 @@ class ProviderProfileService {
     return UserProfile.fromJson(userData as Map<String, dynamic>);
   }
 
-  // 会員退会 (アカウントの完全削除)
+  // 会員退会 (ソフトデリート。連絡先は保持されログインのみ不可になる)
   // マネージャーが店舗を保有したままの場合など、サーバー側で拒否されることがあるため
   // レスポンスの message フィールドをそのままエラーメッセージとして使う
   Future<void> deleteAccount(String mongoUserId) async {

@@ -293,7 +293,7 @@ class PersonalProfileView extends ConsumerWidget {
                 children: [
                   ProfileSettingItem(
                     title: '退会',
-                    subtitle: 'アカウントと個人情報を完全に削除します',
+                    subtitle: 'ログインできなくなります',
                     titleColor: AppColors.error,
                     onTap: () => _handleDeleteAccount(context),
                   ),

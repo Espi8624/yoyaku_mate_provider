@@ -11,7 +11,8 @@ import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 /// 会員退会用ダイアログ
 ///
 /// 本人確認のためパスワードの再入力(Firebase reauthenticateWithCredential)を
-/// 必須にした上で、サーバー側にアカウント完全削除を依頼する。
+/// 必須にした上で、サーバー側に退会(ソフトデリート)を依頼する。氏名・電話番号
+/// などの連絡先は削除されず、ログインのみ不可になる(サーバー側の方針)。
 /// 店舗を保有したままのマネージャーはサーバー側で拒否される(store_info参照)
 class DeleteAccountDialog extends ConsumerStatefulWidget {
   const DeleteAccountDialog({super.key});
@@ -85,7 +86,8 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '退会すると、アカウント情報は完全に削除され元に戻せません。\n'
+              '退会すると、このアカウントではログインできなくなります。\n'
+              '必要な連絡のため、氏名・電話番号などの情報は運営側で保持されます。\n'
               '続行するには現在のパスワードを入力してください。',
               style: TextStyle(color: AppColors.textSecondary, height: 1.5),
             ),
