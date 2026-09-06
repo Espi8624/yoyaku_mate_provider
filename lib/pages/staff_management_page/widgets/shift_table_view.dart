@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
+import 'package:yoyaku_mate_provider/constants/staff_status.dart';
 import 'package:yoyaku_mate_provider/constants/time_block.dart';
 import 'package:yoyaku_mate_provider/models/shift_change_request.dart';
 import 'package:yoyaku_mate_provider/models/shift_table.dart';
 import 'package:yoyaku_mate_provider/models/store_settings.dart';
 import 'package:yoyaku_mate_provider/pages/staff_management_page/shift_table_providers.dart';
 import 'package:yoyaku_mate_provider/pages/staff_management_page/staff_management_providers.dart';
+import 'package:yoyaku_mate_provider/pages/profile_page/widgets/views/staff_approval_status_view.dart';
 import 'package:yoyaku_mate_provider/providers/session_providers.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
@@ -198,6 +200,7 @@ class ShiftTableView extends HookConsumerWidget {
 
     final currentUser = ref.watch(userProfileProvider).valueOrNull;
     final isManager = currentUser?.role == 'manager';
+    final storeProfile = ref.watch(selectedStoreProfileProvider);
 
     final shiftTableAsync = ref.watch(
         shiftTableProvider(storeId: storeId, weekStartDate: weekStartDate));
@@ -240,6 +243,16 @@ class ShiftTableView extends HookConsumerWidget {
         // 確認は補助的な機能。失敗しても画面には何も出さず、次回の復帰時に再試行する
       }
     });
+
+    // 承認待ち・拒否済みのスタッフはシフト表取得APIが403を返すため、
+    // 承認状態の案内だけを表示する(プロフィール画面と同じ判定・同じ表示)
+    final staffStatus = storeProfile?.staffStatus;
+    if (!isManager && staffStatus != null && staffStatus != StaffStatus.approved) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: StaffApprovalStatusWidget(status: staffStatus),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

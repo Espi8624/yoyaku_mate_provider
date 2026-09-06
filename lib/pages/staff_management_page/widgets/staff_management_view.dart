@@ -10,6 +10,7 @@ import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/constants/staff_status.dart';
 import 'package:yoyaku_mate_provider/constants/time_block.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/dialogs/day_availability_dialog.dart';
+import 'package:yoyaku_mate_provider/pages/profile_page/widgets/views/staff_approval_status_view.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 // 例外からユーザー向けメッセージを組み立てる共通処理
@@ -28,12 +29,24 @@ class StaffManagementView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(userProfileProvider).valueOrNull;
+    final storeProfile = ref.watch(selectedStoreProfileProvider);
+    final bool isManager = currentUser?.role == 'manager';
+
+    // 承認待ち・拒否済みのスタッフは一覧取得APIが403を返すため、
+    // 呼び出す前に承認状態の案内だけを表示する(プロフィール画面と同じ判定・同じ表示)
+    final staffStatus = storeProfile?.staffStatus;
+    if (!isManager && staffStatus != null && staffStatus != StaffStatus.approved) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: StaffApprovalStatusWidget(status: staffStatus),
+      );
+    }
+
     // API取得結果は宣言的に購読するだけでよく、initState等での明示的な呼び出しは不要
     final staffAsync = ref.watch(staffListProvider(storeId: storeId));
-    final currentUser = ref.watch(userProfileProvider).valueOrNull;
     final storeSettings =
         ref.watch(storeSettingsProvider(storeId: storeId)).valueOrNull;
-    final bool isManager = currentUser?.role == 'manager';
 
     final staffList = staffAsync.value ?? const <Map<String, dynamic>>[];
 
