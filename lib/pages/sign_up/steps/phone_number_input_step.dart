@@ -6,12 +6,12 @@ import 'package:yoyaku_mate_provider/widgets/common_buttons/action_button.dart';
 
 class PhoneNumberInputStep extends ConsumerStatefulWidget {
   final TextEditingController controller;
-  final VoidCallback onSendCode;
+  final VoidCallback onNext;
 
   const PhoneNumberInputStep({
     super.key,
     required this.controller,
-    required this.onSendCode,
+    required this.onNext,
   });
 
   @override
@@ -34,10 +34,10 @@ class _PhoneNumberInputStepState extends ConsumerState<PhoneNumberInputStep> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('電話番号認証',
+            const Text('電話番号入力',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text('本人確認のために電話番号を認証してください。',
+            const Text('連絡先として使用する電話番号を入力してください。',
                 style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
             const SizedBox(height: 32),
             _buildTextField(
@@ -46,7 +46,7 @@ class _PhoneNumberInputStepState extends ConsumerState<PhoneNumberInputStep> {
                 type: TextInputType.phone,
                 validator: _validatePhoneNumber),
             const SizedBox(height: 16),
-            const Text('※ハイフンなしで入力してください\n※認証コードがSMSで送信されます',
+            const Text('※ハイフンなしで入力してください',
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             if (errorMessage != null)
               Padding(
@@ -54,8 +54,7 @@ class _PhoneNumberInputStepState extends ConsumerState<PhoneNumberInputStep> {
                   child: Text(errorMessage,
                       style: const TextStyle(color: AppColors.error))),
             const SizedBox(height: 40),
-            ActionButton(
-                label: '認証コードを送信', onPressed: _submit, isLoading: isLoading),
+            ActionButton(label: '次へ', onPressed: _submit, isLoading: isLoading),
           ],
         ),
       ),
@@ -64,7 +63,7 @@ class _PhoneNumberInputStepState extends ConsumerState<PhoneNumberInputStep> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      widget.onSendCode();
+      widget.onNext();
     }
   }
 
