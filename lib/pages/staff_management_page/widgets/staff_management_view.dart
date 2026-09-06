@@ -70,25 +70,31 @@ class StaffManagementView extends ConsumerWidget {
       }
     }
 
-    // 「現在のメンバー」= 承認待ち・承認済み・「一度も承認されたことのない」拒否済み
-    // (=まだ店舗に関わったことのない申請却下)。
-    // 「過去のメンバー」= 退会済み(WITHDRAWN)・「一度は承認されていた」拒否済み
-    // (=承認取り消し。実際に一緒に働いたことがある)。
+    // メンバー一覧を3タブに分類する。
+    // 「承認済み」= APPROVED(現在一緒に働いているスタッフ)
+    // 「未承認」= PENDING、または「一度も承認されたことのない」拒否済み
+    //   (=まだ店舗に関わったことのない申請却下)
+    // 「退会済み」= WITHDRAWN、または「一度は承認されていた」拒否済み
+    //   (=承認取り消し。実際に一緒に働いたことがある)
     // REJECTEDは申請却下と承認取り消しの両方が共有する状態のため、
     // has_been_approved(過去に一度でもAPPROVEDになったか)で区別する。
     // いずれも store_staff_info のレコード自体は削除されず残るため、
     // 連絡先確認用にタブを分けて参照できるようにする
-    bool isPastMember(Map<String, dynamic> s) {
-      if (s['status'] == StaffStatus.withdrawn) return true;
-      if (s['status'] == StaffStatus.rejected) {
-        return s['has_been_approved'] == true;
-      }
-      return false;
-    }
-
-    final activeStaffList =
-        otherStaffList.where((s) => !isPastMember(s)).toList();
-    final formerStaffList = otherStaffList.where(isPastMember).toList();
+    final approvedStaffList = otherStaffList
+        .where((s) => s['status'] == StaffStatus.approved)
+        .toList();
+    final unapprovedStaffList = otherStaffList
+        .where((s) =>
+            s['status'] == StaffStatus.pending ||
+            (s['status'] == StaffStatus.rejected &&
+                s['has_been_approved'] != true))
+        .toList();
+    final withdrawnStaffList = otherStaffList
+        .where((s) =>
+            s['status'] == StaffStatus.withdrawn ||
+            (s['status'] == StaffStatus.rejected &&
+                s['has_been_approved'] == true))
+        .toList();
 
     // タブ内のメンバーリストを構築する共通処理
     Widget buildMemberList(
@@ -137,7 +143,7 @@ class StaffManagementView extends ConsumerWidget {
       );
     } else {
       listBody = DefaultTabController(
-        length: 2,
+        length: 3,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -148,17 +154,20 @@ class StaffManagementView extends ConsumerWidget {
               unselectedLabelColor: AppColors.textSecondary,
               indicatorColor: AppColors.accentPrimary,
               tabs: [
-                Tab(text: '現在のメンバー'),
-                Tab(text: '過去のメンバー'),
+                Tab(text: '承認済み'),
+                Tab(text: '未承認'),
+                Tab(text: '退会済み'),
               ],
             ),
             Expanded(
               child: TabBarView(
                 children: [
                   buildMemberList(
-                      activeStaffList, '現在登録されている他のメンバーはいません。'),
+                      approvedStaffList, '現在登録されている他のメンバーはいません。'),
                   buildMemberList(
-                      formerStaffList, '過去に在籍したメンバーはいません。'),
+                      unapprovedStaffList, '承認待ち・却下されたメンバーはいません。'),
+                  buildMemberList(
+                      withdrawnStaffList, '退会・過去に在籍したメンバーはいません。'),
                 ],
               ),
             ),
