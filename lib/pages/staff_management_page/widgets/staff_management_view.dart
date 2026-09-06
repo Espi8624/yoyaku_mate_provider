@@ -395,6 +395,19 @@ class _StaffCard extends HookConsumerWidget {
                           color: AppColors.textSecondary,
                         ),
                       ),
+                      // 退会済みスタッフでも連絡が取れるよう電話番号を表示する
+                      if ((staff['phone'] as String?)?.isNotEmpty ?? false) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          staff['phone'],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -534,9 +547,11 @@ class _StaffCard extends HookConsumerWidget {
             ],
 
             // ステータス変更ボタンは操作許可がある場合のみ表示。
-            // 承認済みの「承認取り消し」は上部の氏名行に移したため、ここには出さない
+            // 承認済みの「承認取り消し」は上部の氏名行に移したため、ここには出さない。
+            // 退会済みは操作対象外のため、ボタンなしの空行を出さないよう除外する
             if (canManageStatusAndPermissions &&
-                status != StaffStatus.approved) ...[
+                status != StaffStatus.approved &&
+                status != StaffStatus.withdrawn) ...[
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -617,6 +632,10 @@ class _StaffCard extends HookConsumerWidget {
       case StaffStatus.rejected:
         color = AppColors.notSubmitted;
         tooltip = '拒否済み';
+        break;
+      case StaffStatus.withdrawn:
+        color = AppColors.textTertiary;
+        tooltip = '退会済み';
         break;
       default:
         color = AppColors.notSubmitted;
