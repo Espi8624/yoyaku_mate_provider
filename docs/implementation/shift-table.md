@@ -23,10 +23,14 @@ class ShiftTable {
   final String storeId;
   final String weekStartDate; // その週の月曜日 "YYYY-MM-DD"
   final List<Shift> shifts;
+  final bool hasUnpublishedChanges; // 下書きに未確定の変更が残っているか
+  final DateTime? publishedAt;      // 最後にスタッフへ公開した日時
 }
 ```
 
 サーバーの BSON/JSON フィールド名とそのまま一致させ、変換処理を不要にしている(`staff_availability` 実装と同じ方針)。
+
+サーバーは下書きと確定版を別々に保持するが、`shifts` には常に「自分が見るべき版」が入って返る(マネージャーには編集中の下書き、スタッフには確定版)。そのため描画側は両者を区別する必要がなく、グリッドのコードは役割によらず1本で済む。`hasUnpublishedChanges` はマネージャー向けレスポンスにのみ含まれ、下部ボタンを「確定して公開」/「自動配置」のどちらにするかの判定と、未確定バナーの表示に使う(スタッフには常に `false`)。判定式は `ShiftTable.hasDraftToReview` にまとめてあり、下部ボタンとヘッダーの破棄ボタンが同じ条件を共有する。
 
 ---
 
@@ -40,7 +44,11 @@ Future<void> createShiftTable(String storeId, String weekStartDate)
 Future<void> addShift(String storeId, String weekStartDate, {required staffId, required day, required startTime, required endTime})
 Future<void> updateShift(String storeId, String weekStartDate, String shiftId, {...})
 Future<void> deleteShift(String storeId, String weekStartDate, String shiftId)
+Future<int> publishShiftTable(String storeId, String weekStartDate)
+Future<int> discardShiftTableDraft(String storeId, String weekStartDate)
 ```
+
+`publishShiftTable` は下書きを確定してスタッフに公開する唯一の経路で、戻り値は今回の確定で処理済みになった修正依頼の件数。編集・自動配置・修正依頼の適用はすべて下書きにしか効かないため、スタッフのシフト表が変わるのはこの呼び出しの時だけになる。
 
 `fetchShiftTable` は HTTP `404` を例外にせず `null` として返す点が特徴的で、呼び出し側 (Riverpod provider) はこれをそのまま「シフト表未作成」状態として扱う。`lib/providers/session_providers.dart` に `shiftTableServiceProvider` として登録。
 
@@ -60,10 +68,12 @@ class ShiftActions extends _$ShiftActions {
   Future<void> addShift(...)
   Future<void> updateShift(...)
   Future<void> deleteShift(...)
+  Future<int> publishShiftTable(...)
+  Future<int> discardShiftTableDraft(...)
 }
 ```
 
-`ShiftActions` は状態を持たないアクション専用 Notifier で、各メソッドは成功時に `shiftTableProvider(storeId:, weekStartDate:)` を invalidate して宣言的に再取得させる。`storeId` + `weekStartDate` の family キーにより、週を切り替えるたびに別々の取得結果がキャッシュされる。
+`ShiftActions` は状態を持たないアクション専用 Notifier で、各メソッドは成功時に `shiftTableProvider(storeId:, weekStartDate:)` を invalidate して宣言的に再取得させる。`publishShiftTable` だけは修正依頼のステータスも同時に変わるため、`shiftChangeRequestsProvider` も併せて invalidate する。`storeId` + `weekStartDate` の family キーにより、週を切り替えるたびに別々の取得結果がキャッシュされる。
 
 ---
 

@@ -50,6 +50,7 @@ docs/
 | ドキュメント | 説明 |
 |------|------|
 | [001-lessons-learned.md](./troubles/001-lessons-learned.md) | SSE再接続、冪等性、ローカルキャッシュ、fl_chart描画パフォーマンス改善の振り返り |
+| [002-m3-seed-color-teal.md](./troubles/002-m3-seed-color-teal.md) | 無彩色をシードにした ColorScheme が青緑になり、色未指定のウィジェットに波及した問題 |
 
 ---
 

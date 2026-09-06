@@ -61,9 +61,30 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.background,
         canvasColor: AppColors.cardBackground,
+        // accentPrimary(#2C2C2C)のような無彩色をseedにすると、M3のHCTアルゴリズムは
+        // 色相を復元できないまま既定の彩度を足すため、primaryが青緑に転ぶ。
+        // 色を明示していないウィジェット(OutlinedButton・TextButton・
+        // CircularProgressIndicator・Switch等)がその青緑を拾ってしまうので、
+        // 彩度を落とすneutralバリアントを指定した上で、実際に画面へ出るロールは
+        // AppColorsで直接上書きする
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.accentPrimary,
-          background: AppColors.background,
+          dynamicSchemeVariant: DynamicSchemeVariant.neutral,
+        ).copyWith(
+          primary: AppColors.accentPrimary,
+          onPrimary: AppColors.textPrimaryLight,
+          secondary: AppColors.accentSecondary,
+          onSecondary: AppColors.textPrimaryLight,
+          surface: AppColors.cardBackground,
+          onSurface: AppColors.textPrimary,
+          tertiary: AppColors.accentSecondary,
+          onTertiary: AppColors.textPrimaryLight,
+          error: AppColors.error,
+          onError: AppColors.textPrimaryLight,
+          outline: AppColors.border,
+          // M3はelevationのあるCard/Dialog/Menuの背景をこの色で着色する。
+          // 未指定だとseed由来の青緑が薄く乗るため、無彩色に固定する
+          surfaceTint: AppColors.accentPrimary,
         ),
         useMaterial3: true,
         textSelectionTheme: const TextSelectionThemeData(
@@ -104,7 +125,7 @@ class MyApp extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withOpacity(0.08),
+                          AppColors.shadow.withValues(alpha: 0.08),
                           Colors.transparent,
                         ],
                       ),

@@ -162,6 +162,50 @@ class ShiftTableService {
     }
   }
 
+  // 下書きを確定してスタッフに公開する (マネージャー専用)。
+  // シフト表の編集・自動配置・修正依頼の適用は全て下書きにしか効かないため、
+  // スタッフのシフト表が変わるのはこの呼び出しの時だけになる。
+  // 戻り値は今回の確定で処理済みになった修正依頼の件数
+  Future<int> publishShiftTable(String storeId, String weekStartDate) async {
+    final token = await _getIdToken();
+    final response = await apiClient.post(
+      Uri.parse(
+          '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/publish'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(
+          'シフト表の確定に失敗しました。Status: ${response.statusCode}, Body: ${response.body}',
+          statusCode: response.statusCode);
+    }
+
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    return (decoded['resolved_request_count'] as int?) ?? 0;
+  }
+
+  // 下書きを破棄して確定版の内容へ戻す (マネージャー専用)。
+  // 確定版そのものは変更しないため、スタッフに見えているシフト表はこの操作では変わらない。
+  // 戻り値は未対応(pending)へ戻した修正依頼の件数
+  Future<int> discardShiftTableDraft(
+      String storeId, String weekStartDate) async {
+    final token = await _getIdToken();
+    final response = await apiClient.post(
+      Uri.parse(
+          '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/discard-draft'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(
+          '下書きの破棄に失敗しました。Status: ${response.statusCode}, Body: ${response.body}',
+          statusCode: response.statusCode);
+    }
+
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    return (decoded['reverted_request_count'] as int?) ?? 0;
+  }
+
   // 週間シフト表に対する修正依頼一覧を取得 (承認済みスタッフ/マネージャー共通)
   Future<List<ShiftChangeRequest>> fetchChangeRequests(
       String storeId, String weekStartDate) async {
@@ -220,24 +264,7 @@ class ShiftTableService {
     }
   }
 
-  // その週の未処理の修正依頼を全て処理済みにする (マネージャー専用)
-  Future<void> resolveChangeRequests(
-      String storeId, String weekStartDate) async {
-    final token = await _getIdToken();
-    final response = await apiClient.post(
-      Uri.parse(
-          '$baseUrl/api/stores/$storeId/shift-tables/$weekStartDate/change-requests/resolve'),
-      headers: _headers(token),
-    );
-
-    if (response.statusCode != 200) {
-      throw ApiException(
-          '修正依頼の処理に失敗しました。Status: ${response.statusCode}, Body: ${response.body}',
-          statusCode: response.statusCode);
-    }
-  }
-
-  // その週の未処理の修正依頼を、古い順に実際のシフト表へ反映する (マネージャー専用)。
+  // その週の未処理の修正依頼を、古い順に下書きのシフト表へ反映する (マネージャー専用)。
   // 衝突に当たった場合は途中で止まり、その1件を結果に含めて返す。呼び出し側はマネージャーの
   // 判断を resolutions に足して、衝突が無くなる(done=true)まで呼び直すウィザード方式
   Future<ChangeRequestApplyResult> applyChangeRequests(

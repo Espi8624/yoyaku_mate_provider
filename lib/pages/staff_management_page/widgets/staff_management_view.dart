@@ -213,9 +213,9 @@ class _MyManagerCard extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       userProfile?.email ?? '',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
-                        color: Colors.grey[600],
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -390,9 +390,9 @@ class _StaffCard extends HookConsumerWidget {
                         staff['email'] ?? '',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -419,11 +419,11 @@ class _StaffCard extends HookConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       "権限設定",
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey[700],
+                        color: AppColors.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -432,7 +432,7 @@ class _StaffCard extends HookConsumerWidget {
                           ? Icons.keyboard_arrow_up
                           : Icons.keyboard_arrow_down,
                       size: 20,
-                      color: Colors.grey[700],
+                      color: AppColors.textSecondary,
                     ),
                   ],
                 ),
@@ -499,11 +499,11 @@ class _StaffCard extends HookConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       "勤務不可時間",
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey[700],
+                        color: AppColors.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -512,7 +512,7 @@ class _StaffCard extends HookConsumerWidget {
                           ? Icons.keyboard_arrow_up
                           : Icons.keyboard_arrow_down,
                       size: 20,
-                      color: Colors.grey[700],
+                      color: AppColors.textSecondary,
                     ),
                   ],
                 ),
@@ -521,7 +521,7 @@ class _StaffCard extends HookConsumerWidget {
                 const SizedBox(height: 12),
                 const Text(
                   '曜日をタップして編集(赤=終日不可、橙=一部不可)',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                 ),
                 const SizedBox(height: 8),
                 _AvailabilitySummary(
@@ -547,8 +547,8 @@ class _StaffCard extends HookConsumerWidget {
                       onPressed: () =>
                           _changeStatus(context, ref, StaffStatus.rejected),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
                       ),
                       child: const Text('拒否'),
                     ),
@@ -558,7 +558,7 @@ class _StaffCard extends HookConsumerWidget {
                           _changeStatus(context, ref, StaffStatus.approved),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentPrimary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.textPrimaryLight,
                       ),
                       child: const Text('承認'),
                     ),
@@ -571,7 +571,7 @@ class _StaffCard extends HookConsumerWidget {
                           _changeStatus(context, ref, StaffStatus.approved),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentPrimary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.textPrimaryLight,
                       ),
                       child: const Text('承認'),
                     ),

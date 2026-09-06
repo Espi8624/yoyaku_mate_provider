@@ -15,7 +15,10 @@ class ShiftChangeRequest {
   final String toDay;
   final String toStartTime;
   final String toEndTime;
-  final String status; // 'pending' | 'resolved'
+  // 'pending' | 'applied' | 'resolved'
+  // applied はマネージャーが下書きへ反映済みだがまだ確定していない中間状態で、
+  // マネージャーにしか届かない (スタッフ向けレスポンスでは pending に伏せられる)
+  final String status;
   final DateTime createdAt;
   final DateTime? resolvedAt;
 
@@ -35,7 +38,14 @@ class ShiftChangeRequest {
     this.resolvedAt,
   });
 
+  // まだマネージャーが手を付けていない依頼 (適用処理の対象になるのはこれだけ)
   bool get isPending => status == 'pending';
+
+  // 下書きへ反映済み・未確定。確定すると resolved に進む
+  bool get isApplied => status == 'applied';
+
+  // 確定済みでスタッフにも「対応済み」として見えている
+  bool get isResolved => status == 'resolved';
 
   factory ShiftChangeRequest.fromJson(Map<String, dynamic> json) {
     return ShiftChangeRequest(
@@ -148,12 +158,20 @@ class ChangeRequestConflict {
 // 一括適用1回の呼び出し結果。conflict が null なら全て処理完了(done=true)
 class ChangeRequestApplyResult {
   final int appliedCount;
+
+  // 本人が同じ枠へ出し直したため、古い依頼を解決済みにした件数
+  final int supersededCount;
+
+  // 依頼元のシフトが既に無く適用できないため、解決済みにした件数。
+  // 「既に処理済み」とは限らず、マネージャーがそのシフトを削除・変更した場合も含む
   final int skippedStaleCount;
+
   final bool done;
   final ChangeRequestConflict? conflict;
 
   ChangeRequestApplyResult({
     required this.appliedCount,
+    required this.supersededCount,
     required this.skippedStaleCount,
     required this.done,
     this.conflict,
@@ -162,6 +180,7 @@ class ChangeRequestApplyResult {
   factory ChangeRequestApplyResult.fromJson(Map<String, dynamic> json) {
     return ChangeRequestApplyResult(
       appliedCount: json['applied_count'] ?? 0,
+      supersededCount: json['superseded_count'] ?? 0,
       skippedStaleCount: json['skipped_stale_count'] ?? 0,
       done: json['done'] ?? true,
       conflict: json['conflict'] != null
