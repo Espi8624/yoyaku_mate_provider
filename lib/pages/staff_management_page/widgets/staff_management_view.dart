@@ -70,6 +70,45 @@ class StaffManagementView extends ConsumerWidget {
       }
     }
 
+    // 「現在のメンバー」= 退会していない全員(承認済み/承認待ち/拒否済み)。
+    // 「過去のメンバー」= 退会済み(WITHDRAWN)。連絡先確認のため一覧からは消さず、
+    // タブを分けて過去の在籍者として参照できるようにする
+    final activeStaffList = otherStaffList
+        .where((s) => s['status'] != StaffStatus.withdrawn)
+        .toList();
+    final formerStaffList = otherStaffList
+        .where((s) => s['status'] == StaffStatus.withdrawn)
+        .toList();
+
+    // タブ内のメンバーリストを構築する共通処理
+    Widget buildMemberList(
+        List<Map<String, dynamic>> list, String emptyMessage) {
+      if (staffAsync.hasValue && list.isEmpty) {
+        return Center(
+            child: Text(
+          emptyMessage,
+          style: const TextStyle(fontSize: 16, color: AppColors.textTertiary),
+        ));
+      }
+      return ListView.builder(
+        padding: const EdgeInsets.only(bottom: 16),
+        itemCount: list.length,
+        itemBuilder: (context, index) {
+          final staff = list[index];
+
+          return _StaffCard(
+            staff: staff,
+            storeId: storeId,
+            storeSettings: storeSettings,
+            // マネージャーは全メンバーを操作可能。
+            // スタッフは自分以外のカードを一切操作できない(閲覧のみ)
+            canManageStatusAndPermissions: isManager,
+            canEditAvailability: isManager,
+          );
+        },
+      );
+    }
+
     Widget listBody;
     if (staffAsync.hasError && !staffAsync.hasValue) {
       listBody = Center(
@@ -86,29 +125,35 @@ class StaffManagementView extends ConsumerWidget {
           ],
         ),
       );
-    } else if (staffAsync.hasValue && otherStaffList.isEmpty) {
-      listBody = const Center(
-          child: Text(
-        '現在登録されている他のメンバーはいません。',
-        style: TextStyle(fontSize: 16, color: AppColors.textTertiary),
-      ));
     } else {
-      listBody = ListView.builder(
-        padding: const EdgeInsets.only(bottom: 16),
-        itemCount: otherStaffList.length,
-        itemBuilder: (context, index) {
-          final staff = otherStaffList[index];
-
-          return _StaffCard(
-            staff: staff,
-            storeId: storeId,
-            storeSettings: storeSettings,
-            // マネージャーは全メンバーを操作可能。
-            // スタッフは自分以外のカードを一切操作できない(閲覧のみ)
-            canManageStatusAndPermissions: isManager,
-            canEditAvailability: isManager,
-          );
-        },
+      listBody = DefaultTabController(
+        length: 2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            const TabBar(
+              isScrollable: false,
+              labelColor: AppColors.accentPrimary,
+              unselectedLabelColor: AppColors.textSecondary,
+              indicatorColor: AppColors.accentPrimary,
+              tabs: [
+                Tab(text: '現在のメンバー'),
+                Tab(text: '過去のメンバー'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  buildMemberList(
+                      activeStaffList, '現在登録されている他のメンバーはいません。'),
+                  buildMemberList(
+                      formerStaffList, '過去に在籍したメンバーはいません。'),
+                ],
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -139,17 +184,6 @@ class StaffManagementView extends ConsumerWidget {
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: Divider(
                   height: 1, thickness: 0.5, color: AppColors.border),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 12, 24, 4),
-              child: Text(
-                'メンバー一覧',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
             ),
             Expanded(
               child: Padding(
