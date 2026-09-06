@@ -203,6 +203,18 @@ class ProfileActions extends _$ProfileActions {
     return updateUserProfileFields({fieldKey: value});
   }
 
+  // 会員退会 (ソフトデリート。連絡先は保持されログインのみ不可になる)。
+  // 呼び出し元(DeleteAccountDialog)で事前にFirebaseの再認証を済ませてから呼ぶこと
+  Future<void> deleteAccount() async {
+    final mongoUserId = ref.read(userProfileProvider).valueOrNull?.id;
+    if (mongoUserId == null || mongoUserId.isEmpty) {
+      throw const ApiException('ユーザーIDが見つかりません。');
+    }
+
+    final service = ref.read(profileServiceProvider);
+    await service.deleteAccount(mongoUserId);
+  }
+
   Future<void> uploadUserImage() async {
     if (_isPickingImage) return; // 連打による二重起動を無視
     _isPickingImage = true;

@@ -24,7 +24,7 @@ final statisticsServiceProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef StatisticsServiceRef = AutoDisposeProviderRef<StatisticsService>;
-String _$statisticsDataHash() => r'f3895b77d74b0702d6dfba7b94bbca2957105417';
+String _$statisticsDataHash() => r'8717ef8580d972471f5365fec53637e50f8d3e84';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -60,12 +60,10 @@ class StatisticsDataFamily extends Family<AsyncValue<Map<String, dynamic>>> {
   StatisticsDataProvider call({
     required String storeId,
     required String period,
-    required DateTime date,
   }) {
     return StatisticsDataProvider(
       storeId: storeId,
       period: period,
-      date: date,
     );
   }
 
@@ -76,7 +74,6 @@ class StatisticsDataFamily extends Family<AsyncValue<Map<String, dynamic>>> {
     return call(
       storeId: provider.storeId,
       period: provider.period,
-      date: provider.date,
     );
   }
 
@@ -102,13 +99,11 @@ class StatisticsDataProvider
   StatisticsDataProvider({
     required String storeId,
     required String period,
-    required DateTime date,
   }) : this._internal(
           (ref) => statisticsData(
             ref as StatisticsDataRef,
             storeId: storeId,
             period: period,
-            date: date,
           ),
           from: statisticsDataProvider,
           name: r'statisticsDataProvider',
@@ -121,7 +116,6 @@ class StatisticsDataProvider
               StatisticsDataFamily._allTransitiveDependencies,
           storeId: storeId,
           period: period,
-          date: date,
         );
 
   StatisticsDataProvider._internal(
@@ -133,12 +127,10 @@ class StatisticsDataProvider
     required super.from,
     required this.storeId,
     required this.period,
-    required this.date,
   }) : super.internal();
 
   final String storeId;
   final String period;
-  final DateTime date;
 
   @override
   Override overrideWith(
@@ -155,7 +147,6 @@ class StatisticsDataProvider
         debugGetCreateSourceHash: null,
         storeId: storeId,
         period: period,
-        date: date,
       ),
     );
   }
@@ -169,8 +160,7 @@ class StatisticsDataProvider
   bool operator ==(Object other) {
     return other is StatisticsDataProvider &&
         other.storeId == storeId &&
-        other.period == period &&
-        other.date == date;
+        other.period == period;
   }
 
   @override
@@ -178,7 +168,6 @@ class StatisticsDataProvider
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
     hash = _SystemHash.combine(hash, storeId.hashCode);
     hash = _SystemHash.combine(hash, period.hashCode);
-    hash = _SystemHash.combine(hash, date.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -192,9 +181,6 @@ mixin StatisticsDataRef on AutoDisposeFutureProviderRef<Map<String, dynamic>> {
 
   /// The parameter `period` of this provider.
   String get period;
-
-  /// The parameter `date` of this provider.
-  DateTime get date;
 }
 
 class _StatisticsDataProviderElement
@@ -206,8 +192,6 @@ class _StatisticsDataProviderElement
   String get storeId => (origin as StatisticsDataProvider).storeId;
   @override
   String get period => (origin as StatisticsDataProvider).period;
-  @override
-  DateTime get date => (origin as StatisticsDataProvider).date;
 }
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

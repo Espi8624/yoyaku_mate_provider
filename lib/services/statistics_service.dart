@@ -8,34 +8,17 @@ class StatisticsService {
 
   StatisticsService({required this.baseUrl});
 
+  /// period: 'auto'(今日を時間帯別) または 'weekly'(今週=日〜土を曜日別、常に直近の週固定)。
+  /// 過去の期間を遡って取得することはできない。
   Future<Map<String, dynamic>> fetchStatistics(String storeId,
-      {String period = 'auto',
-      DateTime? date,
-      DateTime? startDate,
-      DateTime? endDate}) async {
+      {String period = 'auto'}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
 
     final idToken = await user.getIdToken();
-    var queryParams = 'store_id=$storeId&period=$period';
-    if (date != null) {
-      // Format DateTime as YYYY-MM-DD
-      final dateStr =
-          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-      queryParams += '&date=$dateStr';
-    }
-    if (startDate != null) {
-      final startStr =
-          "${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}";
-      queryParams += '&start_date=$startStr';
-    }
-    if (endDate != null) {
-      final endStr =
-          "${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}";
-      queryParams += '&end_date=$endStr';
-    }
+    final queryParams = 'store_id=$storeId&period=$period';
 
     final url = Uri.parse('$baseUrl/api/statistics?$queryParams');
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/sign_up_providers.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/widgets/birthdate_input_field.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/widgets/personal_address_fields.dart';
 import 'package:yoyaku_mate_provider/widgets/common_buttons/action_button.dart';
 
 class StaffNameStep extends ConsumerStatefulWidget {
@@ -9,6 +11,12 @@ class StaffNameStep extends ConsumerStatefulWidget {
   final TextEditingController firstNameController;
   final TextEditingController lastNameKanaController;
   final TextEditingController firstNameKanaController;
+  final TextEditingController birthdateController;
+  final TextEditingController zipCodeController;
+  final TextEditingController prefectureController;
+  final TextEditingController cityController;
+  final TextEditingController addressController;
+  final TextEditingController buildingController;
   final VoidCallback onSubmit;
 
   const StaffNameStep({
@@ -17,6 +25,12 @@ class StaffNameStep extends ConsumerStatefulWidget {
     required this.firstNameController,
     required this.lastNameKanaController,
     required this.firstNameKanaController,
+    required this.birthdateController,
+    required this.zipCodeController,
+    required this.prefectureController,
+    required this.cityController,
+    required this.addressController,
+    required this.buildingController,
     required this.onSubmit,
   });
 
@@ -69,6 +83,14 @@ class _StaffNameStepState extends ConsumerState<StaffNameStep> {
                         controller: widget.firstNameKanaController,
                         label: 'フリガナ（名）')),
               ],
+            ),
+            BirthdateInputField(controller: widget.birthdateController),
+            PersonalAddressFields(
+              zipCodeController: widget.zipCodeController,
+              prefectureController: widget.prefectureController,
+              cityController: widget.cityController,
+              addressController: widget.addressController,
+              buildingController: widget.buildingController,
             ),
             if (errorMessage != null)
               Padding(

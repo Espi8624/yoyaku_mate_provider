@@ -28,12 +28,31 @@ class StaffManagementView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(userProfileProvider).valueOrNull;
+    final storeProfile = ref.watch(selectedStoreProfileProvider);
+    final bool isManager = currentUser?.role == 'manager';
+
+    // 承認待ち・拒否済みのスタッフは一覧取得APIが403を返すため、
+    // 呼び出す前に画面中央へ簡潔な案内だけを表示する
+    // (シフト表への導線はStaffManagementScreen側でボタンごと無効化している)
+    final staffStatus = storeProfile?.staffStatus;
+    if (!isManager && staffStatus != null && staffStatus != StaffStatus.approved) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            '承認をお待ちしています。\n承認されるまでお待ちください。',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+          ),
+        ),
+      );
+    }
+
     // API取得結果は宣言的に購読するだけでよく、initState等での明示的な呼び出しは不要
     final staffAsync = ref.watch(staffListProvider(storeId: storeId));
-    final currentUser = ref.watch(userProfileProvider).valueOrNull;
     final storeSettings =
         ref.watch(storeSettingsProvider(storeId: storeId)).valueOrNull;
-    final bool isManager = currentUser?.role == 'manager';
 
     final staffList = staffAsync.value ?? const <Map<String, dynamic>>[];
 
@@ -49,6 +68,61 @@ class StaffManagementView extends ConsumerWidget {
       } else {
         otherStaffList.add(entry);
       }
+    }
+
+    // メンバー一覧を3タブに分類する。
+    // 「承認済み」= APPROVED(現在一緒に働いているスタッフ)
+    // 「未承認」= PENDING、または「一度も承認されたことのない」拒否済み
+    //   (=まだ店舗に関わったことのない申請却下)
+    // 「退会済み」= WITHDRAWN、または「一度は承認されていた」拒否済み
+    //   (=承認取り消し。実際に一緒に働いたことがある)
+    // REJECTEDは申請却下と承認取り消しの両方が共有する状態のため、
+    // has_been_approved(過去に一度でもAPPROVEDになったか)で区別する。
+    // いずれも store_staff_info のレコード自体は削除されず残るため、
+    // 連絡先確認用にタブを分けて参照できるようにする
+    final approvedStaffList = otherStaffList
+        .where((s) => s['status'] == StaffStatus.approved)
+        .toList();
+    final unapprovedStaffList = otherStaffList
+        .where((s) =>
+            s['status'] == StaffStatus.pending ||
+            (s['status'] == StaffStatus.rejected &&
+                s['has_been_approved'] != true))
+        .toList();
+    final withdrawnStaffList = otherStaffList
+        .where((s) =>
+            s['status'] == StaffStatus.withdrawn ||
+            (s['status'] == StaffStatus.rejected &&
+                s['has_been_approved'] == true))
+        .toList();
+
+    // タブ内のメンバーリストを構築する共通処理
+    Widget buildMemberList(
+        List<Map<String, dynamic>> list, String emptyMessage) {
+      if (staffAsync.hasValue && list.isEmpty) {
+        return Center(
+            child: Text(
+          emptyMessage,
+          style: const TextStyle(fontSize: 16, color: AppColors.textTertiary),
+        ));
+      }
+      return ListView.builder(
+        padding: const EdgeInsets.only(bottom: 16),
+        itemCount: list.length,
+        itemBuilder: (context, index) {
+          final staff = list[index];
+
+          return _StaffCard(
+            staff: staff,
+            storeId: storeId,
+            storeSettings: storeSettings,
+            // マネージャーは全メンバーを操作可能。
+            // スタッフは自分以外のカードを一切操作できない(閲覧のみ)
+            canManageStatusAndPermissions: isManager,
+            canEditAvailability: isManager,
+          );
+        },
+      );
     }
 
     Widget listBody;
@@ -67,29 +141,38 @@ class StaffManagementView extends ConsumerWidget {
           ],
         ),
       );
-    } else if (staffAsync.hasValue && otherStaffList.isEmpty) {
-      listBody = const Center(
-          child: Text(
-        '現在登録されている他のメンバーはいません。',
-        style: TextStyle(fontSize: 16, color: AppColors.textTertiary),
-      ));
     } else {
-      listBody = ListView.builder(
-        padding: const EdgeInsets.only(bottom: 16),
-        itemCount: otherStaffList.length,
-        itemBuilder: (context, index) {
-          final staff = otherStaffList[index];
-
-          return _StaffCard(
-            staff: staff,
-            storeId: storeId,
-            storeSettings: storeSettings,
-            // マネージャーは全メンバーを操作可能。
-            // スタッフは自分以外のカードを一切操作できない(閲覧のみ)
-            canManageStatusAndPermissions: isManager,
-            canEditAvailability: isManager,
-          );
-        },
+      listBody = DefaultTabController(
+        length: 3,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            const TabBar(
+              isScrollable: false,
+              labelColor: AppColors.accentPrimary,
+              unselectedLabelColor: AppColors.textSecondary,
+              indicatorColor: AppColors.accentPrimary,
+              tabs: [
+                Tab(text: '承認済み'),
+                Tab(text: '未承認'),
+                Tab(text: '退会済み'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  buildMemberList(
+                      approvedStaffList, '現在登録されている他のメンバーはいません。'),
+                  buildMemberList(
+                      unapprovedStaffList, '承認待ち・却下されたメンバーはいません。'),
+                  buildMemberList(
+                      withdrawnStaffList, '退会・過去に在籍したメンバーはいません。'),
+                ],
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -120,17 +203,6 @@ class StaffManagementView extends ConsumerWidget {
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: Divider(
                   height: 1, thickness: 0.5, color: AppColors.border),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 12, 24, 4),
-              child: Text(
-                'メンバー一覧',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
             ),
             Expanded(
               child: Padding(
@@ -395,6 +467,19 @@ class _StaffCard extends HookConsumerWidget {
                           color: AppColors.textSecondary,
                         ),
                       ),
+                      // 退会済みスタッフでも連絡が取れるよう電話番号を表示する
+                      if ((staff['phone'] as String?)?.isNotEmpty ?? false) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          staff['phone'],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -534,9 +619,11 @@ class _StaffCard extends HookConsumerWidget {
             ],
 
             // ステータス変更ボタンは操作許可がある場合のみ表示。
-            // 承認済みの「承認取り消し」は上部の氏名行に移したため、ここには出さない
+            // 承認済みの「承認取り消し」は上部の氏名行に移したため、ここには出さない。
+            // 退会済みは操作対象外のため、ボタンなしの空行を出さないよう除外する
             if (canManageStatusAndPermissions &&
-                status != StaffStatus.approved) ...[
+                status != StaffStatus.approved &&
+                status != StaffStatus.withdrawn) ...[
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -617,6 +704,10 @@ class _StaffCard extends HookConsumerWidget {
       case StaffStatus.rejected:
         color = AppColors.notSubmitted;
         tooltip = '拒否済み';
+        break;
+      case StaffStatus.withdrawn:
+        color = AppColors.textTertiary;
+        tooltip = '退会済み';
         break;
       default:
         color = AppColors.notSubmitted;

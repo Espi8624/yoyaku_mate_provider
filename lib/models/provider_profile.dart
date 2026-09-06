@@ -5,6 +5,12 @@ class ProviderProfile {
   final String name;
   final String nameFurigana;
   final String role; // 'manager' または 'staff'
+  final String? birthdate; // 本人の生年月日 (YYYY-MM-DD)
+  final String? zipCode; // 本人の郵便番号
+  final String? prefecture; // 本人の都道府県
+  final String? city; // 本人の市区町村
+  final String? address; // 本人の住所(番地)
+  final String? building; // 本人の建物名・部屋番号(任意)
   final String? storeId; // スタッフは任意、マネージャーは必須
   final String? storeName;
   final String? storeAddress;
@@ -35,6 +41,12 @@ class ProviderProfile {
     required this.name,
     required this.nameFurigana,
     required this.role,
+    this.birthdate,
+    this.zipCode,
+    this.prefecture,
+    this.city,
+    this.address,
+    this.building,
     this.storeId,
     this.storeName,
     this.storeAddress,
@@ -66,6 +78,12 @@ class ProviderProfile {
         'name': name,
         'name_furigana': nameFurigana,
         'role': role,
+        if (birthdate != null) 'birthdate': birthdate,
+        if (zipCode != null) 'zip_code': zipCode,
+        if (prefecture != null) 'prefecture': prefecture,
+        if (city != null) 'city': city,
+        if (address != null) 'address': address,
+        if (building != null) 'building': building,
         if (storeId != null) 'store_id': storeId,
         if (storeName != null) 'store_name': storeName,
         if (storeAddress != null) 'store_address': storeAddress,

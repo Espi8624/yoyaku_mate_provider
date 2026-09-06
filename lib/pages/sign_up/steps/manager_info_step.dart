@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/widgets/birthdate_input_field.dart';
+import 'package:yoyaku_mate_provider/pages/sign_up/widgets/personal_address_fields.dart';
 import 'package:yoyaku_mate_provider/widgets/common_buttons/action_button.dart';
 
 class ManagerInfoStep extends StatefulWidget {
@@ -7,6 +9,12 @@ class ManagerInfoStep extends StatefulWidget {
   final TextEditingController firstNameController;
   final TextEditingController lastNameKanaController;
   final TextEditingController firstNameKanaController;
+  final TextEditingController birthdateController;
+  final TextEditingController zipCodeController;
+  final TextEditingController prefectureController;
+  final TextEditingController cityController;
+  final TextEditingController addressController;
+  final TextEditingController buildingController;
   final VoidCallback onNext;
 
   const ManagerInfoStep({
@@ -15,6 +23,12 @@ class ManagerInfoStep extends StatefulWidget {
     required this.firstNameController,
     required this.lastNameKanaController,
     required this.firstNameKanaController,
+    required this.birthdateController,
+    required this.zipCodeController,
+    required this.prefectureController,
+    required this.cityController,
+    required this.addressController,
+    required this.buildingController,
     required this.onNext,
   });
 
@@ -63,6 +77,14 @@ class _ManagerInfoStepState extends State<ManagerInfoStep> {
                         controller: widget.firstNameKanaController,
                         label: 'フリガナ（名）')),
               ],
+            ),
+            BirthdateInputField(controller: widget.birthdateController),
+            PersonalAddressFields(
+              zipCodeController: widget.zipCodeController,
+              prefectureController: widget.prefectureController,
+              cityController: widget.cityController,
+              addressController: widget.addressController,
+              buildingController: widget.buildingController,
             ),
             const SizedBox(height: 40),
             ActionButton(onPressed: _submit),

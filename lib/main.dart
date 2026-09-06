@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'
     show ProviderScope, ConsumerStatefulWidget, ConsumerState, AsyncValueX;
 import 'package:go_router/go_router.dart';
@@ -29,11 +30,19 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  if (kReleaseMode) {
-    await dotenv.load(fileName: ".env.production");
-  } else {
-    await dotenv.load(fileName: ".env.development");
-  }
+  // 接続先は --dart-define=APP_ENV=dev|prod で明示的に切り替える:
+  //   未指定            → ローカル (.env.development, localhost)
+  //   APP_ENV=dev       → 共有の開発用サーバー (.env.remote-dev, rusui-dev + Cloudflare)
+  //   APP_ENV=prod      → 本番 (.env.production)
+  // ただし、リリースビルドでAPP_ENV指定を忘れた場合に誤ってlocalhostへ
+  // 接続したまま出荷されるのを防ぐため、リリースビルドはデフォルトでprodにする
+  const appEnv = String.fromEnvironment('APP_ENV', defaultValue: '');
+  const String envFile = appEnv == 'dev'
+      ? '.env.remote-dev'
+      : appEnv == 'prod'
+          ? '.env.production'
+          : (kReleaseMode ? '.env.production' : '.env.development');
+  await dotenv.load(fileName: envFile);
 
   // Crashlytics Configuration
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
@@ -58,6 +67,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       routerConfig: router, // GoRouter設定を使用
       title: 'ルスイ店舗管理',
+      // アプリ全体が日本語UIのため、DatePicker等のMaterialウィジェットも
+      // 日本語ロケールで表示されるよう明示的に設定する
+      locale: const Locale('ja'),
+      supportedLocales: const [Locale('ja')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.background,
         canvasColor: AppColors.cardBackground,

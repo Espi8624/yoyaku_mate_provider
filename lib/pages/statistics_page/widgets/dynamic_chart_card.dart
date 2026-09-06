@@ -68,209 +68,205 @@ class DynamicChartCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: Stack(
-                children: [
-                  // Layer 1: Bar Chart (Current Period - Visuals Only)
-                  BarChart(
-                    BarChartData(
-                      alignment: BarChartAlignment.spaceAround,
-                      maxY: maxY,
-                      minY: 0,
-                      barTouchData:
-                          BarTouchData(enabled: false), // Handled by LineChart
-                      titlesData: FlTitlesData(
-                        show: true,
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (value, meta) {
-                              final index = value.toInt();
-                              if (index >= 0 && index < chartData!.length) {
-                                // Reduce labels if too many data points
-                                if (chartData!.length > 10 && index % 2 != 0) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    chartData![index]['label'].toString(),
-                                    style: const TextStyle(
-                                      color: AppColors.statAxisLabel,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                );
-                              }
+              child: LineChart(
+                LineChartData(
+                  minX: -0.5,
+                  maxX: chartData!.length.toDouble() - 0.5,
+                  minY: 0,
+                  maxY: maxY,
+                  titlesData: FlTitlesData(
+                    show: true,
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index >= 0 && index < chartData!.length) {
+                            // Reduce labels if too many data points
+                            if (chartData!.length > 10 && index % 2 != 0) {
                               return const SizedBox.shrink();
-                            },
-                          ),
-                        ),
-                        leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                      ),
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        horizontalInterval: 5,
-                        getDrawingHorizontalLine: (value) => FlLine(
-                          color: Colors.grey.withOpacity(0.1),
-                          strokeWidth: 1,
-                          dashArray: [5, 5],
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      barGroups: List.generate(chartData!.length, (index) {
-                        final val =
-                            (chartData![index]['value'] as num).toDouble();
-                        return BarChartGroupData(
-                          x: index,
-                          barRods: [
-                            BarChartRodData(
-                              toY: val,
-                              color: AppColors.statChartDark,
-                              width: 8,
-                              borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(6)),
-                              backDrawRodData: BackgroundBarChartRodData(
-                                show: false,
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                chartData![index]['label'].toString(),
+                                style: const TextStyle(
+                                  color: AppColors.statAxisLabel,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                            ),
-                          ],
-                        );
-                      }),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                    leftTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: 5,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: Colors.grey.withOpacity(0.1),
+                      strokeWidth: 1,
+                      dashArray: [5, 5],
                     ),
                   ),
-
-                  // Layer 2: Line Chart (Interaction Layer + Previous Dots)
-                  LineChart(
-                    LineChartData(
-                      minX: -0.5,
-                      maxX: chartData!.length.toDouble() - 0.5,
-                      minY: 0,
-                      maxY: maxY,
-                      titlesData: FlTitlesData(
-                        show: true, // Enable titles to reserve space
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize:
-                                40, // Match BarChart reserved size exactly
-                            getTitlesWidget: (value, meta) {
-                              return const SizedBox
-                                  .shrink(); // Don't draw text, just reserve space
-                            },
+                  borderData: FlBorderData(show: false),
+                  lineTouchData: LineTouchData(
+                    enabled: true,
+                    // デフォルトのタッチ強調ドットが大きすぎるため、今回値の線にだけ
+                    // 小さめのドットを表示し、他の線（前回値/タッチ判定用の透明線）は非表示にする
+                    getTouchedSpotIndicator: (barData, spotIndexes) {
+                      final isCurrentLine = barData.color == AppColors.statChartDark;
+                      return spotIndexes.map((index) {
+                        return TouchedSpotIndicatorData(
+                          FlLine(
+                            color: isCurrentLine
+                                ? AppColors.statChartDark.withOpacity(0.2)
+                                : Colors.transparent,
+                            strokeWidth: 1,
                           ),
-                        ),
-                        leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                      ),
-                      gridData: FlGridData(show: false),
-                      borderData: FlBorderData(show: false),
-                      lineTouchData: LineTouchData(
-                        enabled: true,
-                        touchTooltipData: LineTouchTooltipData(
-                          tooltipRoundedRadius: 8,
-                          tooltipMargin: -60,
-                          tooltipPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          tooltipBgColor: Colors.black.withOpacity(0.7),
-                          getTooltipItems: (touchedSpots) {
-                            return touchedSpots.map((touchedSpot) {
-                              if (touchedSpot.barIndex == 0) return null;
+                          FlDotData(
+                            show: isCurrentLine,
+                            getDotPainter: (spot, percent, bar, idx) =>
+                                FlDotCirclePainter(
+                              radius: 3.0,
+                              color: AppColors.statChartDark,
+                              strokeWidth: 1.5,
+                              strokeColor: Colors.white,
+                            ),
+                          ),
+                        );
+                      }).toList();
+                    },
+                    touchTooltipData: LineTouchTooltipData(
+                      tooltipRoundedRadius: 8,
+                      tooltipMargin: -60,
+                      tooltipPadding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      tooltipBgColor: Colors.black.withOpacity(0.7),
+                      getTooltipItems: (touchedSpots) {
+                        return touchedSpots.map((touchedSpot) {
+                          // タッチ判定は透明な最大高さラインだけで拾い、
+                          // 今回/前回それぞれの線が個別にツールチップを出さないようにする
+                          if (touchedSpot.barIndex != 2) return null;
 
-                              final index = touchedSpot.x.toInt();
-                              if (index < 0 || index >= chartData!.length)
-                                return null;
+                          final index = touchedSpot.x.toInt();
+                          if (index < 0 || index >= chartData!.length) {
+                            return null;
+                          }
 
-                              final dataItem = chartData![index];
-                              final label = dataItem['label'];
-                              final currentVal =
-                                  (dataItem['value'] as num).toDouble();
-                              final prevVal = (dataItem['prev_value'] as num?)
-                                      ?.toDouble() ??
+                          final dataItem = chartData![index];
+                          final label = dataItem['label'];
+                          final currentVal =
+                              (dataItem['value'] as num).toDouble();
+                          final prevVal =
+                              (dataItem['prev_value'] as num?)?.toDouble() ??
                                   0.0;
 
-                              return LineTooltipItem(
-                                '$label\n',
-                                const TextStyle(
-                                  color: Colors.white70,
+                          return LineTooltipItem(
+                            '$label\n',
+                            const TextStyle(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: '今回: ${currentVal.toInt()}人\n',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              TextSpan(
+                                text: '前回: ${prevVal.toInt()}人',
+                                style: const TextStyle(
+                                  color: AppColors.statAxisLabel,
                                   fontSize: 12,
                                 ),
-                                children: [
-                                  TextSpan(
-                                    text: '今回: ${currentVal.toInt()}人\n',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: '前回: ${prevVal.toInt()}人',
-                                    style: const TextStyle(
-                                      color: AppColors.statAxisLabel,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }).toList();
-                          },
-                        ),
-                      ),
-                      lineBarsData: [
-                        // Line 0: Previous Value (Red Dots)
-                        LineChartBarData(
-                          spots: List.generate(chartData!.length, (index) {
-                            final prevVal =
-                                (chartData![index]['prev_value'] as num?)
-                                        ?.toDouble() ??
-                                    0.0;
-                            return FlSpot(index.toDouble(), prevVal);
-                          }),
-                          isCurved: false,
-                          color: Colors.transparent, // Invisible line
-                          barWidth: 0,
-                          dotData: FlDotData(
-                            show: true,
-                            checkToShowDot: (spot, barData) {
-                              return spot.y != 0; // Hide dots if value is 0
-                            },
-                            getDotPainter: (spot, percent, barData, index) {
-                              return FlDotCirclePainter(
-                                radius: 2.0,
-                                color: AppColors.statAlertRed,
-                                strokeWidth: 1.0,
-                                strokeColor: AppColors.statAlertRed,
-                              );
-                            },
-                          ),
-                          belowBarData: BarAreaData(show: false),
-                        ),
-                        // Line 1: Invisible Max Height Line for Interaction
-                        LineChartBarData(
-                          spots: List.generate(chartData!.length, (index) {
-                            return FlSpot(index.toDouble(), maxY);
-                          }),
-                          color: Colors.transparent,
-                          barWidth: 0,
-                          dotData: FlDotData(show: false),
-                        ),
-                      ],
+                              ),
+                            ],
+                          );
+                        }).toList();
+                      },
                     ),
                   ),
-                ],
+                  lineBarsData: [
+                    // Line 0: Previous Value (Red Dots のみ、線は描画しない)
+                    LineChartBarData(
+                      spots: List.generate(chartData!.length, (index) {
+                        final prevVal =
+                            (chartData![index]['prev_value'] as num?)
+                                    ?.toDouble() ??
+                                0.0;
+                        return FlSpot(index.toDouble(), prevVal);
+                      }),
+                      isCurved: false,
+                      color: Colors.transparent, // Invisible line
+                      barWidth: 0,
+                      dotData: FlDotData(
+                        show: true,
+                        checkToShowDot: (spot, barData) {
+                          return spot.y != 0; // Hide dots if value is 0
+                        },
+                        getDotPainter: (spot, percent, barData, index) {
+                          return FlDotCirclePainter(
+                            radius: 2.0,
+                            color: AppColors.statAlertRed,
+                            strokeWidth: 1.0,
+                            strokeColor: AppColors.statAlertRed,
+                          );
+                        },
+                      ),
+                      belowBarData: BarAreaData(show: false),
+                    ),
+                    // Line 1: Current Value（曲線 + 下部グラデーション塗り）
+                    LineChartBarData(
+                      spots: List.generate(chartData!.length, (index) {
+                        final val =
+                            (chartData![index]['value'] as num).toDouble();
+                        return FlSpot(index.toDouble(), val);
+                      }),
+                      isCurved: true,
+                      curveSmoothness: 0.3,
+                      preventCurveOverShooting: true,
+                      color: AppColors.statChartDark,
+                      barWidth: 3,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppColors.statChartDark.withOpacity(0.38),
+                            AppColors.statChartDark.withOpacity(0.03),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Line 2: Invisible Max Height Line for Interaction
+                    LineChartBarData(
+                      spots: List.generate(chartData!.length, (index) {
+                        return FlSpot(index.toDouble(), maxY);
+                      }),
+                      color: Colors.transparent,
+                      barWidth: 0,
+                      dotData: const FlDotData(show: false),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

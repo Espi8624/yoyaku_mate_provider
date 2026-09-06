@@ -19,7 +19,6 @@ import 'package:yoyaku_mate_provider/pages/sign_up/steps/email_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/password_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/email_verification_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/phone_number_input_step.dart';
-import 'package:yoyaku_mate_provider/pages/sign_up/steps/verification_code_input_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/manager_info_step.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/staff_name_step.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
@@ -50,6 +49,17 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       TextEditingController();
   final TextEditingController managerFirstNameKanaController =
       TextEditingController();
+  final TextEditingController managerBirthdateController =
+      TextEditingController();
+  final TextEditingController managerZipCodeController =
+      TextEditingController();
+  final TextEditingController managerPrefectureController =
+      TextEditingController();
+  final TextEditingController managerCityController = TextEditingController();
+  final TextEditingController managerAddressController =
+      TextEditingController();
+  final TextEditingController managerBuildingController =
+      TextEditingController();
 
   final TextEditingController staffEmailController = TextEditingController();
   final TextEditingController staffPasswordController = TextEditingController();
@@ -63,11 +73,19 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       TextEditingController();
   final TextEditingController staffFirstNameKanaController =
       TextEditingController();
-
-  final TextEditingController verificationCodeController =
+  final TextEditingController staffBirthdateController =
+      TextEditingController();
+  final TextEditingController staffZipCodeController = TextEditingController();
+  final TextEditingController staffPrefectureController =
+      TextEditingController();
+  final TextEditingController staffCityController = TextEditingController();
+  final TextEditingController staffAddressController = TextEditingController();
+  final TextEditingController staffBuildingController =
       TextEditingController();
 
   bool _isInitialized = false;
+  // 会員登録が正常に完了したかどうか (disposeでの途中離脱クリーンアップと区別するため)
+  bool _signupCompleted = false;
   ProviderSubscription<AsyncValue<UserProfile>>? _userProfileSubscription;
 
   @override
@@ -170,6 +188,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
   @override
   void dispose() {
+    // 会員登録を完了せずに画面を離脱した場合(OS戻る操作など)、
+    // 途中状態が残って次回再開時に認証周りが混乱しないよう完全に破棄する
+    if (!_signupCompleted) {
+      ref.read(signUpNotifierProvider.notifier).discardProgress();
+    }
+
     setSignUpInProgress(false);
     _pageController.removeListener(_pageControllerListener);
     _userProfileSubscription?.close();
@@ -183,6 +207,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     managerFirstNameController.dispose();
     managerLastNameKanaController.dispose();
     managerFirstNameKanaController.dispose();
+    managerBirthdateController.dispose();
+    managerZipCodeController.dispose();
+    managerPrefectureController.dispose();
+    managerCityController.dispose();
+    managerAddressController.dispose();
+    managerBuildingController.dispose();
 
     staffEmailController.dispose();
     staffPasswordController.dispose();
@@ -192,8 +222,13 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     staffFirstNameController.dispose();
     staffLastNameKanaController.dispose();
     staffFirstNameKanaController.dispose();
+    staffBirthdateController.dispose();
+    staffZipCodeController.dispose();
+    staffPrefectureController.dispose();
+    staffCityController.dispose();
+    staffAddressController.dispose();
+    staffBuildingController.dispose();
 
-    verificationCodeController.dispose();
     super.dispose();
   }
 
@@ -262,20 +297,21 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         ), // 5
         PhoneNumberInputStep(
           controller: managerPhoneController,
-          onSendCode: _sendPhoneCode,
+          onNext: _submitPhoneNumber,
         ), // 6
-        VerificationCodeInputStep(
-          controller: verificationCodeController,
-          onVerify: _verifyPhoneCode,
-          onResend: _resendPhoneCode,
-        ), // 7
         ManagerInfoStep(
           lastNameController: managerLastNameController,
           firstNameController: managerFirstNameController,
           lastNameKanaController: managerLastNameKanaController,
           firstNameKanaController: managerFirstNameKanaController,
-          onNext: _handleSignUp, // Step 8で完了
-        ), // 8
+          birthdateController: managerBirthdateController,
+          zipCodeController: managerZipCodeController,
+          prefectureController: managerPrefectureController,
+          cityController: managerCityController,
+          addressController: managerAddressController,
+          buildingController: managerBuildingController,
+          onNext: _handleSignUp, // Step 7で完了
+        ), // 7
       ];
     } else {
       // スタッフ用ページ
@@ -300,20 +336,21 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         ), // 5
         PhoneNumberInputStep(
           controller: staffPhoneController,
-          onSendCode: _sendPhoneCode,
+          onNext: _submitPhoneNumber,
         ), // 6
-        VerificationCodeInputStep(
-          controller: verificationCodeController,
-          onVerify: _verifyPhoneCode,
-          onResend: _resendPhoneCode,
-        ), // 7
         StaffNameStep(
           lastNameController: staffLastNameController,
           firstNameController: staffFirstNameController,
           lastNameKanaController: staffLastNameKanaController,
           firstNameKanaController: staffFirstNameKanaController,
-          onSubmit: _handleSignUp, // Step 8で完了
-        ), // 8
+          birthdateController: staffBirthdateController,
+          zipCodeController: staffZipCodeController,
+          prefectureController: staffPrefectureController,
+          cityController: staffCityController,
+          addressController: staffAddressController,
+          buildingController: staffBuildingController,
+          onSubmit: _handleSignUp, // Step 7で完了
+        ), // 7
       ];
     }
   }
@@ -420,46 +457,15 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     }
   }
 
-  Future<void> _sendPhoneCode() async {
+  // 電話番号認証は廃止。入力された電話番号を進捗として保存し、次のステップへ進む
+  Future<void> _submitPhoneNumber() async {
     final role = ref.read(signUpNotifierProvider).role;
     final notifier = ref.read(signUpNotifierProvider.notifier);
     final phoneController =
         role == 'manager' ? managerPhoneController : staffPhoneController;
-    final rawPhoneNumber = phoneController.text.trim();
 
-    final success = await notifier.sendPhoneCode(rawPhoneNumber, role ?? 'manager');
-    if (success && mounted) {
-      ToastWidget.show(context, '認証コードを送信しました。', type: ToastType.success);
-      _nextPage();
-    }
-  }
-
-  Future<void> _verifyPhoneCode() async {
-    final role = ref.read(signUpNotifierProvider).role;
-    final notifier = ref.read(signUpNotifierProvider.notifier);
-    final success = await notifier.verifyPhoneCode(verificationCodeController.text);
-    if (success && mounted) {
-      final phoneController =
-          role == 'manager' ? managerPhoneController : staffPhoneController;
-      notifier.savePhoneProgress(phoneController.text.trim());
-
-      ToastWidget.show(context, '電話番号認証が完了しました。', type: ToastType.success);
-      _nextPage();
-    }
-  }
-
-  Future<void> _resendPhoneCode() async {
-    final role = ref.read(signUpNotifierProvider).role;
-    final notifier = ref.read(signUpNotifierProvider.notifier);
-    final phoneController =
-        role == 'manager' ? managerPhoneController : staffPhoneController;
-    final success =
-        await notifier.sendPhoneCode(phoneController.text.trim(), role ?? 'manager');
-    if (success && mounted) {
-      if (success && mounted) {
-        ToastWidget.show(context, '認証コードを再送信しました。', type: ToastType.success);
-      }
-    }
+    await notifier.savePhoneProgress(phoneController.text.trim());
+    if (mounted) _nextPage();
   }
 
   Future<void> _handleSignUp() async {
@@ -479,6 +485,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       mode: null,
       managerName: managerName,
       managerNameKana: managerNameKana,
+      managerBirthdate: managerBirthdateController.text.trim(),
+      managerZipCode: managerZipCodeController.text.trim(),
+      managerPrefecture: managerPrefectureController.text.trim(),
+      managerCity: managerCityController.text.trim(),
+      managerAddress: managerAddressController.text.trim(),
+      managerBuilding: managerBuildingController.text.trim(),
       storeName: null,
       storeAddress: null,
       storeZipCode: null,
@@ -488,6 +500,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       storePhone: null,
       staffName: staffName,
       staffNameKana: staffNameKana,
+      staffBirthdate: staffBirthdateController.text.trim(),
+      staffZipCode: staffZipCodeController.text.trim(),
+      staffPrefecture: staffPrefectureController.text.trim(),
+      staffCity: staffCityController.text.trim(),
+      staffAddress: staffAddressController.text.trim(),
+      staffBuilding: staffBuildingController.text.trim(),
       staffStoreId: null, // 店舗IDなし
       managerPhoneInput: managerPhoneController.text.trim(),
       staffPhoneInput: staffPhoneController.text.trim(),
@@ -509,6 +527,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       if (mounted) {
         // Refactor: 登録完了画面 または ホームへ (main.dart route logic will redirect to StoreSelection)
         // ここでは一旦完了画面へ
+        _signupCompleted = true;
         context.go('/signup-prompt');
       }
     }
@@ -545,12 +564,29 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   }
 
   Future<void> _handleBackButton() async {
+    final isEmailVerified = ref.read(signUpNotifierProvider).isEmailVerified;
+
+    // 情報入力ステップ(7)からは、確認ダイアログを出さず普通に1つ前の
+    // ステップ(電話番号入力, 6)へ戻れるようにする。
+    // 電話番号入力ステップ(6)自体まで戻った場合は、そこから更に戻れる
+    // 自然な「1つ前」が無い(3〜5はメール認証済みなら不要)ため、
+    // 従来通り最初からやり直す確認ダイアログを出す
+    if (isEmailVerified && _currentPageIndex > 6) {
+      FocusScope.of(context).unfocus();
+      _pageController.animateToPage(_currentPageIndex - 1,
+          duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+      return;
+    }
+
     if (_currentPageIndex == 0) {
       context.go('/login');
     } else {
       final shouldGoBack = await _showCancelConfirmDialog();
       if (shouldGoBack && mounted) {
-        ref.read(signUpNotifierProvider.notifier).reset();
+        // ダイアログの「戻ると最初からやり直しになる」という説明どおりに
+        // 進捗・Firebaseセッションまで完全に破棄する
+        await ref.read(signUpNotifierProvider.notifier).discardProgress();
+        if (!mounted) return;
 
         managerEmailController.clear();
         managerPasswordController.clear();
@@ -560,6 +596,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         managerFirstNameController.clear();
         managerLastNameKanaController.clear();
         managerFirstNameKanaController.clear();
+        managerBirthdateController.clear();
+        managerZipCodeController.clear();
+        managerPrefectureController.clear();
+        managerCityController.clear();
+        managerAddressController.clear();
+        managerBuildingController.clear();
 
         staffEmailController.clear();
         staffPasswordController.clear();
@@ -569,7 +611,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         staffFirstNameController.clear();
         staffLastNameKanaController.clear();
         staffFirstNameKanaController.clear();
-        verificationCodeController.clear();
+        staffBirthdateController.clear();
+        staffZipCodeController.clear();
+        staffPrefectureController.clear();
+        staffCityController.clear();
+        staffAddressController.clear();
+        staffBuildingController.clear();
 
         _pageController.jumpToPage(0);
       }

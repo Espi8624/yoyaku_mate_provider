@@ -1,34 +1,36 @@
 # 待機統計分析ダッシュボード (Statistics Dashboard)
 
-> 最終更新: 2026-07-10  
-> 関連ファイル: [`lib/pages/statistics_page/statistics_screen.dart`](../../lib/pages/statistics_page/statistics_screen.dart), [`lib/services/statistics_service.dart`](../../lib/services/statistics_service.dart)
+> 最終更新: 2026-09-06
+> 関連ファイル: [`lib/pages/statistics_page/statistics_screen.dart`](../../lib/pages/statistics_page/statistics_screen.dart), [`lib/services/statistics_service.dart`](../../lib/services/statistics_service.dart), [`yoyaku_mate_server/handlers/statistics_handler.go`](../../../yoyaku_mate_server/handlers/statistics_handler.go)
 
 ## 概要
 
-店舗のこれまでの待機列データをグラフとして可視化し、混雑する時間帯の把握や運用の計画に役立てることができる分析ダッシュボードです。
+店舗の待機列データを「今日」または「今週(日〜土)」の2つのビューに絞って可視化し、混雑する時間帯の把握と運用判断に役立てるダッシュボードです。
+
+以前は月間・年間・任意日付範囲の指定や、過去の期間へのナビゲーション(◀▶)も提供していましたが、実際の利用シーンでは「本日の混雑状況」「今週の傾向を先週と比べる」以外はほとんど使われないと判断し、機能を絞りました。あわせて、常に0%として固定表示されていた前週比バッジ(`wow_growth_rate`)のバグも解消しています。
 
 ---
 
 ## データ取得の構造
 
-- **認証方式**: Firebase Auth の `idToken` を Bearer ヘッダーに付与して管理者用APIをリクエスト。
-- **期間オプション (Period)**: 
-  - `auto` (デフォルト: 今日)
-  - 特定日 (`date`)
-  - 自由設定範囲 (`start_date`, `end_date`)
-- **JSONパースの最適化**: 統計用など大容量データのパース時には、Flutterの `compute()` 関数を介してバックグラウンドの別スレッド (Isolate) 上でパース処理を実行し、UIスレッドが一時的にフリーズ（Jank）する現象を完全に防ぎます。
+- **認証方式**: Firebase Auth の `idToken` を Bearer ヘッダーに付与してAPIをリクエスト。
+- **期間オプション (`period`)**:
+  - `auto` (デフォルト): 今日のみ。店舗のタイムゾーン基準で時間帯別(0〜23時)に集計。
+  - `weekly`: 今週(日曜〜土曜)固定。曜日別(日〜土)に集計。**任意の週を遡って指定することはできない**(常に「直近の今週」)。
+- **比較対象**: `auto` は前日、`weekly` は先週(同じ日〜土の範囲)と自動的に比較する。
+- **JSONパースの最適化**: レスポンスのパースは Flutter の `compute()` を介してバックグラウンドの Isolate 上で実行し、UIスレッドのフリーズ(Jank)を防止。
 
 ---
 
 ## グラフビジュアライズ (fl_chart)
 
-`fl_chart` ライブラリを採用し、スムーズで滑らかなモバイル向けアニメーション付きグラフをレンダーします。
+`fl_chart` ライブラリを採用し、スムーズなモバイル向けアニメーション付きバーチャートをレンダーする。
 
 ### 表示する主な指標
-1. **時間帯別の混雑度 (Bar Chart)**: どの時間帯に最も多くの待機受付が発生したか。
-2. **平均待ち時間の推移 (Line Chart)**: 顧客の平均待機時間の変化傾向。
-3. **入店完了/キャンセル比率 (Pie Chart)**: 受付数に対する実入店率とNo-Show率。
+1. **本日/今週のハイライト**: 来店数・キャンセル数・No-Show数をタブ切り替えで表示。来店数タブのみ、前日比/前週比の成長率バッジを表示。
+2. **平均待ち時間**・**No-Show率**: 選択中の期間(今日 or 今週)の集計値。
+3. **時間帯別 / 曜日別 推移 (Bar Chart)**: 選択中の指標(来店数・キャンセル・No-Show)を、今日なら時間帯別、今週なら曜日別のバーで表示し、比較対象期間の値を同時にツールチップ表示。
 
 ### 描画パフォーマンスの最適化
-- `fl_chart` は描画データが更新されるたびに滑らかなアニメーションを実行するため、リビルドの負荷が大きいです。
-- グラフ更新時、無関係な他のテキストUI等まで引きずられてリビルドが走らないよう、 `Selector` を活用して再描画スコープをグラフパーツ単体に限定・隔離しました。
+- `fl_chart` は描画データが更新されるたびにアニメーションを実行するため、リビルドの負荷が大きい。
+- グラフ部分は `DynamicChartCard` に切り出し、指標/期間切り替え時にグラフ領域のみが再描画されるよう分離している。

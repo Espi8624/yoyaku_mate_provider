@@ -426,7 +426,10 @@ class StoreProfileView extends ConsumerWidget {
                         : () => _showEditDialog(context, ref,
                             storeId: storeId,
                             title: '電話番号',
-                            fieldKey: 'phone_number',
+                            // DBのフィールド名(phone)と一致させる。従来'phone_number'を
+                            // 送っておりバックエンドのStoreモデルと噛み合わず更新が
+                            // 反映されない不具合があった
+                            fieldKey: 'phone',
                             initialValue: storeProfile.phone_number),
                   ),
                 ],

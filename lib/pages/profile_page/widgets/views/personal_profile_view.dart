@@ -11,6 +11,9 @@ import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 import '../../../../models/user_profile.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
+import '../dialogs/delete_account_dialog.dart';
+import '../dialogs/edit_address_dialog.dart';
+import '../dialogs/edit_birthdate_dialog.dart';
 import '../dialogs/edit_profile_dialog.dart';
 import '../profile_header.dart';
 import '../profile_section.dart';
@@ -68,6 +71,67 @@ class PersonalProfileView extends ConsumerWidget {
         }
       }
     }
+  }
+
+  /// 生年月日編集ダイアログを表示するメソッド
+  Future<void> _handleBirthdateEdit(BuildContext context, WidgetRef ref) async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (_) =>
+          EditBirthdateDialog(initialBirthdate: userProfile.birthdate ?? ''),
+    );
+
+    if (result != null && result.isNotEmpty && context.mounted) {
+      try {
+        await ref
+            .read(profileActionsProvider.notifier)
+            .updateUserProfileField('birthdate', result);
+        if (!context.mounted) return;
+        ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
+      } catch (e) {
+        if (!context.mounted) return;
+        ToastWidget.show(context, _describeError(e), type: ToastType.error);
+      }
+    }
+  }
+
+  /// 住所編集ダイアログを表示するメソッド
+  /// [EditAddressDialog]は店舗プロフィールと共通の郵便番号検索コンポーネント
+  Future<void> _handleAddressEdit(BuildContext context, WidgetRef ref) async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (_) => EditAddressDialog(
+        initialZipCode: userProfile.zipCode ?? '',
+        initialPrefecture: userProfile.prefecture ?? '',
+        initialCity: userProfile.city ?? '',
+        initialAddress: userProfile.address ?? '',
+        initialBuilding: userProfile.building ?? '',
+      ),
+    );
+
+    if (result != null && context.mounted) {
+      try {
+        // zip_code/prefecture/city/address/buildingを一括更新
+        await ref
+            .read(profileActionsProvider.notifier)
+            .updateUserProfileFields(result);
+        if (!context.mounted) return;
+        ToastWidget.show(context, '住所が更新されました', type: ToastType.success);
+      } catch (e) {
+        if (!context.mounted) return;
+        ToastWidget.show(context, _describeError(e), type: ToastType.error);
+      }
+    }
+  }
+
+  /// 退会ダイアログを表示するメソッド。ダイアログ内で再認証〜削除〜サインアウトまで完結する
+  Future<void> _handleDeleteAccount(BuildContext context) async {
+    await showDialog<bool>(
+      context: context,
+      builder: (_) => const DeleteAccountDialog(),
+    );
+    // 成功時はダイアログ内でサインアウトまで行われ、ルーターが自動でログイン画面へ
+    // 遷移するため、ここでの後続処理(トースト表示等)は不要
   }
 
   void _showPolicyDialog(BuildContext context, String title, String content) {
@@ -161,6 +225,16 @@ class PersonalProfileView extends ConsumerWidget {
                     onTap: null,
                     showTrailingIcon: false,
                   ),
+                  ProfileSettingItem(
+                    title: '生年月日',
+                    subtitle: userProfile.birthdate ?? '未設定',
+                    onTap: () => _handleBirthdateEdit(context, ref),
+                  ),
+                  ProfileSettingItem(
+                    title: '住所',
+                    subtitle: userProfile.fullAddress ?? '未設定',
+                    onTap: () => _handleAddressEdit(context, ref),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -210,6 +284,18 @@ class PersonalProfileView extends ConsumerWidget {
                     subtitle: appVersion,
                     onTap: null,
                     showTrailingIcon: false,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ProfileSection(
+                title: 'アカウント管理',
+                children: [
+                  ProfileSettingItem(
+                    title: '退会',
+                    subtitle: 'ログインできなくなります',
+                    titleColor: AppColors.error,
+                    onTap: () => _handleDeleteAccount(context),
                   ),
                 ],
               ),

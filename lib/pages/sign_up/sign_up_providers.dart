@@ -5,12 +5,10 @@
 // 同じ生存期間になるよう、@riverpod のデフォルトのautoDisposeをそのまま使う)。
 //
 // 既存ViewModelの notifyListeners() オーバーライド(_isDisposed チェック)は、
-// Firebase Auth の電話番号認証コールバック(verifyPhoneNumber の
-// verificationCompleted/verificationFailed/codeSent/codeAutoRetrievalTimeout)が
-// ウィジェット破棄後にも非同期で発火し得ることへの防御だった。Riverpodでは
-// dispose後にstateを書き込むと例外になるため、ref.onDispose()で立てる
-// _isDisposedフラグを_updateState()内で確認するガードに置き換えて
-// 同じ安全性を再現する (riverpod 2.6.1にはref.mountedが無いため)。
+// Firebase Authの非同期コールバックがウィジェット破棄後にも発火し得ることへの
+// 防御だった。Riverpodではdispose後にstateを書き込むと例外になるため、
+// ref.onDispose()で立てる_isDisposedフラグを_updateState()内で確認する
+// ガードに置き換えて同じ安全性を再現する (riverpod 2.6.1にはref.mountedが無いため)。
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,7 +31,6 @@ class SignUpState {
   final bool isTermsAgreed;
   final bool isPrivacyAgreed;
   final bool isEmailVerified;
-  final bool isPhoneVerified;
   final Map<String, Map<String, String>>? operatingHours;
   final bool is24Hours;
   final String resetTime;
@@ -46,7 +43,6 @@ class SignUpState {
     this.isTermsAgreed = false,
     this.isPrivacyAgreed = false,
     this.isEmailVerified = false,
-    this.isPhoneVerified = false,
     this.operatingHours,
     this.is24Hours = false,
     this.resetTime = '06:00',
@@ -61,7 +57,6 @@ class SignUpState {
     bool? isTermsAgreed,
     bool? isPrivacyAgreed,
     bool? isEmailVerified,
-    bool? isPhoneVerified,
     Map<String, Map<String, String>>? operatingHours,
     bool? is24Hours,
     String? resetTime,
@@ -74,7 +69,6 @@ class SignUpState {
       isTermsAgreed: isTermsAgreed ?? this.isTermsAgreed,
       isPrivacyAgreed: isPrivacyAgreed ?? this.isPrivacyAgreed,
       isEmailVerified: isEmailVerified ?? this.isEmailVerified,
-      isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
       operatingHours: operatingHours ?? this.operatingHours,
       is24Hours: is24Hours ?? this.is24Hours,
       resetTime: resetTime ?? this.resetTime,
@@ -85,10 +79,6 @@ class SignUpState {
 @riverpod
 class SignUpNotifier extends _$SignUpNotifier {
   late final ProviderProfileService _profileService;
-
-  // 電話番号認証の状態 (Firebaseコールバックでのみ使用する内部変数)
-  String? _verificationId;
-  int? _resendToken;
 
   // 内部変数
   User? _pendingUser;
@@ -122,6 +112,25 @@ class SignUpNotifier extends _$SignUpNotifier {
       _updateState((s) => s.copyWith(isPrivacyAgreed: value));
 
   void reset() => _updateState((_) => const SignUpState());
+
+  // 会員登録の途中離脱時に呼び出す完全リセット
+  // (メモリ上のstateだけでなく、SharedPreferencesの進捗とFirebaseの
+  //  未完了セッションまで含めて破棄することで、次回「会員登録」に入った際に
+  //  意図せず途中の画面へ復帰してしまうのを防ぐ)
+  Future<void> discardProgress() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      await FirebaseAuth.instance.signOut();
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('signup_role');
+    await prefs.remove('terms_agreed');
+    await prefs.remove('signup_phone');
+
+    _isProgressLoaded = false;
+    reset();
+  }
 
   void setCurrentPageIndex(int index) =>
       _updateState((s) => s.copyWith(currentPageIndex: index));
@@ -172,18 +181,14 @@ class SignUpNotifier extends _$SignUpNotifier {
     await currentUser.reload();
     _pendingUser = currentUser;
 
-    bool isPhoneVerified = false;
-    if (currentUser.phoneNumber != null && currentUser.phoneNumber!.isNotEmpty) {
-      isPhoneVerified = true;
-    }
-
     final savedRole = prefs.getString('signup_role');
     final savedTerms = prefs.getBool('terms_agreed') ?? false;
+    final savedPhone = prefs.getString('signup_phone');
+    final isPhoneEntered = savedPhone != null && savedPhone.isNotEmpty;
     final role = savedRole ?? state.role;
 
     _updateState((s) => s.copyWith(
           isEmailVerified: true,
-          isPhoneVerified: isPhoneVerified,
           role: role,
           isTermsAgreed: savedTerms,
           isPrivacyAgreed: savedTerms,
@@ -192,8 +197,8 @@ class SignUpNotifier extends _$SignUpNotifier {
     // メール認証済みなのでStep5はスキップ
     if (role == null) return 0;
     if (!savedTerms) return 1;
-    if (!isPhoneVerified) return 6; // 電話番号認証
-    return 8; // ユーザー情報
+    if (!isPhoneEntered) return 6; // 電話番号入力
+    return 7; // ユーザー情報
   }
 
   Future<void> saveSignUpProgress() async {
@@ -431,117 +436,16 @@ class SignUpNotifier extends _$SignUpNotifier {
     }
   }
 
-  // --- 電話番号認証ロジック ---
-
-  Future<bool> sendPhoneCode(String phoneNumber, String role) async {
-    // メモ: バリデーションはViewで行われる
-    _updateState((s) => s.copyWith(isLoading: true, clearErrorMessage: true));
-
-    try {
-      setSignUpInProgress(true);
-      final rawPhoneNumber = phoneNumber.trim();
-      final internalNumberString =
-          PhoneFormatter.formatPhoneNumberForInternal(rawPhoneNumber);
-      final phoneNumberForFirebase = _formatPhoneNumber(internalNumberString);
-
-      final completer = Completer<bool>();
-
-      // iOS Simulator에서의 테스트 번호 인증을 위해 앱 검증(reCAPTCHA 우회) 비활성화
-      await FirebaseAuth.instance.setSettings(appVerificationDisabledForTesting: true);
-
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumberForFirebase,
-        timeout: const Duration(seconds: 60),
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          // 自動完了ロジックをここに記述可能だが、通常はcodeSentがメインフロー
-          _updateState((s) => s.copyWith(isPhoneVerified: true));
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          String msg = '認証に失敗しました: ${e.message}';
-          if (e.code == 'invalid-phone-number') msg = '電話番号の形式が正しくありません。';
-          if (e.code == 'too-many-requests') {
-            msg = '試行回数が多すぎます。しばらくしてから再度お試しください。';
-          }
-          _updateState((s) => s.copyWith(errorMessage: msg, isLoading: false));
-          setSignUpInProgress(false);
-          if (!completer.isCompleted) completer.complete(false);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          _verificationId = verificationId;
-          _resendToken = resendToken;
-          _updateState((s) => s.copyWith(isLoading: false));
-          // setSignUpInProgressはtrueのまま
-          if (!completer.isCompleted) completer.complete(true);
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          _verificationId = verificationId;
-        },
-        forceResendingToken: _resendToken,
-      );
-
-      return completer.future;
-    } catch (e) {
-      setSignUpInProgress(false);
-      _updateState((s) => s.copyWith(errorMessage: 'エラーが発生しました: $e', isLoading: false));
-      return false;
-    }
-  }
-
-  String _formatPhoneNumber(String phone) {
-    String cleaned = phone.replaceAll(RegExp(r'[-\s]'), '');
-    if (cleaned.startsWith('0')) {
-      cleaned = cleaned.substring(1);
-    }
-    return '+81$cleaned';
-  }
-
-  Future<bool> verifyPhoneCode(String code) async {
-    if (code.isEmpty || code.length != 6) {
-      _updateState((s) => s.copyWith(errorMessage: '6桁の認証コードを入力してください。'));
-      return false;
-    }
-
-    _updateState((s) => s.copyWith(isLoading: true, clearErrorMessage: true));
-    setSignUpInProgress(true);
-
-    try {
-      final credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId!,
-        smsCode: code,
-      );
-
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null) {
-        await currentUser.linkWithCredential(credential);
-      } else {
-        await FirebaseAuth.instance.signInWithCredential(credential);
-        await FirebaseAuth.instance.signOut();
-      }
-
-      _updateState((s) => s.copyWith(isPhoneVerified: true));
-      return true;
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'invalid-verification-code') {
-        _updateState((s) => s.copyWith(errorMessage: '認証コードが正しくありません。'));
-      } else if (e.code == 'session-expired') {
-        _updateState((s) => s.copyWith(errorMessage: '認証コードの有効期限が切れました。再度送信してください。'));
-      } else {
-        _updateState((s) => s.copyWith(errorMessage: '認証に失敗しました: ${e.message}'));
-      }
-      return false;
-    } catch (e) {
-      _updateState((s) => s.copyWith(errorMessage: 'エラーが発生しました: $e'));
-      return false;
-    } finally {
-      setSignUpInProgress(false);
-      _updateState((s) => s.copyWith(isLoading: false));
-    }
-  }
-
   Future<bool> handleSignUp({
     required String? mode,
     required String? managerName,
     required String? managerNameKana,
+    String? managerBirthdate, // New: 本人の生年月日 (YYYY-MM-DD)
+    String? managerZipCode, // New: 本人の郵便番号
+    String? managerPrefecture, // New: 本人の都道府県
+    String? managerCity, // New: 本人の市区町村
+    String? managerAddress, // New: 本人の住所(番地)
+    String? managerBuilding, // New: 本人の建物名(任意)
     required String? storeName,
     required String? storeAddress,
     String? storeZipCode, // New
@@ -551,6 +455,12 @@ class SignUpNotifier extends _$SignUpNotifier {
     required String? storePhone,
     required String? staffName,
     required String? staffNameKana,
+    String? staffBirthdate, // New: 本人の生年月日 (YYYY-MM-DD)
+    String? staffZipCode, // New: 本人の郵便番号
+    String? staffPrefecture, // New: 本人の都道府県
+    String? staffCity, // New: 本人の市区町村
+    String? staffAddress, // New: 本人の住所(番地)
+    String? staffBuilding, // New: 本人の建物名(任意)
     required String? staffStoreId,
     required String managerPhoneInput, // 内部フォーマットチェック用
     required String staffPhoneInput,
@@ -617,6 +527,12 @@ class SignUpNotifier extends _$SignUpNotifier {
             name: managerName!,
             nameFurigana: managerNameKana!,
             role: 'manager',
+            birthdate: managerBirthdate,
+            zipCode: managerZipCode,
+            prefecture: managerPrefecture,
+            city: managerCity,
+            address: managerAddress,
+            building: managerBuilding,
             // 店舗情報は含めない (null または 空文字)
           );
 
@@ -637,6 +553,12 @@ class SignUpNotifier extends _$SignUpNotifier {
             name: staffName!,
             nameFurigana: staffNameKana!,
             role: 'staff',
+            birthdate: staffBirthdate,
+            zipCode: staffZipCode,
+            prefecture: staffPrefecture,
+            city: staffCity,
+            address: staffAddress,
+            building: staffBuilding,
             // 店舗IDは含めない
           );
           await _profileService.signUp(profile, idToken);
