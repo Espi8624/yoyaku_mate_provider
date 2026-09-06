@@ -112,6 +112,7 @@ flutter:
     - .env
     - .env.production
     - .env.development
+    - .env.remote-dev
     - assets/nationalities.json
     - assets/app_icon.png
   #   - images/a_dot_burr.jpeg
