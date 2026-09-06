@@ -70,15 +70,17 @@ class StaffManagementView extends ConsumerWidget {
       }
     }
 
-    // 「現在のメンバー」= 退会していない全員(承認済み/承認待ち/拒否済み)。
-    // 「過去のメンバー」= 退会済み(WITHDRAWN)。連絡先確認のため一覧からは消さず、
-    // タブを分けて過去の在籍者として参照できるようにする
-    final activeStaffList = otherStaffList
-        .where((s) => s['status'] != StaffStatus.withdrawn)
-        .toList();
-    final formerStaffList = otherStaffList
-        .where((s) => s['status'] == StaffStatus.withdrawn)
-        .toList();
+    // 「現在のメンバー」= 承認待ち・承認済み(現時点で店舗に関わっている)。
+    // 「過去のメンバー」= 退会済み(WITHDRAWN)・拒否済み(REJECTED、申請却下または
+    // 承認取り消しの両方がこの状態を共有する)。いずれも store_staff_info の
+    // レコード自体は削除されず残るため、連絡先確認用にタブを分けて参照できるようにする
+    bool isPastMember(Map<String, dynamic> s) =>
+        s['status'] == StaffStatus.withdrawn ||
+        s['status'] == StaffStatus.rejected;
+    final activeStaffList =
+        otherStaffList.where((s) => !isPastMember(s)).toList();
+    final formerStaffList =
+        otherStaffList.where(isPastMember).toList();
 
     // タブ内のメンバーリストを構築する共通処理
     Widget buildMemberList(
