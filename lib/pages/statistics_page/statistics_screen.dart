@@ -23,96 +23,22 @@ class _StatisticsView extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 期間/日付/指標の選択はページローカルなephemeral UI状態のためHooksで管理
-    final selectedPeriod = useState('auto'); // 'auto', 'weekly', 'monthly', 'yearly'
+    // 期間/指標の選択はページローカルなephemeral UI状態のためHooksで管理。
+    // 過去の期間へのナビゲーションは提供せず、常に「今日」「今週」固定。
+    final selectedPeriod = useState('auto'); // 'auto'(今日), 'weekly'(今週=日〜土)
     final selectedMetric = useState('visitor'); // 'visitor', 'no_show', 'cancelled'
-    final currentDate = useState(DateTime.now());
-
-    // 既存 StatisticsViewModel の formattedDate/isCurrentPeriod と同一ロジック
-    String formattedDate() {
-      if (selectedPeriod.value == 'weekly') {
-        final start = currentDate.value.subtract(const Duration(days: 6));
-        return "${start.month}月${start.day}日 - ${currentDate.value.month}月${currentDate.value.day}日";
-      } else if (selectedPeriod.value == 'monthly') {
-        return "${currentDate.value.year}年 ${currentDate.value.month}月";
-      } else if (selectedPeriod.value == 'yearly') {
-        return "${currentDate.value.year}年";
-      }
-      return "${currentDate.value.year}年 ${currentDate.value.month}月 ${currentDate.value.day}日";
-    }
-
-    bool isCurrentPeriod() {
-      final now = DateTime.now();
-      if (selectedPeriod.value == 'weekly') {
-        final diff = now.difference(currentDate.value).inDays;
-        return diff < 1 && diff >= 0 && now.day == currentDate.value.day;
-      } else if (selectedPeriod.value == 'monthly') {
-        return now.year == currentDate.value.year &&
-            now.month == currentDate.value.month;
-      } else if (selectedPeriod.value == 'yearly') {
-        return now.year == currentDate.value.year;
-      }
-      return now.difference(currentDate.value).inDays == 0 &&
-          now.day == currentDate.value.day;
-    }
 
     void setPeriod(String period) {
-      if (selectedPeriod.value == period) return;
       selectedPeriod.value = period;
-      // 期間タイプ変更時は今日にリセット
-      currentDate.value = DateTime.now();
     }
 
     void setMetric(String metric) {
-      if (selectedMetric.value == metric) return;
       selectedMetric.value = metric;
-
-      // 'no_show'/'cancelled' に切り替える際、現在の期間が'auto'（今日）なら'weekly'に切り替える
-      // 'auto'には時間別のNo-Show/Cancelデータが存在しないため
-      if ((metric == 'no_show' || metric == 'cancelled') &&
-          selectedPeriod.value == 'auto') {
-        selectedPeriod.value = 'weekly';
-        currentDate.value = DateTime.now();
-      }
-    }
-
-    void previousPeriod() {
-      if (selectedPeriod.value == 'weekly') {
-        currentDate.value = currentDate.value.subtract(const Duration(days: 7));
-      } else if (selectedPeriod.value == 'monthly') {
-        currentDate.value = DateTime(
-            currentDate.value.year, currentDate.value.month - 1, 1);
-      } else if (selectedPeriod.value == 'yearly') {
-        currentDate.value = DateTime(currentDate.value.year - 1, 1, 1);
-      } else {
-        currentDate.value = currentDate.value.subtract(const Duration(days: 1));
-      }
-    }
-
-    void nextPeriod() {
-      if (isCurrentPeriod()) return; // 未来への移動を制限
-
-      DateTime next;
-      if (selectedPeriod.value == 'weekly') {
-        next = currentDate.value.add(const Duration(days: 7));
-      } else if (selectedPeriod.value == 'monthly') {
-        next = DateTime(currentDate.value.year, currentDate.value.month + 1, 1);
-      } else if (selectedPeriod.value == 'yearly') {
-        next = DateTime(currentDate.value.year + 1, 1, 1);
-      } else {
-        next = currentDate.value.add(const Duration(days: 1));
-      }
-
-      if (next.isAfter(DateTime.now())) {
-        next = DateTime.now();
-      }
-      currentDate.value = next;
     }
 
     final provider = statisticsDataProvider(
       storeId: storeId,
       period: selectedPeriod.value,
-      date: currentDate.value,
     );
     final statsAsync = ref.watch(provider);
 
@@ -120,17 +46,17 @@ class _StatisticsView extends HookConsumerWidget {
 
     final data = statsAsync.valueOrNull;
 
-    final visitorStats = data?['visitor_stats'];
-    final hourlyCongestion =
-        (data?['hourly_congestion'] as List<dynamic>?) ?? [];
-    final avgWaitTime = (data?['average_wait_time'] as String?) ?? '0分';
+    final visitorTotal = (data?['visitor_total'] as num?)?.toInt() ?? 0;
+    final visitorGrowthRate =
+        ((data?['visitor_growth_rate'] as num?) ?? 0).toDouble();
+    final avgWaitTime = (data?['average_wait_time'] as String?) ?? '--分';
     final noShowRate = ((data?['no_show_rate'] as num?) ?? 0).toDouble();
-    final totalCancelled = (data?['total_cancelled'] as num?)?.toInt() ?? 0;
-    final totalNoShow = (data?['total_no_show'] as num?)?.toInt() ?? 0;
+    final totalCancelled = (data?['cancelled_total'] as num?)?.toInt() ?? 0;
+    final totalNoShow = (data?['no_show_total'] as num?)?.toInt() ?? 0;
 
-    // Determine Highlight Data based on Selection
+    // 選択中の指標に応じたハイライト表示内容を決定
     String highlightTitle = '来店数';
-    int highlightValue = visitorStats?['today'] ?? 0;
+    int highlightValue = visitorTotal;
     Color highlightColor = AppColors.statChartDark;
     IconData? highlightIcon;
 
@@ -162,8 +88,8 @@ class _StatisticsView extends HookConsumerWidget {
         context,
         statsAsync,
         data,
-        visitorStats,
-        hourlyCongestion,
+        visitorTotal,
+        visitorGrowthRate,
         avgWaitTime,
         noShowRate,
         highlightTitle,
@@ -172,12 +98,8 @@ class _StatisticsView extends HookConsumerWidget {
         highlightIcon,
         selectedPeriod.value,
         selectedMetric.value,
-        formattedDate(),
-        isCurrentPeriod(),
         setPeriod,
         setMetric,
-        previousPeriod,
-        nextPeriod,
         refresh,
       ),
     );
@@ -187,8 +109,8 @@ class _StatisticsView extends HookConsumerWidget {
       BuildContext context,
       AsyncValue<Map<String, dynamic>> statsAsync,
       Map<String, dynamic>? data,
-      dynamic visitorStats,
-      List<dynamic> hourlyCongestion,
+      int visitorTotal,
+      double visitorGrowthRate,
       String avgWaitTime,
       double noShowRate,
       String highlightTitle,
@@ -197,12 +119,8 @@ class _StatisticsView extends HookConsumerWidget {
       IconData? highlightIcon,
       String selectedPeriod,
       String selectedMetric,
-      String formattedDate,
-      bool isCurrentPeriod,
       void Function(String) setPeriod,
       void Function(String) setMetric,
-      VoidCallback previousPeriod,
-      VoidCallback nextPeriod,
       Future<void> Function() refresh) {
     final isLoading = statsAsync.isLoading && data == null;
 
@@ -296,20 +214,22 @@ class _StatisticsView extends HookConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildSectionTitle(
-                  selectedPeriod == 'weekly'
-                      ? '週間ハイライト'
-                      : selectedPeriod == 'monthly'
-                          ? '月間ハイライト'
-                          : selectedPeriod == 'yearly'
-                              ? '年間ハイライト'
-                              : '本日のハイライト',
-                ),
+                    selectedPeriod == 'weekly' ? '今週のハイライト' : '本日のハイライト'),
                 const SizedBox(height: 12),
-                _buildVisitorCard(visitorStats,
-                    overrideTitle: highlightTitle,
-                    overrideValue: highlightValue,
-                    overrideColor: highlightColor,
-                    overrideIcon: highlightIcon),
+                _buildVisitorCard(
+                  overrideTitle: highlightTitle,
+                  overrideValue: highlightValue,
+                  overrideColor: highlightColor,
+                  overrideIcon: highlightIcon,
+                  visitorTotal: visitorTotal,
+                  growthRate: visitorGrowthRate,
+                  comparisonLabel: '先週と比較',
+                  // 成長率バッジは「来店数」ハイライト かつ 今週ビューの時のみ表示。
+                  // 「今日」は前日比だと曜日差(週末/平日など)のノイズが大きく、
+                  // 誤解を招く数値になりやすいため意図的に非表示にしている。
+                  showGrowth:
+                      selectedMetric == 'visitor' && selectedPeriod == 'weekly',
+                ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -447,66 +367,16 @@ class _StatisticsView extends HookConsumerWidget {
                   ),
                 ),
 
-                // Period Selector
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildPeriodButton(
-                          selectedPeriod, setPeriod, 'auto', '今日',
-                          isDisabled: selectedMetric == 'no_show' ||
-                              selectedMetric == 'cancelled'),
-                      const SizedBox(width: 8),
-                      _buildPeriodButton(
-                          selectedPeriod, setPeriod, 'weekly', '週間'),
-                      const SizedBox(width: 8),
-                      _buildPeriodButton(
-                          selectedPeriod, setPeriod, 'monthly', '月間'),
-                      const SizedBox(width: 8),
-                      _buildPeriodButton(
-                          selectedPeriod, setPeriod, 'yearly', '年間'),
-                    ],
-                  ),
+                // Period Selector（今日 / 今週の2つのみ。過去への移動はなし）
+                Row(
+                  children: [
+                    _buildPeriodButton(selectedPeriod, setPeriod, 'auto', '今日'),
+                    const SizedBox(width: 8),
+                    _buildPeriodButton(
+                        selectedPeriod, setPeriod, 'weekly', '今週'),
+                  ],
                 ),
-                const SizedBox(height: 8),
-
-                // Date Navigator (Visible only when not 'auto')
-                if (selectedPeriod != 'auto') ...[
-                  Container(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          onPressed: previousPeriod,
-                          icon:
-                              const Icon(Icons.chevron_left_rounded, size: 32),
-                          color: Colors.black54,
-                        ),
-                        const SizedBox(width: 16),
-                        Text(
-                          formattedDate,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        IconButton(
-                          // 未来への移動は isCurrentPeriod で制御
-                          onPressed: isCurrentPeriod ? null : nextPeriod,
-                          icon:
-                              const Icon(Icons.chevron_right_rounded, size: 32),
-                          color: isCurrentPeriod
-                              ? Colors.black12
-                              : Colors.black54,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 4),
+                const SizedBox(height: 12),
 
                 // Chart Display
                 if (statsAsync.isLoading)
@@ -528,24 +398,14 @@ class _StatisticsView extends HookConsumerWidget {
                             color: AppColors.accentPrimary)),
                   )
                 else if (selectedMetric == 'visitor')
-                  if (selectedPeriod == 'auto')
-                    DynamicChartCard(
-                        chartData: hourlyCongestion.map((e) {
-                      return {
-                        'label': e['hour'].toString(),
-                        'value': e['count'],
-                        'prev_value': e['prev_count'] ?? 0,
-                      };
-                    }).toList())
-                  else
-                    DynamicChartCard(
-                        chartData: data['chart_data'] as List<dynamic>?)
+                  DynamicChartCard(
+                      chartData: data['visitor_chart'] as List<dynamic>?)
                 else if (selectedMetric == 'cancelled')
                   DynamicChartCard(
-                      chartData: data['cancelled_chart_data'] as List<dynamic>?)
+                      chartData: data['cancelled_chart'] as List<dynamic>?)
                 else
                   DynamicChartCard(
-                      chartData: data['no_show_chart_data'] as List<dynamic>?),
+                      chartData: data['no_show_chart'] as List<dynamic>?),
               ],
             );
 
@@ -595,19 +455,19 @@ class _StatisticsView extends HookConsumerWidget {
     );
   }
 
-  Widget _buildVisitorCard(Map<String, dynamic> stats,
-      {String? overrideTitle,
-      int? overrideValue,
-      Color? overrideColor,
-      IconData? overrideIcon}) {
-    final value = overrideValue ?? (stats['today'] as int);
+  Widget _buildVisitorCard({
+    required int visitorTotal,
+    required double growthRate,
+    required String comparisonLabel,
+    required bool showGrowth,
+    String? overrideTitle,
+    int? overrideValue,
+    Color? overrideColor,
+    IconData? overrideIcon,
+  }) {
+    final value = overrideValue ?? visitorTotal;
     final title = overrideTitle ?? '総来店者数';
-
-    final wowRate = (stats['wow_growth_rate'] as num).toDouble();
-    final isPositive = wowRate >= 0;
-
-    // Only show growth rate (comparison) if showing Visitor Stats (default)
-    final showGrowth = overrideValue == null;
+    final isPositive = growthRate >= 0;
 
     return Container(
       decoration: BoxDecoration(
@@ -693,7 +553,7 @@ class _StatisticsView extends HookConsumerWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${wowRate.abs().toStringAsFixed(1)}%',
+                              '${growthRate.abs().toStringAsFixed(1)}%',
                               style: TextStyle(
                                 color: isPositive
                                     ? AppColors.statPositiveGreen
@@ -706,8 +566,6 @@ class _StatisticsView extends HookConsumerWidget {
                         ),
                       )
                     else
-                      // Optional: Add icon for Cancel/No-Show if desired, or nothing.
-                      // Let's add an icon to make it look balanced.
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
@@ -739,7 +597,7 @@ class _StatisticsView extends HookConsumerWidget {
                     const Padding(
                       padding: EdgeInsets.only(bottom: 8.0),
                       child: Text(
-                        '人', // Could make this dynamic '件' if needed, but '人' is safer default
+                        '人',
                         style: TextStyle(
                           color: Colors.white60,
                           fontSize: 16,
@@ -750,16 +608,10 @@ class _StatisticsView extends HookConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (showGrowth)
-                  const Text(
-                    '先週の同曜日と比較',
-                    style: TextStyle(color: Colors.white38, fontSize: 12),
-                  )
-                else
-                  Text(
-                    '選択期間の合計',
-                    style: TextStyle(color: Colors.white38, fontSize: 12),
-                  ),
+                Text(
+                  showGrowth ? comparisonLabel : '選択期間の合計',
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -768,30 +620,16 @@ class _StatisticsView extends HookConsumerWidget {
     );
   }
 
-  IconData outlineIconForMetric(String metric) {
-    switch (metric) {
-      case 'cancelled':
-        return Icons.cancel_outlined;
-      case 'no_show':
-        return Icons.person_off_outlined;
-      default:
-        return Icons.people_outline;
-    }
-  }
-
   Widget _buildPeriodButton(String selectedPeriod,
-      void Function(String) setPeriod, String period, String label,
-      {bool isDisabled = false}) {
+      void Function(String) setPeriod, String period, String label) {
     final isSelected = selectedPeriod == period;
     return InkWell(
-      onTap: isDisabled ? null : () => setPeriod(period),
+      onTap: () => setPeriod(period),
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isDisabled
-              ? Colors.grey.withOpacity(0.1)
-              : (isSelected ? AppColors.statDarkCardGradientStart : Colors.white),
+          color: isSelected ? AppColors.statDarkCardGradientStart : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
               color: isSelected ? Colors.transparent : Colors.grey.shade300),
@@ -799,9 +637,7 @@ class _StatisticsView extends HookConsumerWidget {
         child: Text(
           label,
           style: TextStyle(
-            color: isDisabled
-                ? Colors.black26
-                : (isSelected ? Colors.white : Colors.black54),
+            color: isSelected ? Colors.white : Colors.black54,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           ),
         ),
