@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'
     show ProviderScope, ConsumerStatefulWidget, ConsumerState, AsyncValueX;
 import 'package:go_router/go_router.dart';
@@ -66,6 +67,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       routerConfig: router, // GoRouter設定を使用
       title: 'ルスイ店舗管理',
+      // アプリ全体が日本語UIのため、DatePicker等のMaterialウィジェットも
+      // 日本語ロケールで表示されるよう明示的に設定する
+      locale: const Locale('ja'),
+      supportedLocales: const [Locale('ja')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.background,
         canvasColor: AppColors.cardBackground,

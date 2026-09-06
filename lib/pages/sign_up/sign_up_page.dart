@@ -49,6 +49,17 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       TextEditingController();
   final TextEditingController managerFirstNameKanaController =
       TextEditingController();
+  final TextEditingController managerBirthdateController =
+      TextEditingController();
+  final TextEditingController managerZipCodeController =
+      TextEditingController();
+  final TextEditingController managerPrefectureController =
+      TextEditingController();
+  final TextEditingController managerCityController = TextEditingController();
+  final TextEditingController managerAddressController =
+      TextEditingController();
+  final TextEditingController managerBuildingController =
+      TextEditingController();
 
   final TextEditingController staffEmailController = TextEditingController();
   final TextEditingController staffPasswordController = TextEditingController();
@@ -61,6 +72,15 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   final TextEditingController staffLastNameKanaController =
       TextEditingController();
   final TextEditingController staffFirstNameKanaController =
+      TextEditingController();
+  final TextEditingController staffBirthdateController =
+      TextEditingController();
+  final TextEditingController staffZipCodeController = TextEditingController();
+  final TextEditingController staffPrefectureController =
+      TextEditingController();
+  final TextEditingController staffCityController = TextEditingController();
+  final TextEditingController staffAddressController = TextEditingController();
+  final TextEditingController staffBuildingController =
       TextEditingController();
 
   bool _isInitialized = false;
@@ -187,6 +207,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     managerFirstNameController.dispose();
     managerLastNameKanaController.dispose();
     managerFirstNameKanaController.dispose();
+    managerBirthdateController.dispose();
+    managerZipCodeController.dispose();
+    managerPrefectureController.dispose();
+    managerCityController.dispose();
+    managerAddressController.dispose();
+    managerBuildingController.dispose();
 
     staffEmailController.dispose();
     staffPasswordController.dispose();
@@ -196,6 +222,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     staffFirstNameController.dispose();
     staffLastNameKanaController.dispose();
     staffFirstNameKanaController.dispose();
+    staffBirthdateController.dispose();
+    staffZipCodeController.dispose();
+    staffPrefectureController.dispose();
+    staffCityController.dispose();
+    staffAddressController.dispose();
+    staffBuildingController.dispose();
 
     super.dispose();
   }
@@ -272,6 +304,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           firstNameController: managerFirstNameController,
           lastNameKanaController: managerLastNameKanaController,
           firstNameKanaController: managerFirstNameKanaController,
+          birthdateController: managerBirthdateController,
+          zipCodeController: managerZipCodeController,
+          prefectureController: managerPrefectureController,
+          cityController: managerCityController,
+          addressController: managerAddressController,
+          buildingController: managerBuildingController,
           onNext: _handleSignUp, // Step 7で完了
         ), // 7
       ];
@@ -305,6 +343,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           firstNameController: staffFirstNameController,
           lastNameKanaController: staffLastNameKanaController,
           firstNameKanaController: staffFirstNameKanaController,
+          birthdateController: staffBirthdateController,
+          zipCodeController: staffZipCodeController,
+          prefectureController: staffPrefectureController,
+          cityController: staffCityController,
+          addressController: staffAddressController,
+          buildingController: staffBuildingController,
           onSubmit: _handleSignUp, // Step 7で完了
         ), // 7
       ];
@@ -441,6 +485,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       mode: null,
       managerName: managerName,
       managerNameKana: managerNameKana,
+      managerBirthdate: managerBirthdateController.text.trim(),
+      managerZipCode: managerZipCodeController.text.trim(),
+      managerPrefecture: managerPrefectureController.text.trim(),
+      managerCity: managerCityController.text.trim(),
+      managerAddress: managerAddressController.text.trim(),
+      managerBuilding: managerBuildingController.text.trim(),
       storeName: null,
       storeAddress: null,
       storeZipCode: null,
@@ -450,6 +500,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       storePhone: null,
       staffName: staffName,
       staffNameKana: staffNameKana,
+      staffBirthdate: staffBirthdateController.text.trim(),
+      staffZipCode: staffZipCodeController.text.trim(),
+      staffPrefecture: staffPrefectureController.text.trim(),
+      staffCity: staffCityController.text.trim(),
+      staffAddress: staffAddressController.text.trim(),
+      staffBuilding: staffBuildingController.text.trim(),
       staffStoreId: null, // 店舗IDなし
       managerPhoneInput: managerPhoneController.text.trim(),
       staffPhoneInput: staffPhoneController.text.trim(),
@@ -540,6 +596,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         managerFirstNameController.clear();
         managerLastNameKanaController.clear();
         managerFirstNameKanaController.clear();
+        managerBirthdateController.clear();
+        managerZipCodeController.clear();
+        managerPrefectureController.clear();
+        managerCityController.clear();
+        managerAddressController.clear();
+        managerBuildingController.clear();
 
         staffEmailController.clear();
         staffPasswordController.clear();
@@ -549,6 +611,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         staffFirstNameController.clear();
         staffLastNameKanaController.clear();
         staffFirstNameKanaController.clear();
+        staffBirthdateController.clear();
+        staffZipCodeController.clear();
+        staffPrefectureController.clear();
+        staffCityController.clear();
+        staffAddressController.clear();
+        staffBuildingController.clear();
 
         _pageController.jumpToPage(0);
       }

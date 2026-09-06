@@ -440,6 +440,12 @@ class SignUpNotifier extends _$SignUpNotifier {
     required String? mode,
     required String? managerName,
     required String? managerNameKana,
+    String? managerBirthdate, // New: 本人の生年月日 (YYYY-MM-DD)
+    String? managerZipCode, // New: 本人の郵便番号
+    String? managerPrefecture, // New: 本人の都道府県
+    String? managerCity, // New: 本人の市区町村
+    String? managerAddress, // New: 本人の住所(番地)
+    String? managerBuilding, // New: 本人の建物名(任意)
     required String? storeName,
     required String? storeAddress,
     String? storeZipCode, // New
@@ -449,6 +455,12 @@ class SignUpNotifier extends _$SignUpNotifier {
     required String? storePhone,
     required String? staffName,
     required String? staffNameKana,
+    String? staffBirthdate, // New: 本人の生年月日 (YYYY-MM-DD)
+    String? staffZipCode, // New: 本人の郵便番号
+    String? staffPrefecture, // New: 本人の都道府県
+    String? staffCity, // New: 本人の市区町村
+    String? staffAddress, // New: 本人の住所(番地)
+    String? staffBuilding, // New: 本人の建物名(任意)
     required String? staffStoreId,
     required String managerPhoneInput, // 内部フォーマットチェック用
     required String staffPhoneInput,
@@ -515,6 +527,12 @@ class SignUpNotifier extends _$SignUpNotifier {
             name: managerName!,
             nameFurigana: managerNameKana!,
             role: 'manager',
+            birthdate: managerBirthdate,
+            zipCode: managerZipCode,
+            prefecture: managerPrefecture,
+            city: managerCity,
+            address: managerAddress,
+            building: managerBuilding,
             // 店舗情報は含めない (null または 空文字)
           );
 
@@ -535,6 +553,12 @@ class SignUpNotifier extends _$SignUpNotifier {
             name: staffName!,
             nameFurigana: staffNameKana!,
             role: 'staff',
+            birthdate: staffBirthdate,
+            zipCode: staffZipCode,
+            prefecture: staffPrefecture,
+            city: staffCity,
+            address: staffAddress,
+            building: staffBuilding,
             // 店舗IDは含めない
           );
           await _profileService.signUp(profile, idToken);
