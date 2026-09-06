@@ -11,6 +11,7 @@ import 'package:yoyaku_mate_provider/widgets/common_dialogs/base_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 import '../../../../models/user_profile.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
+import '../dialogs/delete_account_dialog.dart';
 import '../dialogs/edit_address_dialog.dart';
 import '../dialogs/edit_birthdate_dialog.dart';
 import '../dialogs/edit_profile_dialog.dart';
@@ -121,6 +122,16 @@ class PersonalProfileView extends ConsumerWidget {
         ToastWidget.show(context, _describeError(e), type: ToastType.error);
       }
     }
+  }
+
+  /// 退会ダイアログを表示するメソッド。ダイアログ内で再認証〜削除〜サインアウトまで完結する
+  Future<void> _handleDeleteAccount(BuildContext context) async {
+    await showDialog<bool>(
+      context: context,
+      builder: (_) => const DeleteAccountDialog(),
+    );
+    // 成功時はダイアログ内でサインアウトまで行われ、ルーターが自動でログイン画面へ
+    // 遷移するため、ここでの後続処理(トースト表示等)は不要
   }
 
   void _showPolicyDialog(BuildContext context, String title, String content) {
@@ -273,6 +284,18 @@ class PersonalProfileView extends ConsumerWidget {
                     subtitle: appVersion,
                     onTap: null,
                     showTrailingIcon: false,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ProfileSection(
+                title: 'アカウント管理',
+                children: [
+                  ProfileSettingItem(
+                    title: '退会',
+                    subtitle: 'アカウントと個人情報を完全に削除します',
+                    titleColor: AppColors.error,
+                    onTap: () => _handleDeleteAccount(context),
                   ),
                 ],
               ),

@@ -7,6 +7,7 @@ class ProfileSettingItem extends StatelessWidget {
   final VoidCallback? onTap;
   final bool showTrailingIcon;
   final Widget? trailing;
+  final Color? titleColor; // 退会など、強調したい項目用(未指定時は通常色)
 
   const ProfileSettingItem({
     super.key,
@@ -15,6 +16,7 @@ class ProfileSettingItem extends StatelessWidget {
     this.onTap,
     this.showTrailingIcon = true,
     this.trailing,
+    this.titleColor,
   });
 
   @override
@@ -23,7 +25,8 @@ class ProfileSettingItem extends StatelessWidget {
       color: Colors.transparent,
       child: ListTile(
         title: Text(title,
-            style: const TextStyle(fontSize: 16, color: AppColors.textPrimary)),
+            style: TextStyle(
+                fontSize: 16, color: titleColor ?? AppColors.textPrimary)),
         subtitle: subtitle.isNotEmpty
             ? Text(subtitle,
                 style: const TextStyle(fontSize: 13, color: Colors.grey))

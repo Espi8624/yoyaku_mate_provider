@@ -107,6 +107,33 @@ class ProviderProfileService {
     return UserProfile.fromJson(userData as Map<String, dynamic>);
   }
 
+  // 会員退会 (アカウントの完全削除)
+  // マネージャーが店舗を保有したままの場合など、サーバー側で拒否されることがあるため
+  // レスポンスの message フィールドをそのままエラーメッセージとして使う
+  Future<void> deleteAccount(String mongoUserId) async {
+    final token = await _getIdToken();
+    final response = await apiClient.delete(
+      Uri.parse('$baseUrl/api/provider_user?user_id=$mongoUserId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      String message = '退会処理に失敗しました。';
+      try {
+        final body = json.decode(utf8.decode(response.bodyBytes));
+        if (body is Map && body['message'] is String) {
+          message = body['message'];
+        }
+      } catch (_) {
+        // レスポンスがJSONでない場合はデフォルトメッセージのまま
+      }
+      throw ApiException(message);
+    }
+  }
+
   Future<UserProfile> uploadUserImage(File imageFile, String idToken) async {
     final uri = Uri.parse('$baseUrl/api/provider_user/image');
     try {
