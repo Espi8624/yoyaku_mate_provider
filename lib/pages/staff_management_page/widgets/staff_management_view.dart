@@ -10,7 +10,6 @@ import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/constants/staff_status.dart';
 import 'package:yoyaku_mate_provider/constants/time_block.dart';
 import 'package:yoyaku_mate_provider/pages/profile_page/dialogs/day_availability_dialog.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/widgets/views/staff_approval_status_view.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 // 例外からユーザー向けメッセージを組み立てる共通処理
@@ -34,12 +33,19 @@ class StaffManagementView extends ConsumerWidget {
     final bool isManager = currentUser?.role == 'manager';
 
     // 承認待ち・拒否済みのスタッフは一覧取得APIが403を返すため、
-    // 呼び出す前に承認状態の案内だけを表示する(プロフィール画面と同じ判定・同じ表示)
+    // 呼び出す前に画面中央へ簡潔な案内だけを表示する
+    // (シフト表への導線はStaffManagementScreen側でボタンごと無効化している)
     final staffStatus = storeProfile?.staffStatus;
     if (!isManager && staffStatus != null && staffStatus != StaffStatus.approved) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: StaffApprovalStatusWidget(status: staffStatus),
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            '承認をお待ちしています。\n承認されるまでお待ちください。',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+          ),
+        ),
       );
     }
 

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/app_colors.dart';
+import '../../constants/staff_status.dart';
+import '../../providers/session_providers.dart';
 import 'widgets/staff_management_view.dart';
 import 'widgets/shift_table_screen.dart';
 
@@ -10,13 +13,23 @@ import 'widgets/shift_table_screen.dart';
 // 스태프관리(승인/권한/근무가능시간) 화면. 시프트표는 탭이 아니라
 // 타이틀 오른쪽 달력 아이콘 버튼으로 새 화면(ShiftTableScreen)을 열어 표시한다
 // (탭 UI가 화면 상단 공간을 과도하게 차지해 제거함)
-class StaffManagementScreen extends StatelessWidget {
+class StaffManagementScreen extends ConsumerWidget {
   final String storeId;
 
   const StaffManagementScreen({super.key, required this.storeId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(userProfileProvider).valueOrNull;
+    final storeProfile = ref.watch(selectedStoreProfileProvider);
+    final bool isManager = currentUser?.role == 'manager';
+
+    // 承認待ち・拒否済みのスタッフはシフト表取得APIが403を返すため、
+    // ボタン自体を無効化して遷移させない
+    final staffStatus = storeProfile?.staffStatus;
+    final bool canViewShiftTable =
+        isManager || staffStatus == StaffStatus.approved;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -41,6 +54,8 @@ class StaffManagementScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentPrimary,
                 foregroundColor: AppColors.textPrimaryLight,
+                disabledBackgroundColor: AppColors.disabled,
+                disabledForegroundColor: AppColors.textTertiary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -48,11 +63,13 @@ class StaffManagementScreen extends StatelessWidget {
                 textStyle: const TextStyle(
                     fontSize: 13, fontWeight: FontWeight.w600),
               ),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ShiftTableScreen(storeId: storeId),
-                ),
-              ),
+              onPressed: canViewShiftTable
+                  ? () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ShiftTableScreen(storeId: storeId),
+                        ),
+                      )
+                  : null,
             ),
           ),
         ],
