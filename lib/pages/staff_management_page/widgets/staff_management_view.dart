@@ -8,8 +8,9 @@ import 'package:yoyaku_mate_provider/models/user_profile.dart';
 import 'package:yoyaku_mate_provider/models/store_settings.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/constants/staff_status.dart';
-import 'package:yoyaku_mate_provider/constants/time_block.dart';
-import 'package:yoyaku_mate_provider/pages/profile_page/dialogs/day_availability_dialog.dart';
+// 「シフト表に含める」「勤務不可時間」一時非表示に伴い未使用(TODO: 復旧時はコメント解除)
+// import 'package:yoyaku_mate_provider/constants/time_block.dart';
+// import 'package:yoyaku_mate_provider/pages/profile_page/dialogs/day_availability_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 
 // 例外からユーザー向けメッセージを組み立てる共通処理
@@ -235,25 +236,26 @@ class _MyManagerCard extends ConsumerWidget {
 
   const _MyManagerCard({required this.userProfile, required this.storeSettings});
 
-  Future<void> _toggleIncluded(
-      BuildContext context, WidgetRef ref, bool included) async {
-    final settings = storeSettings;
-    if (settings == null) return;
-    try {
-      await ref.read(storeActionsProvider.notifier).updateStoreSettings(
-            settings.copyWith(excludeManagerFromShiftTable: !included),
-          );
-      if (!context.mounted) return;
-      ToastWidget.show(context, '設定を更新しました', type: ToastType.success);
-    } catch (e) {
-      if (!context.mounted) return;
-      ToastWidget.show(
-        context,
-        _describeError(e, actionLabel: '設定更新失敗'),
-        type: ToastType.error,
-      );
-    }
-  }
+  // 「シフト表に含める」トグルは一時的に非表示中のため未使用(TODO: 復旧時はコメント解除)
+  // Future<void> _toggleIncluded(
+  //     BuildContext context, WidgetRef ref, bool included) async {
+  //   final settings = storeSettings;
+  //   if (settings == null) return;
+  //   try {
+  //     await ref.read(storeActionsProvider.notifier).updateStoreSettings(
+  //           settings.copyWith(excludeManagerFromShiftTable: !included),
+  //         );
+  //     if (!context.mounted) return;
+  //     ToastWidget.show(context, '設定を更新しました', type: ToastType.success);
+  //   } catch (e) {
+  //     if (!context.mounted) return;
+  //     ToastWidget.show(
+  //       context,
+  //       _describeError(e, actionLabel: '設定更新失敗'),
+  //       type: ToastType.error,
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -310,26 +312,27 @@ class _MyManagerCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Divider(height: 1, thickness: 0.5, color: AppColors.border),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'シフト表に含める',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Switch(
-                  value: !(storeSettings?.excludeManagerFromShiftTable ?? false),
-                  onChanged: storeSettings == null
-                      ? null
-                      : (value) => _toggleIncluded(context, ref, value),
-                  activeColor: AppColors.accentPrimary,
-                ),
-              ],
-            ),
+            // 「シフト表に含める」トグルは一時的に非表示中(TODO: 復旧時はコメント解除)
+            // const SizedBox(height: 12),
+            // const Divider(height: 1, thickness: 0.5, color: AppColors.border),
+            // const SizedBox(height: 12),
+            // Row(
+            //   children: [
+            //     const Expanded(
+            //       child: Text(
+            //         'シフト表に含める',
+            //         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            //       ),
+            //     ),
+            //     Switch(
+            //       value: !(storeSettings?.excludeManagerFromShiftTable ?? false),
+            //       onChanged: storeSettings == null
+            //           ? null
+            //           : (value) => _toggleIncluded(context, ref, value),
+            //       activeColor: AppColors.accentPrimary,
+            //     ),
+            //   ],
+            // ),
           ],
         ),
       ),
@@ -377,59 +380,61 @@ class _StaffCard extends HookConsumerWidget {
     }
   }
 
-  // 曜日バッジタップ時、その曜日1日分だけの勤務不可時間帯を編集するダイアログを表示
-  Future<void> _showDayAvailabilityDialog(
-      BuildContext context, WidgetRef ref, String day, String dayLabel) async {
-    final availability = staff['availability'] as Map<String, dynamic>? ?? {};
-    // 旧スキーマ(文字列リスト)のデータが残っている場合は無視する(型不一致でクラッシュしないよう防御)
-    final currentRanges = (availability[day] as List<dynamic>?)
-            ?.whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList() ??
-        <Map<String, dynamic>>[];
-
-    final result = await showDialog<List<Map<String, dynamic>>>(
-      context: context,
-      builder: (_) => DayAvailabilityDialog(
-        dayLabel: dayLabel,
-        initialRanges: currentRanges,
-        isClosed: storeSettings?.closedDays.isClosedOn(dayLabel) ?? false,
-      ),
-    );
-
-    if (result == null) return;
-
-    // 他の曜日の値は維持したまま、タップされた曜日だけを更新してサーバーに送信
-    final updatedAvailability = {
-      for (final d in Weekday.values)
-        d: (availability[d] as List<dynamic>?)
-                ?.whereType<Map>()
-                .map((e) => Map<String, dynamic>.from(e))
-                .toList() ??
-            <Map<String, dynamic>>[],
-    };
-    updatedAvailability[day] = result;
-
-    try {
-      await ref
-          .read(staffActionsProvider.notifier)
-          .updateAvailability(storeId, staff['_id'], updatedAvailability);
-      if (!context.mounted) return;
-      ToastWidget.show(context, '勤務不可時間を更新しました', type: ToastType.success);
-    } catch (e) {
-      if (!context.mounted) return;
-      ToastWidget.show(
-        context,
-        _describeError(e, actionLabel: '勤務不可時間の更新失敗'),
-        type: ToastType.error,
-      );
-    }
-  }
+  // 「勤務不可時間」は一時的に非表示中のため未使用(TODO: 復旧時はコメント解除)
+  // // 曜日バッジタップ時、その曜日1日分だけの勤務不可時間帯を編集するダイアログを表示
+  // Future<void> _showDayAvailabilityDialog(
+  //     BuildContext context, WidgetRef ref, String day, String dayLabel) async {
+  //   final availability = staff['availability'] as Map<String, dynamic>? ?? {};
+  //   // 旧スキーマ(文字列リスト)のデータが残っている場合は無視する(型不一致でクラッシュしないよう防御)
+  //   final currentRanges = (availability[day] as List<dynamic>?)
+  //           ?.whereType<Map>()
+  //           .map((e) => Map<String, dynamic>.from(e))
+  //           .toList() ??
+  //       <Map<String, dynamic>>[];
+  //
+  //   final result = await showDialog<List<Map<String, dynamic>>>(
+  //     context: context,
+  //     builder: (_) => DayAvailabilityDialog(
+  //       dayLabel: dayLabel,
+  //       initialRanges: currentRanges,
+  //       isClosed: storeSettings?.closedDays.isClosedOn(dayLabel) ?? false,
+  //     ),
+  //   );
+  //
+  //   if (result == null) return;
+  //
+  //   // 他の曜日の値は維持したまま、タップされた曜日だけを更新してサーバーに送信
+  //   final updatedAvailability = {
+  //     for (final d in Weekday.values)
+  //       d: (availability[d] as List<dynamic>?)
+  //               ?.whereType<Map>()
+  //               .map((e) => Map<String, dynamic>.from(e))
+  //               .toList() ??
+  //           <Map<String, dynamic>>[],
+  //   };
+  //   updatedAvailability[day] = result;
+  //
+  //   try {
+  //     await ref
+  //         .read(staffActionsProvider.notifier)
+  //         .updateAvailability(storeId, staff['_id'], updatedAvailability);
+  //     if (!context.mounted) return;
+  //     ToastWidget.show(context, '勤務不可時間を更新しました', type: ToastType.success);
+  //   } catch (e) {
+  //     if (!context.mounted) return;
+  //     ToastWidget.show(
+  //       context,
+  //       _describeError(e, actionLabel: '勤務不可時間の更新失敗'),
+  //       type: ToastType.error,
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isExpanded = useState(false);
-    final isAvailabilityExpanded = useState(false);
+    // 「勤務不可時間」一時非表示中のため未使用(TODO: 復旧時はコメント解除)
+    // final isAvailabilityExpanded = useState(false);
     final status = staff['status'];
 
     return Card(
@@ -571,52 +576,53 @@ class _StaffCard extends HookConsumerWidget {
               ],
             ],
 
-            // 承認済み、かつ勤務不可時間の編集が許可されている場合のみ「勤務不可時間」を表示
-            // (「権限設定」とは独立して開閉可能)
-            if (status == StaffStatus.approved && canEditAvailability) ...[
-              const SizedBox(height: 12),
-              const Divider(height: 1, thickness: 0.5, color: AppColors.border),
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: () => isAvailabilityExpanded.value =
-                    !isAvailabilityExpanded.value,
-                behavior: HitTestBehavior.opaque,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "勤務不可時間",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Icon(
-                      isAvailabilityExpanded.value
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                      size: 20,
-                      color: AppColors.textSecondary,
-                    ),
-                  ],
-                ),
-              ),
-              if (isAvailabilityExpanded.value) ...[
-                const SizedBox(height: 12),
-                const Text(
-                  '曜日をタップして編集(赤=終日不可、橙=一部不可)',
-                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                ),
-                const SizedBox(height: 8),
-                _AvailabilitySummary(
-                  availability:
-                      staff['availability'] as Map<String, dynamic>? ?? {},
-                  onDayTap: (day, dayLabel) =>
-                      _showDayAvailabilityDialog(context, ref, day, dayLabel),
-                ),
-              ],
-            ],
+            // 「勤務不可時間」は一時的に非表示中(TODO: 復旧時はコメント解除)
+            // // 承認済み、かつ勤務不可時間の編集が許可されている場合のみ「勤務不可時間」を表示
+            // // (「権限設定」とは独立して開閉可能)
+            // if (status == StaffStatus.approved && canEditAvailability) ...[
+            //   const SizedBox(height: 12),
+            //   const Divider(height: 1, thickness: 0.5, color: AppColors.border),
+            //   const SizedBox(height: 12),
+            //   GestureDetector(
+            //     onTap: () => isAvailabilityExpanded.value =
+            //         !isAvailabilityExpanded.value,
+            //     behavior: HitTestBehavior.opaque,
+            //     child: Row(
+            //       mainAxisAlignment: MainAxisAlignment.start,
+            //       children: [
+            //         const Text(
+            //           "勤務不可時間",
+            //           style: TextStyle(
+            //             fontSize: 13,
+            //             color: AppColors.textSecondary,
+            //             fontWeight: FontWeight.w500,
+            //           ),
+            //         ),
+            //         Icon(
+            //           isAvailabilityExpanded.value
+            //               ? Icons.keyboard_arrow_up
+            //               : Icons.keyboard_arrow_down,
+            //           size: 20,
+            //           color: AppColors.textSecondary,
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            //   if (isAvailabilityExpanded.value) ...[
+            //     const SizedBox(height: 12),
+            //     const Text(
+            //       '曜日をタップして編集(赤=終日不可、橙=一部不可)',
+            //       style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+            //     ),
+            //     const SizedBox(height: 8),
+            //     _AvailabilitySummary(
+            //       availability:
+            //           staff['availability'] as Map<String, dynamic>? ?? {},
+            //       onDayTap: (day, dayLabel) =>
+            //           _showDayAvailabilityDialog(context, ref, day, dayLabel),
+            //     ),
+            //   ],
+            // ],
 
             // ステータス変更ボタンは操作許可がある場合のみ表示。
             // 承認済みの「承認取り消し」は上部の氏名行に移したため、ここには出さない。
@@ -728,63 +734,64 @@ class _StaffCard extends HookConsumerWidget {
   }
 }
 
-// スタッフの勤務可能日を曜日バッジ(ボタン)で要約表示するウィジェット
-// 選択された時間帯が1つでもある曜日は「可能」、無ければ「不可」として表示
-// 各バッジをタップすると、その曜日の勤務可能時間帯を編集できる
-class _AvailabilitySummary extends StatelessWidget {
-  final Map<String, dynamic> availability;
-  final void Function(String day, String dayLabel) onDayTap;
-
-  const _AvailabilitySummary({
-    required this.availability,
-    required this.onDayTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: List.generate(Weekday.values.length, (index) {
-        final day = Weekday.values[index];
-        final dayLabel = Weekday.labels[index];
-        // 旧スキーマ(文字列リスト)のデータが残っている場合は無視する(型不一致でクラッシュしないよう防御)
-        final ranges =
-            (availability[day] as List<dynamic>?)?.whereType<Map>().toList() ??
-                const [];
-        final hasAllDay = ranges.any((r) => r['all_day'] == true);
-        final hasPartial = !hasAllDay && ranges.isNotEmpty;
-
-        // 終日不可: 赤、一部の時間帯のみ不可: 橙、制限なし: 通常色
-        final Color badgeColor = hasAllDay
-            ? AppColors.rejected
-            : hasPartial
-                ? AppColors.pending
-                : AppColors.accentPrimary;
-
-        return InkWell(
-          onTap: () => onDayTap(day, dayLabel),
-          customBorder: const CircleBorder(),
-          child: Container(
-            width: 56,
-            height: 56,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: badgeColor,
-              shape: BoxShape.circle,
-              border: Border.all(color: badgeColor, width: 1.5),
-            ),
-            child: Text(
-              dayLabel,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimaryLight,
-              ),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-}
+// 「勤務不可時間」は一時的に非表示中のため未使用(TODO: 復旧時はコメント解除)
+// // スタッフの勤務可能日を曜日バッジ(ボタン)で要約表示するウィジェット
+// // 選択された時間帯が1つでもある曜日は「可能」、無ければ「不可」として表示
+// // 各バッジをタップすると、その曜日の勤務可能時間帯を編集できる
+// class _AvailabilitySummary extends StatelessWidget {
+//   final Map<String, dynamic> availability;
+//   final void Function(String day, String dayLabel) onDayTap;
+//
+//   const _AvailabilitySummary({
+//     required this.availability,
+//     required this.onDayTap,
+//   });
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Wrap(
+//       spacing: 12,
+//       runSpacing: 12,
+//       children: List.generate(Weekday.values.length, (index) {
+//         final day = Weekday.values[index];
+//         final dayLabel = Weekday.labels[index];
+//         // 旧スキーマ(文字列リスト)のデータが残っている場合は無視する(型不一致でクラッシュしないよう防御)
+//         final ranges =
+//             (availability[day] as List<dynamic>?)?.whereType<Map>().toList() ??
+//                 const [];
+//         final hasAllDay = ranges.any((r) => r['all_day'] == true);
+//         final hasPartial = !hasAllDay && ranges.isNotEmpty;
+//
+//         // 終日不可: 赤、一部の時間帯のみ不可: 橙、制限なし: 通常色
+//         final Color badgeColor = hasAllDay
+//             ? AppColors.rejected
+//             : hasPartial
+//                 ? AppColors.pending
+//                 : AppColors.accentPrimary;
+//
+//         return InkWell(
+//           onTap: () => onDayTap(day, dayLabel),
+//           customBorder: const CircleBorder(),
+//           child: Container(
+//             width: 56,
+//             height: 56,
+//             alignment: Alignment.center,
+//             decoration: BoxDecoration(
+//               color: badgeColor,
+//               shape: BoxShape.circle,
+//               border: Border.all(color: badgeColor, width: 1.5),
+//             ),
+//             child: Text(
+//               dayLabel,
+//               style: const TextStyle(
+//                 fontSize: 18,
+//                 fontWeight: FontWeight.bold,
+//                 color: AppColors.textPrimaryLight,
+//               ),
+//             ),
+//           ),
+//         );
+//       }),
+//     );
+//   }
+// }

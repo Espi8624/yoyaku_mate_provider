@@ -7,8 +7,9 @@ import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../dialogs/business_hours_dialog.dart';
 import '../../dialogs/holiday_dialog.dart';
 import '../../dialogs/number_input_dialog.dart';
-import '../../dialogs/staff_count_dialog.dart';
-import '../../dialogs/text_input_dialog.dart';
+// 必要人員設定/AIアシスタント追加情報の一時非表示に伴い未使用(TODO: 復旧時はコメント解除)
+// import '../../dialogs/staff_count_dialog.dart';
+// import '../../dialogs/text_input_dialog.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
 
@@ -58,15 +59,16 @@ class OperationSettingsSection extends ConsumerWidget {
               ? null
               : () => _showBusinessHoursDialog(context, ref, storeSettings),
         ),
-        const Divider(height: 1, indent: 16, endIndent: 16),
-        ProfileSettingItem(
-          title: '必要人員設定',
-          subtitle: _buildStaffCountSummary(storeSettings.requiredStaffCount),
-          showTrailingIcon: !isReadOnly,
-          onTap: isReadOnly
-              ? null
-              : () => _showStaffCountDialog(context, ref, storeSettings),
-        ),
+        // 必要人員設定は一時的に非表示中(TODO: 復旧時はコメント解除)
+        // const Divider(height: 1, indent: 16, endIndent: 16),
+        // ProfileSettingItem(
+        //   title: '必要人員設定',
+        //   subtitle: _buildStaffCountSummary(storeSettings.requiredStaffCount),
+        //   showTrailingIcon: !isReadOnly,
+        //   onTap: isReadOnly
+        //       ? null
+        //       : () => _showStaffCountDialog(context, ref, storeSettings),
+        // ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         ProfileSettingItem(
           title: '休業日',
@@ -76,17 +78,18 @@ class OperationSettingsSection extends ConsumerWidget {
               ? null
               : () => _showHolidayDialog(context, ref, storeSettings),
         ),
-        const Divider(height: 1, indent: 16, endIndent: 16),
-        ProfileSettingItem(
-          title: 'AIアシスタントへの追加情報',
-          subtitle: storeSettings.aiAdditionalInfo.isNotEmpty
-              ? storeSettings.aiAdditionalInfo
-              : 'なし',
-          showTrailingIcon: !isReadOnly,
-          onTap: isReadOnly
-              ? null
-              : () => _showAIAdditionalInfoDialog(context, ref, storeSettings),
-        ),
+        // AIアシスタントへの追加情報は一時的に非表示中(TODO: 復旧時はコメント解除)
+        // const Divider(height: 1, indent: 16, endIndent: 16),
+        // ProfileSettingItem(
+        //   title: 'AIアシスタントへの追加情報',
+        //   subtitle: storeSettings.aiAdditionalInfo.isNotEmpty
+        //       ? storeSettings.aiAdditionalInfo
+        //       : 'なし',
+        //   showTrailingIcon: !isReadOnly,
+        //   onTap: isReadOnly
+        //       ? null
+        //       : () => _showAIAdditionalInfoDialog(context, ref, storeSettings),
+        // ),
       ],
     );
   }
@@ -97,17 +100,16 @@ class OperationSettingsSection extends ConsumerWidget {
     return '平日: $weekdayHours';
   }
 
-  // 必要人員設定の要約表示。1件も設定されていない場合は「未設定」を表示し、
-  // それ以外は月曜日の値を代表例として表示する(営業時間の要約と同じ方針)
-  String _buildStaffCountSummary(Map<String, DayStaffRequirement> requirements) {
-    // shiftChangeCount(交代回数)は0も有効な設定値(=1ブロック)のため、
-    // 「設定済みかどうか」の判定にはcount(必要人数)のみを用いる
-    final hasAnySetting = requirements.values.any((r) => r.count > 0);
-    if (!hasAnySetting) return '未設定';
-
-    final monday = requirements['monday'];
-    return '月 ${monday?.count ?? 0}名・交代${monday?.shiftChangeCount ?? 0}回 他';
-  }
+  // 必要人員設定は一時的に非表示中のため未使用(TODO: 復旧時はコメント解除)
+  // String _buildStaffCountSummary(Map<String, DayStaffRequirement> requirements) {
+  //   // shiftChangeCount(交代回数)は0も有効な設定値(=1ブロック)のため、
+  //   // 「設定済みかどうか」の判定にはcount(必要人数)のみを用いる
+  //   final hasAnySetting = requirements.values.any((r) => r.count > 0);
+  //   if (!hasAnySetting) return '未設定';
+  //
+  //   final monday = requirements['monday'];
+  //   return '月 ${monday?.count ?? 0}名・交代${monday?.shiftChangeCount ?? 0}回 他';
+  // }
 
   Future<void> _applyUpdate(
       BuildContext context, WidgetRef ref, StoreSettings updated,
@@ -166,21 +168,22 @@ class OperationSettingsSection extends ConsumerWidget {
     }
   }
 
-  Future<void> _showStaffCountDialog(
-      BuildContext context, WidgetRef ref, StoreSettings storeSettings) async {
-    final result = await showDialog<Map<String, DayStaffRequirement>>(
-      context: context,
-      builder: (_) => StaffCountDialog(
-        initialRequirements: storeSettings.requiredStaffCount,
-        closedWeekdayLabels: storeSettings.closedDays.regularWeekly,
-      ),
-    );
-
-    if (result != null) {
-      final updatedSettings = storeSettings.copyWith(requiredStaffCount: result);
-      await _applyUpdate(context, ref, updatedSettings);
-    }
-  }
+  // 必要人員設定は一時的に非表示中のため未使用(TODO: 復旧時はコメント解除)
+  // Future<void> _showStaffCountDialog(
+  //     BuildContext context, WidgetRef ref, StoreSettings storeSettings) async {
+  //   final result = await showDialog<Map<String, DayStaffRequirement>>(
+  //     context: context,
+  //     builder: (_) => StaffCountDialog(
+  //       initialRequirements: storeSettings.requiredStaffCount,
+  //       closedWeekdayLabels: storeSettings.closedDays.regularWeekly,
+  //     ),
+  //   );
+  //
+  //   if (result != null) {
+  //     final updatedSettings = storeSettings.copyWith(requiredStaffCount: result);
+  //     await _applyUpdate(context, ref, updatedSettings);
+  //   }
+  // }
 
   Future<void> _showHolidayDialog(
       BuildContext context, WidgetRef ref, StoreSettings storeSettings) async {
@@ -196,21 +199,22 @@ class OperationSettingsSection extends ConsumerWidget {
     }
   }
 
-  Future<void> _showAIAdditionalInfoDialog(
-      BuildContext context, WidgetRef ref, StoreSettings storeSettings) async {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (_) => TextInputDialog(
-        title: 'AIアシスタントへの追加情報',
-        labelText: '追加情報',
-        helperText: '周辺のランドマークや、AIに知っておいてほしい特定の情報を入力してください。',
-        initialValue: storeSettings.aiAdditionalInfo,
-      ),
-    );
-
-    if (result != null) {
-      final updatedSettings = storeSettings.copyWith(aiAdditionalInfo: result);
-      await _applyUpdate(context, ref, updatedSettings);
-    }
-  }
+  // AIアシスタントへの追加情報は一時的に非表示中のため未使用(TODO: 復旧時はコメント解除)
+  // Future<void> _showAIAdditionalInfoDialog(
+  //     BuildContext context, WidgetRef ref, StoreSettings storeSettings) async {
+  //   final result = await showDialog<String>(
+  //     context: context,
+  //     builder: (_) => TextInputDialog(
+  //       title: 'AIアシスタントへの追加情報',
+  //       labelText: '追加情報',
+  //       helperText: '周辺のランドマークや、AIに知っておいてほしい特定の情報を入力してください。',
+  //       initialValue: storeSettings.aiAdditionalInfo,
+  //     ),
+  //   );
+  //
+  //   if (result != null) {
+  //     final updatedSettings = storeSettings.copyWith(aiAdditionalInfo: result);
+  //     await _applyUpdate(context, ref, updatedSettings);
+  //   }
+  // }
 }

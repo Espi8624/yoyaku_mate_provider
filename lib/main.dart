@@ -27,9 +27,19 @@ import 'package:yoyaku_mate_provider/widgets/common_widgets/session_revoked_list
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Androidはgoogle-services.jsonにより、Dartコード実行前にネイティブ側で
+  // [DEFAULT] FirebaseAppが自動初期化される。Firebase.appsはDart側のキャッシュに
+  // すぎずこの自動初期化を検知できないため、initializeApp呼び出し自体は必ず行い、
+  // duplicate-appエラーのみ「既に初期化済み」として無視する
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } on FirebaseException catch (e) {
+    if (e.code != 'duplicate-app') {
+      rethrow;
+    }
+  }
   // 接続先は --dart-define=APP_ENV=dev|prod で明示的に切り替える:
   //   未指定            → ローカル (.env.development, localhost)
   //   APP_ENV=dev       → 共有の開発用サーバー (.env.remote-dev, rusui-dev + Cloudflare)

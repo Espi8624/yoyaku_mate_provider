@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/app_colors.dart';
-import '../../constants/staff_status.dart';
-import '../../providers/session_providers.dart';
+// シフト表ボタン一時無効化に伴い未使用(TODO: 復旧時はコメント解除)
+// import '../../constants/staff_status.dart';
+// import '../../providers/session_providers.dart';
 import 'widgets/staff_management_view.dart';
-import 'widgets/shift_table_screen.dart';
+// import 'widgets/shift_table_screen.dart';
 
 // Riverpodへの移行後は ChangeNotifierProvider によるViewModelのスコープ生成が不要になった
 // (staffListProvider/staffActionsProvider は family の autoDispose によって
@@ -20,15 +21,16 @@ class StaffManagementScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(userProfileProvider).valueOrNull;
-    final storeProfile = ref.watch(selectedStoreProfileProvider);
-    final bool isManager = currentUser?.role == 'manager';
+    // final currentUser = ref.watch(userProfileProvider).valueOrNull;
+    // final storeProfile = ref.watch(selectedStoreProfileProvider);
+    // final bool isManager = currentUser?.role == 'manager';
 
     // 承認待ち・拒否済みのスタッフはシフト表取得APIが403を返すため、
     // ボタン自体を無効化して遷移させない
-    final staffStatus = storeProfile?.staffStatus;
-    final bool canViewShiftTable =
-        isManager || staffStatus == StaffStatus.approved;
+    // final staffStatus = storeProfile?.staffStatus;
+    // final bool canViewShiftTable =
+    //     isManager || staffStatus == StaffStatus.approved;
+    // シフト表ボタンは一時的に無効化中(TODO: 復旧時はコメント解除)
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -44,35 +46,36 @@ class StaffManagementScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            // 아이콘만으로는 용도가 모호할 수 있어 텍스트를 함께 표시하는 필(pill)형 버튼으로 구성
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.calendar_month_outlined, size: 18),
-              label: const Text('シフト表'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentPrimary,
-                foregroundColor: AppColors.textPrimaryLight,
-                disabledBackgroundColor: AppColors.disabled,
-                disabledForegroundColor: AppColors.textTertiary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                textStyle: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              onPressed: canViewShiftTable
-                  ? () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ShiftTableScreen(storeId: storeId),
-                        ),
-                      )
-                  : null,
-            ),
-          ),
-        ],
+        // シフト表ボタンは一時的に非表示中(TODO: 復旧時はコメント解除)
+        // actions: [
+        //   Padding(
+        //     padding: const EdgeInsets.only(right: 16),
+        //     // 아이콘만으로는 용도가 모호할 수 있어 텍스트를 함께 표시하는 필(pill)형 버튼으로 구성
+        //     child: ElevatedButton.icon(
+        //       icon: const Icon(Icons.calendar_month_outlined, size: 18),
+        //       label: const Text('シフト表'),
+        //       style: ElevatedButton.styleFrom(
+        //         backgroundColor: AppColors.accentPrimary,
+        //         foregroundColor: AppColors.textPrimaryLight,
+        //         disabledBackgroundColor: AppColors.disabled,
+        //         disabledForegroundColor: AppColors.textTertiary,
+        //         shape: RoundedRectangleBorder(
+        //           borderRadius: BorderRadius.circular(20),
+        //         ),
+        //         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        //         textStyle: const TextStyle(
+        //             fontSize: 13, fontWeight: FontWeight.w600),
+        //       ),
+        //       onPressed: canViewShiftTable
+        //           ? () => Navigator.of(context).push(
+        //                 MaterialPageRoute(
+        //                   builder: (_) => ShiftTableScreen(storeId: storeId),
+        //                 ),
+        //               )
+        //           : null,
+        //     ),
+        //   ),
+        // ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {

@@ -34,6 +34,40 @@ class Shift {
       };
 }
 
+// 特定の曜日・直(交代ブロック)で必要人員数に対して人員が不足している状態。
+// 自動配置(auto-generate)のレスポンスにのみ含まれる(GET等では常に空リスト)
+class ShiftShortage {
+  final String day; // Weekday定数のキー (monday..sunday)
+  final int shiftIndex; // 0-based。その曜日の何番目のブロック(直)か。表示時は+1して「N直」とする
+  final String startTime; // "HH:MM"
+  final String endTime; // "HH:MM"
+  final int required;
+  final int filled;
+  final int shortage;
+
+  ShiftShortage({
+    required this.day,
+    required this.shiftIndex,
+    required this.startTime,
+    required this.endTime,
+    required this.required,
+    required this.filled,
+    required this.shortage,
+  });
+
+  factory ShiftShortage.fromJson(Map<String, dynamic> json) {
+    return ShiftShortage(
+      day: json['day'] ?? '',
+      shiftIndex: json['shift_index'] ?? 0,
+      startTime: json['start_time'] ?? '',
+      endTime: json['end_time'] ?? '',
+      required: json['required'] ?? 0,
+      filled: json['filled'] ?? 0,
+      shortage: json['shortage'] ?? 0,
+    );
+  }
+}
+
 // 店舗の週単位シフト表 (マネージャーが明示的に作成するまで存在しない)
 //
 // サーバー側は下書きと確定版を別々に持つが、shifts には「自分が見るべき版」が入って返る
@@ -51,6 +85,10 @@ class ShiftTable {
   // 最後にスタッフへ公開した日時。null は一度も確定していないことを表す
   final DateTime? publishedAt;
 
+  // 自動配置の結果、必要人員数を満たせなかったブロックの一覧。
+  // 自動配置(auto-generate)のレスポンスにのみ含まれる(それ以外は常に空リスト)
+  final List<ShiftShortage> shiftShortages;
+
   ShiftTable({
     required this.id,
     required this.storeId,
@@ -58,6 +96,7 @@ class ShiftTable {
     required this.shifts,
     this.hasUnpublishedChanges = false,
     this.publishedAt,
+    this.shiftShortages = const <ShiftShortage>[],
   });
 
   // 作ったばかりで中身が空、かつ一度も確定していない状態。
@@ -82,6 +121,10 @@ class ShiftTable {
       publishedAt: json['published_at'] != null
           ? DateTime.tryParse(json['published_at'] as String)
           : null,
+      shiftShortages: (json['shift_shortages'] as List<dynamic>?)
+              ?.map((e) => ShiftShortage.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <ShiftShortage>[],
     );
   }
 }

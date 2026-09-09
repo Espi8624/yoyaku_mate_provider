@@ -103,15 +103,19 @@ class ShiftActions extends _$ShiftActions {
         shiftTableProvider(storeId: storeId, weekStartDate: weekStartDate));
   }
 
-  Future<void> autoGenerateShifts(
+  // 戻り値の shiftShortages を呼び出し元(画面)がそのままバナー表示に使えるよう、
+  // 自動配置結果の ShiftTable をそのまま返す
+  Future<ShiftTable> autoGenerateShifts(
     String storeId,
     String weekStartDate, {
     required String mode,
   }) async {
     final service = ref.read(shiftTableServiceProvider);
-    await service.autoGenerateShifts(storeId, weekStartDate, mode: mode);
+    final result =
+        await service.autoGenerateShifts(storeId, weekStartDate, mode: mode);
     ref.invalidate(
         shiftTableProvider(storeId: storeId, weekStartDate: weekStartDate));
+    return result;
   }
 
   // シフトブロックに対する修正依頼を送信 (承認済みスタッフ用)
