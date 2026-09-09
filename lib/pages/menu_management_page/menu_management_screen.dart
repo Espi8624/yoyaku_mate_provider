@@ -85,16 +85,20 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
   List<String> get _categories => _data?.categories ?? const <String>[];
   Map<String, List<MenuListItem>> get _categorizedMenu =>
       _data?.categorizedMenu ?? const {};
+  Map<String, Map<String, String>> get _categoryTranslations =>
+      _data?.categoryTranslations ?? const {};
 
   Future<void> _showAddCategoryDialog() async {
-    final newCategory = await showDialog<String>(
+    final result = await showDialog<dynamic>(
       context: context,
       builder: (_) => CategoryFormDialog(existingCategories: _categories),
     );
-    if (newCategory != null) {
+    if (result is Map<String, dynamic>) {
       ref
           .read(menuItemsNotifierProvider(storeId: widget.storeId).notifier)
-          .addCategory(newCategory);
+          .addCategory(result['name'] as String,
+              translations:
+                  Map<String, String>.from(result['translations'] ?? {}));
       _tabController.animateTo(_tabController.length - 1);
     }
   }
@@ -102,18 +106,23 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
   Future<void> _showEditCategoryDialog(int index) async {
     final categories = _categories;
     final oldCategory = categories[index];
-    final newCategory = await showDialog<String>(
+    final result = await showDialog<dynamic>(
       context: context,
       builder: (_) => CategoryFormDialog(
-          initialValue: oldCategory, existingCategories: categories),
+          initialValue: oldCategory,
+          existingCategories: categories,
+          initialTranslations: _categoryTranslations[oldCategory] ?? const {}),
     );
-    if (newCategory == 'DELETE_ACTION') {
+    if (result == 'DELETE_ACTION') {
       _showDeleteCategoryDialog(index);
-    } else if (newCategory != null && newCategory != oldCategory) {
+    } else if (result is Map<String, dynamic> &&
+        result['name'] != oldCategory) {
       try {
         await ref
             .read(menuItemsNotifierProvider(storeId: widget.storeId).notifier)
-            .editCategory(widget.storeId, oldCategory, newCategory);
+            .editCategory(widget.storeId, oldCategory, result['name'] as String,
+                translations:
+                    Map<String, String>.from(result['translations'] ?? {}));
       } catch (e) {
         if (!mounted) return;
         ToastWidget.show(context, _describeError(e), type: ToastType.error);
@@ -142,11 +151,13 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
   }
 
   Future<void> _showAddMenuDialog() async {
+    final category = _categories[_tabController.index];
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => MenuFormDialog(
           storeId: widget.storeId,
-          category: _categories[_tabController.index]),
+          category: category,
+          categoryTranslations: _categoryTranslations[category] ?? const {}),
     );
 
     if (result != null) {
@@ -196,7 +207,10 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
     final result = await showDialog<dynamic>(
       context: context,
       builder: (_) => MenuFormDialog(
-          menuItem: menuItem, storeId: widget.storeId, category: category),
+          menuItem: menuItem,
+          storeId: widget.storeId,
+          category: category,
+          categoryTranslations: _categoryTranslations[category] ?? const {}),
     );
 
     if (result == 'DELETE_ACTION') {
@@ -328,13 +342,12 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
                       'de': 'ドイツ語',
                       'it': 'イタリア語',
                       'ru': 'ロシア語',
-                      'pt': 'ポルトガル語',
                       'ar': 'アラビア語',
                     }.entries.toList().asMap().entries.map((entry) {
                       final index = entry.key;
                       final e = entry.value;
                       // Dynamic check for last item
-                      final isLast = index == 10; // Total 11 items (0-10)
+                      final isLast = index == 9; // Total 10 items (0-9)
 
                       return Column(
                         children: [
@@ -507,9 +520,8 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
         selectedCategory != null ? [selectedCategory] : _categories;
 
     for (final cat in categoriesToProcess) {
-      // Categories don't have stored translations in this model, so use original
-      // Use original text for category (or implement category translation storage later)
-      titleTranslations[cat] = cat;
+      // 保存済みのカテゴリー翻訳があればそれを使用、なければ原文にフォールバック
+      titleTranslations[cat] = _categoryTranslations[cat]?[targetLang] ?? cat;
 
       final menus = _categorizedMenu[cat] ?? [];
       for (final menu in menus) {
@@ -566,7 +578,6 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
               'https://fonts.gstatic.com/s/notosanstc/v39/-nFuOG829Oofr2wohFbTp9ifNAn722rq0MXz76Cy_Co.ttf';
           break;
         case 'ru':
-        case 'pt':
           fontUrl =
               'https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9A99d.ttf';
           break;
@@ -703,7 +714,6 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
                         'es' => 'Menú',
                         'de' => 'Menü',
                         'it' => 'Menù',
-                        'pt' => 'Menu',
                         'ar' => 'قائمة الطعام',
                         _ => 'Menu', // en fallback
                       },

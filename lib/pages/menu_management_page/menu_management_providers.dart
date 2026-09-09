@@ -32,25 +32,32 @@ class MenuManagementData {
   final List<MenuListItem> items;
   final List<String> categories;
   final Map<String, List<MenuListItem>> categorizedMenu;
+  final Map<String, Map<String, String>> categoryTranslations;
 
   const MenuManagementData({
     required this.items,
     required this.categories,
     required this.categorizedMenu,
+    this.categoryTranslations = const {},
   });
 
   // itemsからcategorizedMenu/categoriesを完全に再計算する
   // (既存の _updateCategorizedMenu と同じロジック・同じタイミングで使用)
   factory MenuManagementData.recompute(List<MenuListItem> items) {
     final map = <String, List<MenuListItem>>{};
+    final translations = <String, Map<String, String>>{};
     for (final item in items) {
       final category = item.category.isNotEmpty ? item.category : '未分類';
       (map[category] ??= []).add(item);
+      if (item.categoryTranslations.isNotEmpty) {
+        translations[category] = item.categoryTranslations;
+      }
     }
     return MenuManagementData(
       items: items,
       categories: map.keys.toList(),
       categorizedMenu: map,
+      categoryTranslations: translations,
     );
   }
 }
@@ -72,22 +79,29 @@ class MenuItemsNotifier extends _$MenuItemsNotifier {
   }
 
   // カテゴリ追加 - ローカルのみ即時反映 (サーバー呼び出しなし、既存挙動)
-  void addCategory(String categoryName) {
+  void addCategory(String categoryName,
+      {Map<String, String> translations = const {}}) {
     final current = state.valueOrNull;
     if (current == null || current.categories.contains(categoryName)) return;
 
     final newCategorized =
         Map<String, List<MenuListItem>>.from(current.categorizedMenu);
     newCategorized[categoryName] = [];
+    final newTranslations =
+        Map<String, Map<String, String>>.from(current.categoryTranslations);
+    if (translations.isNotEmpty) newTranslations[categoryName] = translations;
+
     state = AsyncData(MenuManagementData(
       items: current.items,
       categories: [...current.categories, categoryName],
       categorizedMenu: newCategorized,
+      categoryTranslations: newTranslations,
     ));
   }
 
   Future<void> editCategory(
-      String storeId, String oldName, String newName) async {
+      String storeId, String oldName, String newName,
+      {Map<String, String> translations = const {}}) async {
     final current = state.valueOrNull;
     if (current == null) return;
     if (!current.categories.contains(oldName) ||
@@ -100,30 +114,40 @@ class MenuItemsNotifier extends _$MenuItemsNotifier {
       final menuList = current.categorizedMenu[oldName] ?? [];
       // 1回のAPI呼び出しで全メニューのカテゴリを更新 (N+1問題解決)
       if (menuList.isNotEmpty) {
-        await ref
-            .read(menuServiceProvider)
-            .bulkUpdateCategory(storeId, oldName, newName);
+        await ref.read(menuServiceProvider).bulkUpdateCategory(
+            storeId, oldName, newName,
+            categoryTranslations: translations);
       }
 
       final newCategories = [...current.categories];
       newCategories[newCategories.indexOf(oldName)] = newName;
 
-      final renamedItems =
-          menuList.map((item) => item.copyWith(category: newName)).toList();
+      final renamedItems = menuList
+          .map((item) => item.copyWith(
+              category: newName, categoryTranslations: translations))
+          .toList();
       final newCategorized =
           Map<String, List<MenuListItem>>.from(current.categorizedMenu)
             ..remove(oldName)
             ..[newName] = renamedItems;
 
       final newItems = current.items
-          .map((item) =>
-              item.category == oldName ? item.copyWith(category: newName) : item)
+          .map((item) => item.category == oldName
+              ? item.copyWith(
+                  category: newName, categoryTranslations: translations)
+              : item)
           .toList();
+
+      final newTranslations =
+          Map<String, Map<String, String>>.from(current.categoryTranslations)
+            ..remove(oldName);
+      if (translations.isNotEmpty) newTranslations[newName] = translations;
 
       state = AsyncData(MenuManagementData(
         items: newItems,
         categories: newCategories,
         categorizedMenu: newCategorized,
+        categoryTranslations: newTranslations,
       ));
       _setSaveStatus(SaveStatus.saved);
     } catch (e) {
@@ -152,11 +176,15 @@ class MenuItemsNotifier extends _$MenuItemsNotifier {
       final newCategorized =
           Map<String, List<MenuListItem>>.from(current.categorizedMenu)
             ..remove(category);
+      final newTranslations =
+          Map<String, Map<String, String>>.from(current.categoryTranslations)
+            ..remove(category);
 
       state = AsyncData(MenuManagementData(
         items: newItems,
         categories: newCategories,
         categorizedMenu: newCategorized,
+        categoryTranslations: newTranslations,
       ));
       _setSaveStatus(SaveStatus.saved);
     } catch (e) {

@@ -16,6 +16,7 @@ class MenuListItem extends Equatable {
   final bool isPreOrderAvailable;
   final Map<String, String> titleTranslations;
   final Map<String, String> descriptionTranslations;
+  final Map<String, String> categoryTranslations;
   final Uint8List? tempImageBytes;
 
   const MenuListItem({
@@ -33,6 +34,7 @@ class MenuListItem extends Equatable {
     this.isPreOrderAvailable = false,
     this.titleTranslations = const {},
     this.descriptionTranslations = const {},
+    this.categoryTranslations = const {},
     this.tempImageBytes,
   });
 
@@ -53,6 +55,7 @@ class MenuListItem extends Equatable {
         isPreOrderAvailable,
         titleTranslations,
         descriptionTranslations,
+        categoryTranslations,
       ];
 
   MenuListItem copyWith({
@@ -70,6 +73,7 @@ class MenuListItem extends Equatable {
     bool? isPreOrderAvailable,
     Map<String, String>? titleTranslations,
     Map<String, String>? descriptionTranslations,
+    Map<String, String>? categoryTranslations,
     Uint8List? tempImageBytes,
     bool clearTempImage = false,
   }) {
@@ -89,6 +93,7 @@ class MenuListItem extends Equatable {
       titleTranslations: titleTranslations ?? this.titleTranslations,
       descriptionTranslations:
           descriptionTranslations ?? this.descriptionTranslations,
+      categoryTranslations: categoryTranslations ?? this.categoryTranslations,
       tempImageBytes:
           clearTempImage ? null : tempImageBytes ?? this.tempImageBytes,
     );
@@ -116,6 +121,8 @@ class MenuListItem extends Equatable {
           Map<String, String>.from(json['title_translations'] ?? {}),
       descriptionTranslations:
           Map<String, String>.from(json['description_translations'] ?? {}),
+      categoryTranslations:
+          Map<String, String>.from(json['category_translations'] ?? {}),
       tempImageBytes: null,
     );
   }
@@ -136,6 +143,7 @@ class MenuListItem extends Equatable {
       'menu_image_url': menuImageUrl,
       'title_translations': titleTranslations,
       'description_translations': descriptionTranslations,
+      'category_translations': categoryTranslations,
     };
 
     // menu_image_urlが空でない場合のみ追加

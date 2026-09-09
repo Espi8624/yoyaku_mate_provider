@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../../../constants/app_colors.dart';
+import '../../../../services/translation_service.dart';
 import '../../../../widgets/common_dialogs/base_dialog.dart';
 
 class CategoryFormDialog extends StatefulWidget {
   final String? initialValue;
   final List<String> existingCategories;
+  final Map<String, String> initialTranslations;
 
   const CategoryFormDialog({
     super.key,
     this.initialValue,
     required this.existingCategories,
+    this.initialTranslations = const {},
   });
 
   @override
@@ -19,6 +22,7 @@ class CategoryFormDialog extends StatefulWidget {
 class _CategoryFormDialogState extends State<CategoryFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _controller;
+  bool _isLoading = false;
   bool get _isEditing => widget.initialValue != null;
 
   @override
@@ -33,10 +37,37 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.of(context).pop(_controller.text.trim());
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final name = _controller.text.trim();
+    setState(() => _isLoading = true);
+
+    // カテゴリー名が変わった場合のみ再翻訳 (既存翻訳があれば再利用)
+    var translations = widget.initialTranslations;
+    if (name != widget.initialValue) {
+      try {
+        final result = await TranslationService().translateToMultipleLanguages(
+          {'c_0': name},
+          TranslationService.targetLanguages,
+        );
+        translations = {
+          for (final entry in result.entries)
+            if (entry.value['c_0'] != null) entry.key: entry.value['c_0']!,
+        };
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('カテゴリーの翻訳に失敗しました: $e')),
+          );
+        }
+        translations = {};
+      }
     }
+
+    if (!mounted) return;
+    Navigator.of(context)
+        .pop({'name': name, 'translations': translations});
   }
 
   @override
@@ -79,8 +110,14 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                           backgroundColor: AppColors.accentPrimary,
                           foregroundColor: AppColors.cardBackground,
                           padding: const EdgeInsets.symmetric(vertical: 16)),
-                      onPressed: _submit,
-                      child: const Text("確認"),
+                      onPressed: _isLoading ? null : _submit,
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2))
+                          : const Text("確認"),
                     ),
                   ),
                   SizedBox(
@@ -89,8 +126,9 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                       style: TextButton.styleFrom(
                           foregroundColor: AppColors.error,
                           padding: const EdgeInsets.symmetric(vertical: 0)),
-                      onPressed: () =>
-                          Navigator.of(context).pop('DELETE_ACTION'),
+                      onPressed: _isLoading
+                          ? null
+                          : () => Navigator.of(context).pop('DELETE_ACTION'),
                       child: const Text(
                         "削除",
                         style: TextStyle(
@@ -108,8 +146,14 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                       backgroundColor: AppColors.accentPrimary,
                       foregroundColor: AppColors.cardBackground,
                       padding: const EdgeInsets.symmetric(vertical: 16)),
-                  onPressed: _submit,
-                  child: const Text("確認"),
+                  onPressed: _isLoading ? null : _submit,
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Text("確認"),
                 ),
               ),
           ],

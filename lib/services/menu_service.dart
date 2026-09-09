@@ -260,7 +260,8 @@ class MenuService {
 
   // カテゴリ名一括変更
   Future<void> bulkUpdateCategory(
-      String storeId, String oldCategory, String newCategory) async {
+      String storeId, String oldCategory, String newCategory,
+      {Map<String, String> categoryTranslations = const {}}) async {
     final uri = Uri.parse(
         '$_baseUrl/api/provider_menu/category/bulk-update?store_id=$storeId');
     try {
@@ -274,6 +275,7 @@ class MenuService {
         body: json.encode({
           'old_category': oldCategory,
           'new_category': newCategory,
+          'category_translations': categoryTranslations,
         }),
       );
 

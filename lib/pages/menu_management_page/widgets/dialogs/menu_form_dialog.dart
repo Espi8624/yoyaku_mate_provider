@@ -10,12 +10,14 @@ class MenuFormDialog extends StatefulWidget {
   final MenuListItem? menuItem;
   final String storeId;
   final String category;
+  final Map<String, String> categoryTranslations;
 
   const MenuFormDialog({
     super.key,
     this.menuItem,
     required this.storeId,
     required this.category,
+    this.categoryTranslations = const {},
   });
 
   @override
@@ -37,20 +39,6 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
   Map<String, String> _descTranslations = {};
 
   bool get _isEditing => widget.menuItem != null;
-
-  static const List<String> _targetLanguages = [
-    'en', // English
-    'ko', // Korean
-    'zh', // Chinese (Simplified)
-    'zh-TW', // Traditional Chinese
-    'es', // Spanish
-    'fr', // French
-    'de', // German
-    'it', // Italian
-    'ar', // Arabic
-    'ru', // Russian
-    'pt', // Portuguese
-  ];
 
   @override
   void initState() {
@@ -74,7 +62,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
     original.forEach((key, value) {
       final normalizedKey = TranslationService.normalizeLanguageCode(key);
       // Only keep if it's one of our target languages
-      if (_targetLanguages.contains(normalizedKey)) {
+      if (TranslationService.targetLanguages.contains(normalizedKey)) {
         // If multiple keys normalize to same ISO code (e.g. "English" and "en"),
         // the last one wins, but prefer existing ISO code if both present.
         if (!sanitized.containsKey(normalizedKey) || key == normalizedKey) {
@@ -104,7 +92,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
     bool needTitle = titleChanged || isNew;
     if (!needTitle && title.isNotEmpty) {
       // Check if any target language is missing
-      for (final lang in _targetLanguages) {
+      for (final lang in TranslationService.targetLanguages) {
         if (!_titleTranslations.containsKey(lang)) {
           needTitle = true;
           break;
@@ -118,7 +106,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
     // Determine if Description needs translation
     bool needDesc = desc.isNotEmpty && (descChanged || isNew);
     if (!needDesc && desc.isNotEmpty) {
-      for (final lang in _targetLanguages) {
+      for (final lang in TranslationService.targetLanguages) {
         if (!_descTranslations.containsKey(lang)) {
           needDesc = true;
           break;
@@ -138,14 +126,14 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
     // Call API once for all languages
     final result = await TranslationService().translateToMultipleLanguages(
       inputMap,
-      _targetLanguages,
+      TranslationService.targetLanguages,
       smartMenuMode: true,
     );
 
     // Apply results
     result.forEach((lang, transMap) {
       final normalizedLang = TranslationService.normalizeLanguageCode(lang);
-      if (_targetLanguages.contains(normalizedLang)) {
+      if (TranslationService.targetLanguages.contains(normalizedLang)) {
         if (inputMap.containsKey('t_0') && transMap.containsKey('t_0')) {
           _titleTranslations[normalizedLang] = transMap['t_0']!;
         }
@@ -198,6 +186,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
           tempImageBytes: _tempImageBytes,
           titleTranslations: _titleTranslations,
           descriptionTranslations: _descTranslations,
+          categoryTranslations: widget.categoryTranslations,
         );
 
         final result = {
