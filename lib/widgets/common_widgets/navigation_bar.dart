@@ -53,32 +53,37 @@ class SideNavigationBar extends ConsumerWidget {
           ),
           child: IntrinsicHeight(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              // 上下に空白が偏らないよう、各項目を全体に均等に配置する
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Center(
-                    child: IconButton(
-                      icon: Icon(
-                        isExpanded ? Icons.close : Icons.menu_rounded,
-                        color: AppColors.accentPrimary,
-                        size: 28,
+                // トグル/プロフィール/区切り線はひとまとまりの見出し扱いとし、
+                // 均等配置(spaceEvenly)の対象からは外して間隔が二重にならないようにする
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Center(
+                        child: IconButton(
+                          icon: Icon(
+                            isExpanded ? Icons.close : Icons.menu_rounded,
+                            color: AppColors.accentPrimary,
+                            size: 28,
+                          ),
+                          onPressed: onToggle,
+                          splashRadius: 20,
+                        ),
                       ),
-                      onPressed: onToggle,
-                      splashRadius: 20,
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8),
+                    const SizedBox(height: 8),
 
-                // プロフィール区画
+                    // プロフィール区画
                 if (isExpanded) ...[
                   InkWell(
                     onTap: () {
                       // 0=Wait, 1=Menu, 2=Stats, 3=Staff, 4=Profile (Manager/Staff共通)
+                      // ページ移動してもサイドバーの展開状態は維持する
                       onItemTapped(_profileIndex);
-                      onToggle();
                     },
                     splashColor: AppColors.accentPrimary.withOpacity(0.05),
                     highlightColor: AppColors.accentPrimary.withOpacity(0.02),
@@ -218,26 +223,24 @@ class SideNavigationBar extends ConsumerWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 15),
 
-                const Divider(
-                  height: 1,
-                  thickness: 0.5,
-                  color: AppColors.border,
-                  indent: 16,
-                  endIndent: 16,
+                    const SizedBox(height: 15),
+                    const Divider(
+                      height: 1,
+                      thickness: 0.5,
+                      color: AppColors.border,
+                      indent: 16,
+                      endIndent: 16,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 15),
 
                 isExpanded
                     ? _NavItem(
                         icon: Icons.list_alt_rounded,
                         label: '待機リスト',
                         selected: selectedIndex == 0,
-                        onTap: () {
-                          onItemTapped(0);
-                          onToggle();
-                        },
+                        onTap: () => onItemTapped(0),
                       )
                     : _NavIcon(
                         icon: Icons.list_alt_rounded,
@@ -246,17 +249,13 @@ class SideNavigationBar extends ConsumerWidget {
                         onTap: () => onItemTapped(0),
                         isExpanded: isExpanded,
                       ),
-                const SizedBox(height: 12),
 
                 isExpanded
                     ? _NavItem(
                         icon: Icons.table_view_rounded,
                         label: 'メニュー管理',
                         selected: selectedIndex == 1,
-                        onTap: () {
-                          onItemTapped(1);
-                          onToggle();
-                        },
+                        onTap: () => onItemTapped(1),
                       )
                     : _NavIcon(
                         icon: Icons.table_view_rounded,
@@ -265,7 +264,6 @@ class SideNavigationBar extends ConsumerWidget {
                         onTap: () => onItemTapped(1),
                         isExpanded: isExpanded,
                       ),
-                const SizedBox(height: 12),
 
                 // Missing Statistics Button Added (Index 2)
                 isExpanded
@@ -273,10 +271,7 @@ class SideNavigationBar extends ConsumerWidget {
                         icon: Icons.bar_chart_rounded,
                         label: '統計',
                         selected: selectedIndex == 2,
-                        onTap: () {
-                          onItemTapped(2);
-                          onToggle();
-                        },
+                        onTap: () => onItemTapped(2),
                       )
                     : _NavIcon(
                         icon: Icons.bar_chart_rounded,
@@ -285,7 +280,6 @@ class SideNavigationBar extends ConsumerWidget {
                         onTap: () => onItemTapped(2),
                         isExpanded: isExpanded,
                       ),
-                const SizedBox(height: 12),
 
                 // スタッフメニューはManager/Staff共通で表示
                 isExpanded
@@ -293,10 +287,7 @@ class SideNavigationBar extends ConsumerWidget {
                         icon: Icons.people_alt_rounded,
                         label: 'スタッフ',
                         selected: selectedIndex == 3,
-                        onTap: () {
-                          onItemTapped(3);
-                          onToggle();
-                        },
+                        onTap: () => onItemTapped(3),
                       )
                     : _NavIcon(
                         icon: Icons.people_alt_rounded,
@@ -305,7 +296,6 @@ class SideNavigationBar extends ConsumerWidget {
                         onTap: () => onItemTapped(3),
                         isExpanded: isExpanded,
                       ),
-                const SizedBox(height: 12),
 
                 // const Divider(
                 //   height: 1,

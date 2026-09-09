@@ -13,6 +13,7 @@ class ProviderProfile {
   final String? building; // 本人の建物名・部屋番号(任意)
   final String? storeId; // スタッフは任意、マネージャーは必須
   final String? storeName;
+  final String? storeBusinessCategory; // 業種タグ（店舗作成時必須）
   final String? storeAddress;
   final String? storeBuilding; // New
   final String? storeZipCode;
@@ -49,6 +50,7 @@ class ProviderProfile {
     this.building,
     this.storeId,
     this.storeName,
+    this.storeBusinessCategory,
     this.storeAddress,
     this.storeBuilding,
     this.storeZipCode,
@@ -86,6 +88,8 @@ class ProviderProfile {
         if (building != null) 'building': building,
         if (storeId != null) 'store_id': storeId,
         if (storeName != null) 'store_name': storeName,
+        if (storeBusinessCategory != null)
+          'business_category': storeBusinessCategory,
         if (storeAddress != null) 'store_address': storeAddress,
         if (storeBuilding != null) 'store_building': storeBuilding,
         if (storeZipCode != null) 'store_zip_code': storeZipCode,

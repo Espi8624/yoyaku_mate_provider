@@ -13,6 +13,8 @@ import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../dialogs/edit_profile_dialog.dart';
 import '../dialogs/edit_address_dialog.dart';
+import '../dialogs/business_category_dialog.dart';
+import 'package:yoyaku_mate_provider/models/store_category.dart';
 import '../profile_header.dart';
 import '../profile_section.dart';
 import '../profile_setting_item.dart';
@@ -151,6 +153,33 @@ class StoreProfileView extends ConsumerWidget {
             );
         if (!context.mounted) return;
         ToastWidget.show(context, '住所が更新されました', type: ToastType.success);
+      } catch (e) {
+        if (!context.mounted) return;
+        ToastWidget.show(context, _describeError(e), type: ToastType.error);
+      }
+    }
+  }
+
+  /// 業種編集用ダイアログを表示するメソッド
+  /// [BusinessCategoryDialog] を使用して、業種タグ(必須項目)を更新します。
+  Future<void> _handleCategoryEdit(
+      BuildContext context, WidgetRef ref, String storeId, String? current) async {
+    if (isReadOnly) return;
+
+    final newValue = await showDialog<String>(
+      context: context,
+      builder: (_) => BusinessCategoryDialog(
+        initialCategory: StoreCategory.fromValue(current),
+      ),
+    );
+
+    if (newValue != null) {
+      try {
+        await ref
+            .read(storeActionsProvider.notifier)
+            .updateStoreProfileField(storeId, 'business_category', newValue);
+        if (!context.mounted) return;
+        ToastWidget.show(context, '変更が保存されました', type: ToastType.success);
       } catch (e) {
         if (!context.mounted) return;
         ToastWidget.show(context, _describeError(e), type: ToastType.error);
@@ -407,6 +436,18 @@ class StoreProfileView extends ConsumerWidget {
                         color: AppColors.accentPrimary),
                     onTap: () => _showQRCodeDialog(
                         context, storeProfile.id, storeProfile.name),
+                  ),
+                  ProfileSettingItem(
+                    title: '業種',
+                    subtitle: StoreCategory.fromValue(
+                                storeProfile.businessCategory)
+                            ?.label ??
+                        '未設定',
+                    showTrailingIcon: !isReadOnly,
+                    onTap: isReadOnly
+                        ? null
+                        : () => _handleCategoryEdit(context, ref, storeId,
+                            storeProfile.businessCategory),
                   ),
                   ProfileSettingItem(
                     title: '住所',

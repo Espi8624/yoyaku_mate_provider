@@ -92,17 +92,22 @@ class _StoreBusinessHoursStepState extends State<StoreBusinessHoursStep> {
             ),
             child: Column(
               children: [
-                SwitchListTile(
-                  title: const Text('24時間営業',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: const Text('指定時間に毎日リセットされます'),
-                  value: _is24Hours,
-                  activeColor: AppColors.accentPrimary,
-                  onChanged: (value) {
-                    setState(() {
-                      _is24Hours = value;
-                    });
-                  },
+                Material(
+                  // 親Containerの背景色付きDecorationがListTile系のインク効果を
+                  // 隠してしまうため、直近のMaterial祖先をここで提供する
+                  color: Colors.transparent,
+                  child: SwitchListTile(
+                    title: const Text('24時間営業',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: const Text('指定時間に毎日リセットされます'),
+                    value: _is24Hours,
+                    activeColor: AppColors.accentPrimary,
+                    onChanged: (value) {
+                      setState(() {
+                        _is24Hours = value;
+                      });
+                    },
+                  ),
                 ),
                 const Divider(height: 1),
                 Expanded(

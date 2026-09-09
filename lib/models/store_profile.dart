@@ -1,6 +1,7 @@
 class StoreProfile {
   final String id;
   final String name;
+  final String businessCategory; // 業種タグ
   final String address;
   final String? zipCode; // New
   final String? prefecture; // New
@@ -15,6 +16,7 @@ class StoreProfile {
   StoreProfile({
     required this.id,
     required this.name,
+    required this.businessCategory,
     required this.address,
     this.zipCode, // New
     this.prefecture, // New
@@ -31,6 +33,7 @@ class StoreProfile {
     return StoreProfile(
       id: json['store_id'] as String? ?? '',
       name: json['store_name'] as String? ?? '',
+      businessCategory: json['business_category'] as String? ?? '',
       address: json['address'] as String? ?? '',
       zipCode: json['zip_code'] as String?, // New
       prefecture: json['prefecture'] as String?, // New

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart'; // Clipboard
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/waiting_list.dart';
 import 'package:yoyaku_mate_provider/providers/session_providers.dart';
@@ -13,7 +14,6 @@ import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.
 import 'package:yoyaku_mate_provider/widgets/common_widgets/loading_indicator.dart';
 import 'widgets/dialogs/add_waiting_dialog.dart';
 import 'widgets/qr_code_button.dart';
-import 'widgets/waiting_action_buttons.dart';
 import 'widgets/waiting_list_panel.dart';
 import 'widgets/waiting_status_area.dart';
 import '../../widgets/common_widgets/toast_widget.dart';
@@ -155,6 +155,7 @@ class _WaitingView extends HookConsumerWidget {
               actions: [
                 IconButton(
                     icon: const Icon(Icons.monitor, color: AppColors.textPrimary),
+                    tooltip: '待機モニターURL',
                     onPressed: () => _showMonitorUrlDialog(context)),
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
@@ -259,25 +260,10 @@ class _WaitingView extends HookConsumerWidget {
               elevation: 0,
               centerTitle: false,
               actions: [
-                Tooltip(
-                  message: "更新",
-                  child: ElevatedButton(
-                    onPressed: refresh,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.textPrimary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(12),
-                      minimumSize: const Size(48, 48),
-                    ),
-                    child: const Icon(Icons.refresh, color: Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                WaitingActionButtons(
-                  onAddWaiting: () => _showAddWaitingDialog(
-                      context, ref, enableMenuSelection, requireOneMenuPerPerson),
-                  onShowMonitor: () => _showMonitorUrlDialog(context),
-                ),
+                IconButton(
+                    icon: const Icon(Icons.monitor, color: AppColors.textPrimary),
+                    tooltip: '待機モニターURL',
+                    onPressed: () => _showMonitorUrlDialog(context)),
                 const SizedBox(width: 8),
                 QRCodeButton(data: qrCodeData),
                 const SizedBox(width: 16),
@@ -311,17 +297,33 @@ class _WaitingView extends HookConsumerWidget {
                             children: [
                               Expanded(
                                 flex: 2,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Stack(
+                                  clipBehavior: Clip.none, // 影が切れないようにする
                                   children: [
-                                    _buildFilterBar(selectedFilter),
-                                    Expanded(
-                                      child: WaitingListPanel(
-                                        waitingList: filteredWaitingList(),
-                                        onRefresh: refresh,
-                                        onItemAction: (item) =>
-                                            _showStatusBasedDialog(context, ref, item),
-                                        qrToken: qrToken,
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildFilterBar(selectedFilter),
+                                        Expanded(
+                                          child: WaitingListPanel(
+                                            waitingList: filteredWaitingList(),
+                                            onRefresh: refresh,
+                                            onItemAction: (item) =>
+                                                _showStatusBasedDialog(context, ref, item),
+                                            bottomPadding: 85,
+                                            qrToken: qrToken,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Positioned(
+                                      right: 16,
+                                      bottom: 16,
+                                      child: FloatingActionButton(
+                                        onPressed: () => _showAddWaitingDialog(
+                                            context, ref, enableMenuSelection, requireOneMenuPerPerson),
+                                        backgroundColor: AppColors.accentPrimary,
+                                        child: const Icon(Icons.add, color: Colors.white),
                                       ),
                                     ),
                                   ],
@@ -461,10 +463,39 @@ class _WaitingView extends HookConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.open_in_new, color: Colors.white),
+              label: const Text('モニターを開く', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPrimary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                minimumSize: const Size(double.infinity, 48),
+              ),
+              onPressed: () => _launchMonitorUrl(context, url),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
     );
+  }
+
+  // 待機状況モニターURLを外部ブラウザで直接開く
+  Future<void> _launchMonitorUrl(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else if (context.mounted) {
+        ToastWidget.show(context, 'ブラウザを開けませんでした。', type: ToastType.error);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ToastWidget.show(context, 'ブラウザを開けませんでした: ${_describeError(e)}',
+            type: ToastType.error);
+      }
+    }
   }
 
   Future<void> _showCancelConfirmationDialog(

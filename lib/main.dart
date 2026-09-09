@@ -275,8 +275,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // mobile/ desktopを区分する基準点を設定
           const double mobileBreakpoint = 700;
 
-          // 設定値より幅が狭い場合mobileレイアウトを表示
-          if (constraints.maxWidth < mobileBreakpoint) {
+          // iPad等、幅は広くても縦向き(portrait)の場合はmobileレイアウトを優先
+          // (例: iPad 11インチの縦向き幅は700を超えるが、サイドバーではなく下部ナビを表示したい)
+          final bool isPortrait =
+              MediaQuery.of(context).orientation == Orientation.portrait;
+
+          // 設定値より幅が狭い、または縦向きの場合mobileレイアウトを表示
+          if (isPortrait || constraints.maxWidth < mobileBreakpoint) {
             // mobile layout
             return Scaffold(
               body: pages[_selectedIndex],
