@@ -287,8 +287,8 @@ class WaitingService {
     }
   }
 
-  // QRトークン取得
-  Future<Map<String, String>> fetchQRToken(String storeId) async {
+  // QRトークン取得 (board_key検証必須。事前に fetchBoardKey で取得した値を渡すこと)
+  Future<Map<String, String>> fetchQRToken(String storeId, String boardKey) async {
     try {
       final token = await _getIdToken();
 
@@ -299,7 +299,7 @@ class WaitingService {
 
       final response = await apiClient.get(
         Uri.parse(
-            '$_baseUrl/api/waiting-list?action=qr_token&store_id=$storeId'),
+            '$_baseUrl/api/waiting-list?action=qr_token&store_id=$storeId&board_key=$boardKey'),
         headers: headers,
       );
 
@@ -313,6 +313,32 @@ class WaitingService {
         };
       }
       throw Exception('Failed to fetch QR token: ${response.body}');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // 店舗別board_key取得 (未設定ならサーバー側で生成。モニターボードURL・QRトークン発行の両方に使う)
+  Future<String> fetchBoardKey(String storeId) async {
+    try {
+      final token = await _getIdToken();
+
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final response = await apiClient.get(
+        Uri.parse('$_baseUrl/api/store_settings/board_key?store_id=$storeId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        final data = jsonResponse['data'] as Map<String, dynamic>;
+        return data['board_key'] as String;
+      }
+      throw Exception('Failed to fetch board key: ${response.body}');
     } catch (e) {
       rethrow;
     }

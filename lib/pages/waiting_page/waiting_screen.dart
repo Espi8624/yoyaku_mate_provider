@@ -78,34 +78,43 @@ class _WaitingView extends HookConsumerWidget {
     final data = waitingAsync.valueOrNull;
     final waitingList = data?.items ?? const <WaitingList>[];
     final qrToken = data?.qrToken;
+    final boardKey = data?.boardKey;
     final isLoading = waitingAsync.isLoading && data == null;
     final error = (waitingAsync.hasError && data == null)
         ? _describeError(waitingAsync.error!)
         : null;
 
-    // 既存 filteredWaitingList と同一ロジック
-    List<WaitingList> filteredWaitingList() {
-      switch (selectedFilter.value) {
-        case 'all':
-          return waitingList;
-        case 'waiting':
-          return waitingList
-              .where((item) => item.status == 'waiting' || item.status == 'notified')
-              .toList();
-        case 'completed':
-          return waitingList.where((item) => item.status == 'completed').toList();
-        case 'cancelled':
-          return waitingList.where((item) => item.status == 'cancelled').toList();
-        default:
-          // no_show データは完全に除外
-          return waitingList.where((item) => item.status != 'no_show').toList();
-      }
-    }
+    // - フィルタ選択・ライフサイクル状態・settings取得などwaitingListと無関係な再構築のたびに
+    //   このbuild全体が呼ばれ、以下のO(n)フィルタ/スキャンが素の関数として毎回再実行されていた。
+    //   useMemoでwaitingList(またはフィルタ条件)が実際に変わった時だけ再計算する
+    final currentFilteredList = useMemoized(
+      () {
+        switch (selectedFilter.value) {
+          case 'all':
+            return waitingList;
+          case 'waiting':
+            return waitingList
+                .where((item) => item.status == 'waiting' || item.status == 'notified')
+                .toList();
+          case 'completed':
+            return waitingList.where((item) => item.status == 'completed').toList();
+          case 'cancelled':
+            return waitingList.where((item) => item.status == 'cancelled').toList();
+          default:
+            // no_show データは完全に除外
+            return waitingList.where((item) => item.status != 'no_show').toList();
+        }
+      },
+      [waitingList, selectedFilter.value],
+    );
 
-    final waitingCount = waitingList.where((item) => item.status == 'waiting').length;
+    final waitingCount = useMemoized(
+      () => waitingList.where((item) => item.status == 'waiting').length,
+      [waitingList],
+    );
 
-    // 最後入場時間計算ロジック (既存 lastEntryTimeFormatted と同一)
-    String lastEntryTimeFormatted() {
+    // 最後入場時間計算ロジック
+    final lastEntryTimeStr = useMemoized(() {
       DateTime? lastEntryTime;
       for (var item in waitingList) {
         if (item.entryTime != null) {
@@ -117,12 +126,12 @@ class _WaitingView extends HookConsumerWidget {
       if (lastEntryTime == null) return "--:--";
       final jst = lastEntryTime.toUtc().add(const Duration(hours: 9));
       return "${jst.hour.toString().padLeft(2, '0')}:${jst.minute.toString().padLeft(2, '0')}";
-    }
+    }, [waitingList]);
 
-    String totalEstimatedWaitTimeFormatted() {
+    final totalEstimatedWaitTimeStr = useMemoized(() {
       if (waitingList.isEmpty) return "0分";
       return "${waitingCount * estimatedWaitTimePerTeam}分";
-    }
+    }, [waitingList, waitingCount, estimatedWaitTimePerTeam]);
 
     Future<void> refresh() =>
         ref.refresh(waitingListNotifierProvider(storeId: storeId).future);
@@ -156,7 +165,7 @@ class _WaitingView extends HookConsumerWidget {
                 IconButton(
                     icon: const Icon(Icons.monitor, color: AppColors.textPrimary),
                     tooltip: '待機モニターURL',
-                    onPressed: () => _showMonitorUrlDialog(context)),
+                    onPressed: () => _showMonitorUrlDialog(context, boardKey)),
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: QRCodeButton(data: qrCodeData),
@@ -194,7 +203,7 @@ class _WaitingView extends HookConsumerWidget {
                                 _buildFilterBar(selectedFilter),
                                 Expanded(
                                   child: WaitingListPanel(
-                                    waitingList: filteredWaitingList(),
+                                    waitingList: currentFilteredList,
                                     onRefresh: refresh,
                                     onItemAction: (item) =>
                                         _showStatusBasedDialog(context, ref, item),
@@ -227,9 +236,9 @@ class _WaitingView extends HookConsumerWidget {
                             ),
                             WaitingStatusArea(
                               waitingCount: waitingCount,
-                              lastEntryTimeFormatted: lastEntryTimeFormatted(),
+                              lastEntryTimeFormatted: lastEntryTimeStr,
                               totalEstimatedWaitTimeFormatted:
-                                  totalEstimatedWaitTimeFormatted(),
+                                  totalEstimatedWaitTimeStr,
                             ),
                           ],
                         ),
@@ -263,7 +272,7 @@ class _WaitingView extends HookConsumerWidget {
                 IconButton(
                     icon: const Icon(Icons.monitor, color: AppColors.textPrimary),
                     tooltip: '待機モニターURL',
-                    onPressed: () => _showMonitorUrlDialog(context)),
+                    onPressed: () => _showMonitorUrlDialog(context, boardKey)),
                 const SizedBox(width: 8),
                 QRCodeButton(data: qrCodeData),
                 const SizedBox(width: 16),
@@ -306,7 +315,7 @@ class _WaitingView extends HookConsumerWidget {
                                         _buildFilterBar(selectedFilter),
                                         Expanded(
                                           child: WaitingListPanel(
-                                            waitingList: filteredWaitingList(),
+                                            waitingList: currentFilteredList,
                                             onRefresh: refresh,
                                             onItemAction: (item) =>
                                                 _showStatusBasedDialog(context, ref, item),
@@ -335,9 +344,9 @@ class _WaitingView extends HookConsumerWidget {
                                 child: WaitingStatusArea(
                                   isInitiallyExpanded: true,
                                   waitingCount: waitingCount,
-                                  lastEntryTimeFormatted: lastEntryTimeFormatted(),
+                                  lastEntryTimeFormatted: lastEntryTimeStr,
                                   totalEstimatedWaitTimeFormatted:
-                                      totalEstimatedWaitTimeFormatted(),
+                                      totalEstimatedWaitTimeStr,
                                 ),
                               ),
                             ],
@@ -384,8 +393,17 @@ class _WaitingView extends HookConsumerWidget {
     }
   }
 
-  Future<void> _showMonitorUrlDialog(BuildContext context) async {
-    final String url = "${ApiConfig.webBaseUrl}/board?store_id=$storeId";
+  Future<void> _showMonitorUrlDialog(BuildContext context, String? boardKey) async {
+    // - boardKeyが未取得(読込中/失敗)の場合、$boardKeyがそのまま文字列"null"として
+    //   URLに埋め込まれてしまい、モニターがQR発行に失敗する不具合を防ぐ
+    if (boardKey == null) {
+      ToastWidget.show(context, 'データ読込中です。少し待ってから再度お試しください',
+          type: ToastType.error);
+      return;
+    }
+
+    final String url =
+        "${ApiConfig.webBaseUrl}/board?store_id=$storeId&board_key=$boardKey";
 
     await showDialog(
       context: context,

@@ -356,6 +356,9 @@ class StoreProfileView extends ConsumerWidget {
                             fit: BoxFit.cover,
                             width: double.infinity,
                             height: 200,
+                            // - 表示高さ200に対し原寸デコードされていたため、縦解像度だけ上限を設ける
+                            //   (幅はdouble.infinityで可変のためcacheWidthは指定せずアスペクト比維持)
+                            cacheHeight: 400,
                             loadingBuilder: (context, child, progress) {
                               if (progress == null) return child;
                               return const SizedBox(

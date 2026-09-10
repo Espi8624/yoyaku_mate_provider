@@ -23,6 +23,11 @@ class ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // - 半径40(表示は80x80)の円形アバターなのに、NetworkImageはダウンサイズ指定がなく
+    //   原寸のまま(スマホ撮影の場合数MB)デコードしてから縮小表示されていた。
+    //   ResizeImageで実際に必要な解像度(devicePixelRatio込み)までデコードサイズを抑える
+    final avatarCachePx = (80 * MediaQuery.of(context).devicePixelRatio).round();
+
     return Center(
       child: Column(
         children: [
@@ -32,7 +37,8 @@ class ProfileHeader extends StatelessWidget {
               radius: 40,
               backgroundColor: Colors.grey[300],
               backgroundImage: (imageUrl != null && imageUrl!.isNotEmpty)
-                  ? NetworkImage(imageUrl!)
+                  ? ResizeImage(NetworkImage(imageUrl!),
+                      width: avatarCachePx, height: avatarCachePx)
                   : null,
               child: (imageUrl == null || imageUrl!.isEmpty)
                   ? Icon(icon ?? Icons.person, color: Colors.white, size: 30)

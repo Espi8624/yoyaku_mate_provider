@@ -6,8 +6,10 @@ import '../../../models/waiting_list.dart';
 import '../../../widgets/common_dialogs/base_dialog.dart';
 import '../../../constants/api_config.dart';
 
-
-class WaitingItemCard extends StatefulWidget {
+// - 待機時間の秒単位表示のためだけに毎秒setState({})しカード全体(アイコン・メニューWrap・
+//   ボタン等)を再構築していたのが、待機リストのカクつき("버벅임")の主因だった。
+//   経過時間表示だけを独立したStatefulWidgetに切り出し、毎秒の再構築範囲をこのTextのみに限定する。
+class WaitingItemCard extends StatelessWidget {
   final WaitingList item;
   final VoidCallback onAction;
   final VoidCallback? onCancel;
@@ -20,30 +22,6 @@ class WaitingItemCard extends StatefulWidget {
     this.onCancel,
     this.qrToken,
   });
-
-  @override
-  State<WaitingItemCard> createState() => _WaitingItemCardState();
-}
-
-class _WaitingItemCardState extends State<WaitingItemCard> {
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    // 1秒ごとに画面を更新して経過時間を最新に保つ
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {});
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
 
   IconData _getStatusIcon(String status) {
     switch (status) {
@@ -58,14 +36,8 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    final item = widget.item;
     final notesText =
         (item.notes != null && item.notes!.isNotEmpty) ? item.notes! : 'なし';
-
-    final duration = DateTime.now().difference(item.registrationTime);
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    final waitTimeStr = '$minutes分 $seconds秒';
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -117,7 +89,7 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
                         ),
                       )
                     else ...[
-                      _buildInfoRow("待機時間", waitTimeStr),
+                      _WaitTimeRow(registrationTime: item.registrationTime),
                       const SizedBox(height: 4),
                       _buildInfoRow("備考", notesText),
                       if (item.menuItems.isNotEmpty) ...[
@@ -173,7 +145,7 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
                 const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: () => _showQRDialog(
-                      context, item.storeId, item.waitingId, widget.qrToken),
+                      context, item.storeId, item.waitingId, qrToken),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: AppColors.textPrimary,
@@ -191,7 +163,7 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
               ],
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: widget.onAction,
+                onPressed: onAction,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.textPrimary,
                   foregroundColor: Colors.white,
@@ -277,6 +249,67 @@ class _WaitingItemCardState extends State<WaitingItemCard> {
         Expanded(
           child: Text(
             value,
+            style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// - 経過待機時間だけを1秒ごとに再描画する専用ウィジェット。
+//   親のWaitingItemCard(StatelessWidget)を巻き込まず、この行のTextだけが再構築される。
+class _WaitTimeRow extends StatefulWidget {
+  final DateTime registrationTime;
+
+  const _WaitTimeRow({required this.registrationTime});
+
+  @override
+  State<_WaitTimeRow> createState() => _WaitTimeRowState();
+}
+
+class _WaitTimeRowState extends State<_WaitTimeRow> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final duration = DateTime.now().difference(widget.registrationTime);
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    final waitTimeStr = '$minutes分 $seconds秒';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(
+          width: 60,
+          child: Text(
+            "待機時間",
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            waitTimeStr,
             style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.textPrimary,

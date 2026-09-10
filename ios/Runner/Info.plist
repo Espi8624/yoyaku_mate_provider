@@ -38,6 +38,11 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- Firebase AuthおよびバックエンドAPI通信は標準TLS(HTTPS)のみ使用し、
+	     独自の暗号化実装は行っていないため輸出コンプライアンス対象外。
+	     未指定のままだと提出のたびに輸出コンプライアンスの質問が表示されるため明示しておく -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>mailto</string>

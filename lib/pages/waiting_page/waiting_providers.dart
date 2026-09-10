@@ -24,8 +24,9 @@ WaitingService waitingService(Ref ref) => WaitingService(); // シングルト�
 class WaitingListData {
   final List<WaitingList> items;
   final String? qrToken;
+  final String? boardKey;
 
-  const WaitingListData({required this.items, required this.qrToken});
+  const WaitingListData({required this.items, required this.qrToken, this.boardKey});
 }
 
 @riverpod
@@ -40,19 +41,22 @@ class WaitingListNotifier extends _$WaitingListNotifier {
     final service = ref.watch(waitingServiceProvider);
 
     try {
-      // 待機リスト取得とQRトークン取得を同時に実行
+      // 待機リスト取得とboard_key取得を同時に実行。QRトークン発行はboard_key検証が
+      // 必須になったため、board_keyが揃ってから続けて取得する
       final results = await Future.wait([
         service.fetchWaitingCustomers(storeId),
-        service.fetchQRToken(storeId),
+        service.fetchBoardKey(storeId),
       ]);
 
       final items = (results[0] as List<WaitingList>)
         ..sort((a, b) => b.registrationTime.compareTo(a.registrationTime));
-      final tokenData = results[1] as Map<String, String>;
+      final boardKey = results[1] as String;
+      final tokenData = await service.fetchQRToken(storeId, boardKey);
 
       _subscribeToStream(storeId);
 
-      return WaitingListData(items: items, qrToken: tokenData['v_token']);
+      return WaitingListData(
+          items: items, qrToken: tokenData['v_token'], boardKey: boardKey);
     } catch (e) {
       // "データなし"は正常系として空リスト扱い (既存 _handleStreamError と同じ判定)
       if (e.toString().contains('data":null')) {
@@ -75,12 +79,16 @@ class WaitingListNotifier extends _$WaitingListNotifier {
 
         updatedList.sort((a, b) => b.registrationTime.compareTo(a.registrationTime));
         final currentToken = state.valueOrNull?.qrToken;
-        state = AsyncData(WaitingListData(items: updatedList, qrToken: currentToken));
+        final currentBoardKey = state.valueOrNull?.boardKey;
+        state = AsyncData(WaitingListData(
+            items: updatedList, qrToken: currentToken, boardKey: currentBoardKey));
       },
       onError: (e) {
         final currentToken = state.valueOrNull?.qrToken;
+        final currentBoardKey = state.valueOrNull?.boardKey;
         if (e.toString().contains('data":null')) {
-          state = AsyncData(WaitingListData(items: const [], qrToken: currentToken));
+          state = AsyncData(WaitingListData(
+              items: const [], qrToken: currentToken, boardKey: currentBoardKey));
         } else {
           state = AsyncError('データ処理中エラーが発生しました', StackTrace.current);
         }
@@ -125,7 +133,8 @@ class WaitingListNotifier extends _$WaitingListNotifier {
 
       final newItems = [...(current?.items ?? const <WaitingList>[]), newWaitingItem]
         ..sort((a, b) => b.registrationTime.compareTo(a.registrationTime));
-      state = AsyncData(WaitingListData(items: newItems, qrToken: current?.qrToken));
+      state = AsyncData(WaitingListData(
+          items: newItems, qrToken: current?.qrToken, boardKey: current?.boardKey));
     } catch (e) {
       // 失敗時はサーバーと確実に同期するため全体再取得 (既存の loadWaitingList() 相当)
       ref.invalidateSelf();
@@ -154,7 +163,8 @@ class WaitingListNotifier extends _$WaitingListNotifier {
     );
     final optimisticItems = [...current.items];
     optimisticItems[itemIndex] = updatedItem;
-    state = AsyncData(WaitingListData(items: optimisticItems, qrToken: current.qrToken));
+    state = AsyncData(WaitingListData(
+        items: optimisticItems, qrToken: current.qrToken, boardKey: current.boardKey));
 
     try {
       final service = ref.read(waitingServiceProvider);
@@ -164,7 +174,8 @@ class WaitingListNotifier extends _$WaitingListNotifier {
       // 失敗時、UI を以前の状態にロールバック
       final rollbackItems = [...optimisticItems];
       rollbackItems[itemIndex] = originalItem;
-      state = AsyncData(WaitingListData(items: rollbackItems, qrToken: current.qrToken));
+      state = AsyncData(WaitingListData(
+          items: rollbackItems, qrToken: current.qrToken, boardKey: current.boardKey));
       rethrow;
     } finally {
       _isPerformingOptimisticUpdate = false;
@@ -177,7 +188,8 @@ class WaitingListNotifier extends _$WaitingListNotifier {
     if (current == null) return;
 
     _isPerformingOptimisticUpdate = true;
-    state = AsyncData(WaitingListData(items: const [], qrToken: current.qrToken));
+    state = AsyncData(WaitingListData(
+        items: const [], qrToken: current.qrToken, boardKey: current.boardKey));
 
     try {
       final service = ref.read(waitingServiceProvider);
