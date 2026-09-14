@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../models/store_settings.dart';
+import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/providers/session_providers.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
+import '../../../menu_management_page/menu_management_providers.dart';
 import '../../dialogs/business_hours_dialog.dart';
 import '../../dialogs/holiday_dialog.dart';
+import '../../dialogs/language_settings_dialog.dart';
 import '../../dialogs/number_input_dialog.dart';
 // 必要人員設定/AIアシスタント追加情報の一時非表示に伴い未使用(TODO: 復旧時はコメント解除)
 // import '../../dialogs/staff_count_dialog.dart';
@@ -36,6 +40,14 @@ class OperationSettingsSection extends ConsumerWidget {
     final storeSettings = storeSettingsAsync.valueOrNull;
 
     if (storeSettings == null) return const SizedBox();
+
+    // メニュー表示トグルの活性/非活性判定用。メニューが1件も登録されていない店舗は
+    // 表示すべき内容自体が無いため、トグルを操作不能にして常にOFFのまま固定する
+    final menuItems = ref
+        .watch(menuItemsNotifierProvider(storeId: storeId))
+        .valueOrNull
+        ?.items;
+    final hasMenu = menuItems != null && menuItems.isNotEmpty;
 
     return ProfileSection(
       title: '運営設定',
@@ -78,6 +90,31 @@ class OperationSettingsSection extends ConsumerWidget {
               ? null
               : () => _showHolidayDialog(context, ref, storeSettings),
         ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        ProfileSettingItem(
+          title: 'メニュー表示',
+          subtitle: hasMenu
+              ? '待機画面でメニューを閲覧できるようにする'
+              : '登録されたメニューがありません',
+          showTrailingIcon: false,
+          trailing: Switch(
+            value: hasMenu && storeSettings.waitingPolicy.showMenu,
+            activeThumbColor: AppColors.accentPrimary,
+            onChanged: (isReadOnly || !hasMenu)
+                ? null
+                : (value) => _updateShowMenu(context, ref, storeSettings, value),
+          ),
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        ProfileSettingItem(
+          title: '多言語対応',
+          subtitle: _buildLanguageSummary(storeSettings.supportedLanguages),
+          showTrailingIcon: !isReadOnly,
+          onTap: isReadOnly
+              ? null
+              : () => _showLanguageSettingsDialog(
+                  context, ref, storeId, storeSettings),
+        ),
         // AIアシスタントへの追加情報は一時的に非表示中(TODO: 復旧時はコメント解除)
         // const Divider(height: 1, indent: 16, endIndent: 16),
         // ProfileSettingItem(
@@ -92,6 +129,12 @@ class OperationSettingsSection extends ConsumerWidget {
         // ),
       ],
     );
+  }
+
+  // 多言語対応設定の要約表示。全言語が対等な選択制のため、件数のみ表示する
+  String _buildLanguageSummary(List<String> supportedLanguages) {
+    if (supportedLanguages.isEmpty) return '未設定';
+    return '${supportedLanguages.length}言語対応中';
   }
 
   String _buildBusinessHoursSummary(Map<String, Map<String, String>> hours) {
@@ -110,6 +153,18 @@ class OperationSettingsSection extends ConsumerWidget {
   //   final monday = requirements['monday'];
   //   return '月 ${monday?.count ?? 0}名・交代${monday?.shiftChangeCount ?? 0}回 他';
   // }
+
+  Future<void> _updateShowMenu(BuildContext context, WidgetRef ref,
+      StoreSettings storeSettings, bool value) async {
+    final updatedPolicy =
+        storeSettings.waitingPolicy.copyWith(showMenu: value);
+    await _applyUpdate(
+      context,
+      ref,
+      storeSettings.copyWith(waitingPolicy: updatedPolicy),
+      successMessage: value ? 'メニュー表示をONにしました' : 'メニュー表示をOFFにしました',
+    );
+  }
 
   Future<void> _applyUpdate(
       BuildContext context, WidgetRef ref, StoreSettings updated,
@@ -196,6 +251,59 @@ class OperationSettingsSection extends ConsumerWidget {
     if (result != null) {
       final updatedSettings = storeSettings.copyWith(closedDays: result);
       await _applyUpdate(context, ref, updatedSettings);
+    }
+  }
+
+  // 多言語対応設定ダイアログを開き、保存後に新たに有効化された言語があれば
+  // 既存メニューの一括翻訳(バックフィル)を任意で提案する
+  Future<void> _showLanguageSettingsDialog(BuildContext context, WidgetRef ref,
+      String storeId, StoreSettings storeSettings) async {
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (_) => LanguageSettingsDialog(
+          initialSupportedLanguages: storeSettings.supportedLanguages),
+    );
+    if (result == null) return;
+
+    // 全言語(日本語含む)が対等に選択制なので、今回新たに有効化された言語を
+    // そのまま抽出する。日本語・英語・韓国語であっても、一度OFFにしてから
+    // 再度ONにした場合はここに含まれうる。
+    // 既存メニューはこの言語の翻訳データを持っていないため、後続でバックフィルを提案する
+    final oldLanguages = storeSettings.supportedLanguages.toSet();
+    final newlyAdded =
+        result.where((lang) => !oldLanguages.contains(lang)).toList();
+
+    final updatedSettings = storeSettings.copyWith(supportedLanguages: result);
+    await _applyUpdate(context, ref, updatedSettings,
+        successMessage: '多言語対応設定を保存しました');
+
+    if (newlyAdded.isEmpty || !context.mounted) return;
+
+    final menuItems = ref
+        .read(menuItemsNotifierProvider(storeId: storeId))
+        .valueOrNull
+        ?.items;
+    if (menuItems == null || menuItems.isEmpty) return;
+
+    final confirmed = await showConfirmationDialog(
+      context: context,
+      title: '既存メニューの翻訳',
+      content: '追加した言語について、登録済みのメニュー${menuItems.length}件を今すぐ翻訳しますか？\n'
+          '(翻訳APIの呼び出しが発生します。後から個別にメニューを編集して反映することもできます)',
+      confirmText: '翻訳する',
+      isDestructive: false,
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref
+          .read(menuItemsNotifierProvider(storeId: storeId).notifier)
+          .backfillTranslations(storeId, newlyAdded);
+      if (!context.mounted) return;
+      ToastWidget.show(context, '既存メニューの翻訳が完了しました', type: ToastType.success);
+    } catch (e) {
+      if (!context.mounted) return;
+      ToastWidget.show(context, _describeError(e), type: ToastType.error);
     }
   }
 

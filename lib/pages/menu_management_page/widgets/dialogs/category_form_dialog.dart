@@ -7,12 +7,15 @@ class CategoryFormDialog extends StatefulWidget {
   final String? initialValue;
   final List<String> existingCategories;
   final Map<String, String> initialTranslations;
+  // 店舗の「多言語対応」設定で有効化されている翻訳対象言語(日本語は除く)
+  final List<String> activeLanguages;
 
   const CategoryFormDialog({
     super.key,
     this.initialValue,
     required this.existingCategories,
     this.initialTranslations = const {},
+    this.activeLanguages = TranslationService.defaultLanguages,
   });
 
   @override
@@ -43,25 +46,26 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
     final name = _controller.text.trim();
     setState(() => _isLoading = true);
 
-    // カテゴリー名が変わった場合のみ再翻訳 (既存翻訳があれば再利用)
-    var translations = widget.initialTranslations;
-    if (name != widget.initialValue) {
+    // カテゴリー名が変わった場合のみ再翻訳 (既存翻訳があれば再利用)。
+    // 有効化されている言語だけを更新し、無効化されている言語の既存翻訳は
+    // 残す(再有効化時の再翻訳を不要にするため、ここでは削除しない)
+    final translations = Map<String, String>.from(widget.initialTranslations);
+    if (name != widget.initialValue && widget.activeLanguages.isNotEmpty) {
       try {
         final result = await TranslationService().translateToMultipleLanguages(
           {'c_0': name},
-          TranslationService.targetLanguages,
+          widget.activeLanguages,
         );
-        translations = {
-          for (final entry in result.entries)
-            if (entry.value['c_0'] != null) entry.key: entry.value['c_0']!,
-        };
+        result.forEach((lang, transMap) {
+          final translated = transMap['c_0'];
+          if (translated != null) translations[lang] = translated;
+        });
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('カテゴリーの翻訳に失敗しました: $e')),
           );
         }
-        translations = {};
       }
     }
 

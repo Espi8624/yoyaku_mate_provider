@@ -13,6 +13,9 @@ class StoreSettings {
   final Map<String, DayStaffRequirement> requiredStaffCount;
   // マネージャーをシフト自動配置の対象から除外するか。未設定は false(除外しない=従来通り含める)
   final bool excludeManagerFromShiftTable;
+  // メニュー等の自動翻訳対象言語。日本語・英語・韓国語は常時固定で、
+  // それ以外は店舗が選択制で有効化する。未設定(既存店舗)はデフォルト3言語として扱う
+  final List<String> supportedLanguages;
 
   StoreSettings({
     required this.storeId,
@@ -26,6 +29,7 @@ class StoreSettings {
     this.aiAdditionalInfo = '',
     this.requiredStaffCount = const {},
     this.excludeManagerFromShiftTable = false,
+    this.supportedLanguages = const ['ja', 'en', 'ko'],
   });
 
   factory StoreSettings.fromJson(Map<String, dynamic> json) {
@@ -50,6 +54,9 @@ class StoreSettings {
               const {},
       excludeManagerFromShiftTable:
           json['settings']['exclude_manager_from_shift_table'] ?? false,
+      supportedLanguages: json['settings']['supported_languages'] == null
+          ? const ['ja', 'en', 'ko']
+          : List<String>.from(json['settings']['supported_languages']),
     );
   }
 
@@ -66,6 +73,7 @@ class StoreSettings {
           'required_staff_count': requiredStaffCount
               .map((k, v) => MapEntry(k, v.toJson())),
           'exclude_manager_from_shift_table': excludeManagerFromShiftTable,
+          'supported_languages': supportedLanguages,
         },
       };
 
@@ -80,6 +88,7 @@ class StoreSettings {
     String? aiAdditionalInfo,
     Map<String, DayStaffRequirement>? requiredStaffCount,
     bool? excludeManagerFromShiftTable,
+    List<String>? supportedLanguages,
   }) {
     return StoreSettings(
       storeId: storeId ?? this.storeId,
@@ -94,6 +103,7 @@ class StoreSettings {
       requiredStaffCount: requiredStaffCount ?? this.requiredStaffCount,
       excludeManagerFromShiftTable:
           excludeManagerFromShiftTable ?? this.excludeManagerFromShiftTable,
+      supportedLanguages: supportedLanguages ?? this.supportedLanguages,
     );
   }
 }
@@ -189,12 +199,16 @@ class WaitingPolicy {
   final int? estimatedWaitTime;
   final bool enableMenuSelection;
   final bool requireOneMenuPerPerson;
+  // showMenu 待機画面(QRページ)でのメニュー閲覧表示可否。
+  // 未設定(既存店舗)はデフォルトtrue(表示)として扱う
+  final bool showMenu;
 
   WaitingPolicy({
     required this.maxWaitingCount,
     this.estimatedWaitTime,
     this.enableMenuSelection = false,
     this.requireOneMenuPerPerson = false,
+    this.showMenu = true,
   });
 
   factory WaitingPolicy.fromJson(Map<String, dynamic> json) {
@@ -203,6 +217,7 @@ class WaitingPolicy {
       estimatedWaitTime: json['estimated_wait_time'] ?? 0,
       enableMenuSelection: json['enable_menu_selection'] ?? false,
       requireOneMenuPerPerson: json['require_one_menu_per_person'] ?? false,
+      showMenu: json['show_menu'] ?? true,
     );
   }
 
@@ -211,6 +226,7 @@ class WaitingPolicy {
         'estimated_wait_time': estimatedWaitTime,
         'enable_menu_selection': enableMenuSelection,
         'require_one_menu_per_person': requireOneMenuPerPerson,
+        'show_menu': showMenu,
       };
 
   WaitingPolicy copyWith({
@@ -218,6 +234,7 @@ class WaitingPolicy {
     int? estimatedWaitTime,
     bool? enableMenuSelection,
     bool? requireOneMenuPerPerson,
+    bool? showMenu,
   }) {
     return WaitingPolicy(
       maxWaitingCount: maxWaitingCount ?? this.maxWaitingCount,
@@ -225,6 +242,7 @@ class WaitingPolicy {
       enableMenuSelection: enableMenuSelection ?? this.enableMenuSelection,
       requireOneMenuPerPerson:
           requireOneMenuPerPerson ?? this.requireOneMenuPerPerson,
+      showMenu: showMenu ?? this.showMenu,
     );
   }
 }

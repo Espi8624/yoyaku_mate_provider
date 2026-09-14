@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:yoyaku_mate_provider/models/menu_list.dart';
 import 'package:yoyaku_mate_provider/services/menu_service.dart';
+import 'package:yoyaku_mate_provider/services/translation_service.dart';
 
 part 'menu_management_providers.g.dart';
 
@@ -289,6 +290,64 @@ class MenuItemsNotifier extends _$MenuItemsNotifier {
 
       final newItems =
           current.items.where((item) => item.id != menuItem.id).toList();
+      state = AsyncData(MenuManagementData.recompute(newItems));
+      _setSaveStatus(SaveStatus.saved);
+    } catch (e) {
+      _setSaveStatus(SaveStatus.error);
+      rethrow;
+    }
+  }
+
+  // 新規に有効化された言語について、既存メニュー全件を一括翻訳しサーバーに反映する。
+  // 「設定 > 店舗 > 多言語対応」で言語を追加したときにのみ、ユーザーの明示的な確認を
+  // 経て呼ばれる操作(自動では走らせない。翻訳API呼び出しのコストが発生するため)
+  Future<void> backfillTranslations(
+      String storeId, List<String> newLanguages) async {
+    final current = state.valueOrNull;
+    if (current == null || current.items.isEmpty || newLanguages.isEmpty) {
+      return;
+    }
+
+    _setSaveStatus(SaveStatus.saving);
+    try {
+      // 1回のAPI呼び出しで全メニューのタイトル/説明をまとめて翻訳 (N+1問題解決)
+      final inputMap = <String, String>{};
+      for (final item in current.items) {
+        inputMap['t_${item.id}'] = item.title;
+        if (item.description.isNotEmpty) {
+          inputMap['d_${item.id}'] = item.description;
+        }
+      }
+
+      final result = await TranslationService()
+          .translateToMultipleLanguages(inputMap, newLanguages, smartMenuMode: true);
+
+      final newItems = <MenuListItem>[];
+      for (final item in current.items) {
+        final newTitleTranslations =
+            Map<String, String>.from(item.titleTranslations);
+        final newDescTranslations =
+            Map<String, String>.from(item.descriptionTranslations);
+        result.forEach((lang, transMap) {
+          final translatedTitle = transMap['t_${item.id}'];
+          if (translatedTitle != null) {
+            newTitleTranslations[lang] = translatedTitle;
+          }
+          final translatedDesc = transMap['d_${item.id}'];
+          if (translatedDesc != null) {
+            newDescTranslations[lang] = translatedDesc;
+          }
+        });
+
+        final updatedItem = item.copyWith(
+          titleTranslations: newTitleTranslations,
+          descriptionTranslations: newDescTranslations,
+        );
+        newItems.add(updatedItem);
+        // メニューごとの更新エンドポイントしか存在しないため、ここはメニュー件数分のPATCHになる
+        await ref.read(menuServiceProvider).updateSingleMenu(updatedItem);
+      }
+
       state = AsyncData(MenuManagementData.recompute(newItems));
       _setSaveStatus(SaveStatus.saved);
     } catch (e) {

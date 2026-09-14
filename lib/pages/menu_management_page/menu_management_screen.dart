@@ -10,7 +10,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:yoyaku_mate_provider/pages/menu_management_page/widgets/panels/action_button_panel_mobile.dart';
 import '../../models/menu_list.dart';
+import '../../providers/session_providers.dart';
 import '../../services/api_exception.dart';
+import '../../services/translation_service.dart';
 import 'menu_management_providers.dart';
 
 import '../../widgets/common_dialogs/confirmation_dialog.dart';
@@ -88,10 +90,23 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
   Map<String, Map<String, String>> get _categoryTranslations =>
       _data?.categoryTranslations ?? const {};
 
+  // 店舗の「多言語対応」設定で有効化されている翻訳対象言語。
+  // メニュー入力者が日本語話者とは限らない(外国人スタッフの可能性がある)ため、
+  // 日本語も除外せずそのまま対象に含める(基本言語=日本語・英語・韓国語 + 追加言語)。
+  // 設定未取得時は基本言語のみにフォールバックする
+  List<String> get _activeLanguages {
+    final supported = ref
+        .read(storeSettingsProvider(storeId: widget.storeId))
+        .valueOrNull
+        ?.supportedLanguages;
+    return supported ?? TranslationService.defaultLanguages;
+  }
+
   Future<void> _showAddCategoryDialog() async {
     final result = await showDialog<dynamic>(
       context: context,
-      builder: (_) => CategoryFormDialog(existingCategories: _categories),
+      builder: (_) => CategoryFormDialog(
+          existingCategories: _categories, activeLanguages: _activeLanguages),
     );
     if (result is Map<String, dynamic>) {
       ref
@@ -111,7 +126,8 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
       builder: (_) => CategoryFormDialog(
           initialValue: oldCategory,
           existingCategories: categories,
-          initialTranslations: _categoryTranslations[oldCategory] ?? const {}),
+          initialTranslations: _categoryTranslations[oldCategory] ?? const {},
+          activeLanguages: _activeLanguages),
     );
     if (result == 'DELETE_ACTION') {
       _showDeleteCategoryDialog(index);
@@ -157,7 +173,8 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
       builder: (_) => MenuFormDialog(
           storeId: widget.storeId,
           category: category,
-          categoryTranslations: _categoryTranslations[category] ?? const {}),
+          categoryTranslations: _categoryTranslations[category] ?? const {},
+          activeLanguages: _activeLanguages),
     );
 
     if (result != null) {
@@ -210,7 +227,8 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
           menuItem: menuItem,
           storeId: widget.storeId,
           category: category,
-          categoryTranslations: _categoryTranslations[category] ?? const {}),
+          categoryTranslations: _categoryTranslations[category] ?? const {},
+          activeLanguages: _activeLanguages),
     );
 
     if (result == 'DELETE_ACTION') {
@@ -289,6 +307,13 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
   }
 
   Future<void> _showLanguageSelectionDialog() async {
+    // 印刷で選べる翻訳言語は、店舗の「多言語対応」設定(supportedLanguages)に
+    // 追従させる。過去に無効化した言語の翻訳データがメニューに残っていても、
+    // 現在の設定に含まれない言語は印刷の選択肢には出さない
+    final printLanguages = TranslationService.allLanguages
+        .where((lang) => _activeLanguages.contains(lang))
+        .toList();
+
     final selectedLang = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -297,7 +322,9 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Independent Japanese Option
+              // 原文(入力されたまま、翻訳を一切介さない)オプション。
+              // メニュー入力者が日本語話者とは限らない(外国人スタッフの可能性がある)ため、
+              // 「日本語」(=titleTranslations['ja'])とは別に、入力そのままを出力する選択肢を独立させる
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -305,13 +332,13 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: InkWell(
-                  onTap: () => Navigator.pop(context, 'Japanese'),
+                  onTap: () => Navigator.pop(context, 'ORIGINAL'),
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
                     child: const Text(
-                      '日本語',
+                      '原文',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -322,70 +349,61 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
                   ),
                 ),
               ),
-              const SizedBox(height: 24), // Distinct gap
-              // Other Languages Group
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    ...{
-                      'en': '英語',
-                      'ko': '韓国語',
-                      'zh': '中国語',
-                      'zh-TW': '中国語 (台湾)',
-                      'es': 'スペイン語',
-                      'fr': 'フランス語',
-                      'de': 'ドイツ語',
-                      'it': 'イタリア語',
-                      'ru': 'ロシア語',
-                      'ar': 'アラビア語',
-                    }.entries.toList().asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final e = entry.value;
-                      // Dynamic check for last item
-                      final isLast = index == 9; // Total 10 items (0-9)
+              // 翻訳言語グループ。店舗の多言語対応設定に含まれる言語のみ表示(日本語が先頭)
+              if (printLanguages.isNotEmpty) ...[
+                const SizedBox(height: 24), // Distinct gap
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      ...printLanguages.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final lang = entry.value;
+                        final isLast = index == printLanguages.length - 1;
 
-                      return Column(
-                        children: [
-                          InkWell(
-                            onTap: () => Navigator.pop(context, e.key),
-                            borderRadius: isLast
-                                ? const BorderRadius.vertical(
-                                    bottom: Radius.circular(8))
-                                : (index == 0
-                                    ? const BorderRadius.vertical(
-                                        top: Radius.circular(8))
-                                    : BorderRadius.zero),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 12, horizontal: 8),
-                              child: Text(
-                                e.value,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: AppColors.textPrimary,
+                        return Column(
+                          children: [
+                            InkWell(
+                              onTap: () => Navigator.pop(context, lang),
+                              borderRadius: isLast
+                                  ? const BorderRadius.vertical(
+                                      bottom: Radius.circular(8))
+                                  : (index == 0
+                                      ? const BorderRadius.vertical(
+                                          top: Radius.circular(8))
+                                      : BorderRadius.zero),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 12, horizontal: 8),
+                                child: Text(
+                                  TranslationService.languageLabels[lang] ??
+                                      lang,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ),
-                          ),
-                          if (!isLast)
-                            const Divider(
-                              height: 1,
-                              thickness: 1,
-                              color: AppColors.border,
-                            ),
-                        ],
-                      );
-                    }),
-                  ],
+                            if (!isLast)
+                              const Divider(
+                                height: 1,
+                                thickness: 1,
+                                color: AppColors.border,
+                              ),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         );
@@ -501,8 +519,8 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
 
   Future<void> _translateAndPrint(String targetLang,
       {String? selectedCategory}) async {
-    // If Japanese is selected, use original text
-    if (targetLang == 'Japanese') {
+    // 「原文」選択時は翻訳データを一切参照せず、入力されたテキストをそのまま使う
+    if (targetLang == 'ORIGINAL') {
       await _printMenu(
           titleTranslations: {},
           descTranslations: {},
@@ -511,7 +529,10 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
       return;
     }
 
-    // Prepare translation maps using STORED data only
+    // 日本語も他の言語と同じ経路(targetLang='ja')で翻訳データを参照する。
+    // メニュー入力者が日本語話者とは限らない(外国人スタッフが韓国語・英語等で
+    // 入力する可能性がある)ため、titleTranslations['ja']があればそちらを優先し、
+    // 無い場合(この機能導入前のメニュー等)のみ原文にフォールバックする
     final titleTranslations = <String, String>{};
     final descTranslations = <String, String>{};
 
@@ -706,7 +727,8 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
                 children: [
                   pw.Text(
                       switch (targetLang) {
-                        'ja' || 'Japanese' => 'メニュー',
+                        'ja' => 'メニュー',
+                        'ORIGINAL' => 'メニュー',
                         'ko' => '메뉴',
                         'zh' => '菜单',
                         'zh-TW' => '菜單',

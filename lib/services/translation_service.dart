@@ -8,10 +8,15 @@ import 'package:http/http.dart' as http;
 // APIキーはクライアントに一切持たせず、yoyaku_mate_server の
 // /api/provider_translate, /api/provider_translate/multi にプロキシさせる。
 class TranslationService {
-  // メニュー/カテゴリー自動翻訳の対象言語 (共通)
-  static const List<String> targetLanguages = [
-    'en', // English
-    'ko', // Korean
+  // 常時翻訳対象とする基本言語。メニュー入力者(店舗スタッフ)が必ずしも
+  // 日本語話者とは限らない(外国人スタッフが英語や韓国語で入力するケースがある)ため、
+  // 「入力言語=日本語」を前提にせず、日本語・英語・韓国語の3言語は常に
+  // 翻訳結果を持つようにする(入力言語がこの3言語のいずれかであっても、
+  // Geminiにとってはただの自己翻訳になるだけで害はない)
+  static const List<String> defaultLanguages = ['ja', 'en', 'ko'];
+
+  // 店舗が「設定 > 店舗」の多言語対応設定で選択制に有効化できる追加言語
+  static const List<String> optionalLanguages = [
     'zh', // Chinese (Simplified)
     'zh-TW', // Traditional Chinese
     'es', // Spanish
@@ -21,6 +26,32 @@ class TranslationService {
     'ar', // Arabic
     'ru', // Russian
   ];
+
+  // 既存翻訳データの正規化・保持判定に使う、認識対象言語コードの全体集合。
+  // 店舗が言語を無効化しても既存データはここでは失われず、有効/無効の絞り込みは
+  // 呼び出し側がstoreSettings.supportedLanguagesを使って別途行う
+  static const List<String> allLanguages = [
+    ...defaultLanguages,
+    ...optionalLanguages,
+  ];
+
+  // 後方互換: 以前の全言語固定リストを参照していた呼び出し元向けのエイリアス
+  static const List<String> targetLanguages = allLanguages;
+
+  // 多言語設定ダイアログ等で使う表示名(日本語UI向け)
+  static const Map<String, String> languageLabels = {
+    'ja': '日本語',
+    'en': '英語',
+    'ko': '韓国語',
+    'zh': '中国語(簡体字)',
+    'zh-TW': '中国語(繁体字)',
+    'es': 'スペイン語',
+    'fr': 'フランス語',
+    'de': 'ドイツ語',
+    'it': 'イタリア語',
+    'ar': 'アラビア語',
+    'ru': 'ロシア語',
+  };
 
   static final TranslationService _instance = TranslationService._internal();
 
