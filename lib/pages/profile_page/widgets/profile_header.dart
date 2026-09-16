@@ -36,9 +36,14 @@ class ProfileHeader extends StatelessWidget {
             child: CircleAvatar(
               radius: 40,
               backgroundColor: Colors.grey[300],
+              // - policy未指定(デフォルトのexact)だと、正方形でない元画像を
+              //   縦横比無視でwidth×heightに引き伸ばしてしまい、CircleAvatar表示が
+              //   歪む(潰れる)バグになっていた。fitで縦横比を保ったままデコードする
               backgroundImage: (imageUrl != null && imageUrl!.isNotEmpty)
                   ? ResizeImage(NetworkImage(imageUrl!),
-                      width: avatarCachePx, height: avatarCachePx)
+                      width: avatarCachePx,
+                      height: avatarCachePx,
+                      policy: ResizeImagePolicy.fit)
                   : null,
               child: (imageUrl == null || imageUrl!.isEmpty)
                   ? Icon(icon ?? Icons.person, color: Colors.white, size: 30)

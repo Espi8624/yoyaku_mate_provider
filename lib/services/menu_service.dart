@@ -18,7 +18,7 @@ class MenuService {
   MenuService({
     http.Client? client,
     String? baseUrl,
-  })  : _client = client ?? http.Client(),
+  })  : _client = client ?? apiClient,
         _baseUrl = baseUrl ?? dotenv.env['API_URL']!;
 
   Future<List<MenuListItem>> fetchMenuItems(String storeId) async {

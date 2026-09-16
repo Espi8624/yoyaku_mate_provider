@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../../../models/menu_list.dart';
 import '../../../../models/store_settings.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/providers/session_providers.dart';
@@ -279,11 +280,18 @@ class OperationSettingsSection extends ConsumerWidget {
 
     if (newlyAdded.isEmpty || !context.mounted) return;
 
-    final menuItems = ref
-        .read(menuItemsNotifierProvider(storeId: storeId))
-        .valueOrNull
-        ?.items;
-    if (menuItems == null || menuItems.isEmpty) return;
+    // - valueOrNullだと、この設定画面に来る前にメニュー管理画面を一度も開いて
+    //   いない場合(autoDisposeでまだロードされていない)nullになり、確認自体が
+    //   出ないまま処理が終わってしまう。.futureで確実に一度読み込む
+    List<MenuListItem> menuItems;
+    try {
+      menuItems = (await ref
+              .read(menuItemsNotifierProvider(storeId: storeId).future))
+          .items;
+    } catch (_) {
+      return;
+    }
+    if (menuItems.isEmpty || !context.mounted) return;
 
     final confirmed = await showConfirmationDialog(
       context: context,

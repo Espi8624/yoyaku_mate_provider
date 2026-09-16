@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'package:yoyaku_mate_provider/services/api_client.dart';
 
 // 自動翻訳 (メニュー名/カテゴリー名/待機メモ) は Gemini API をサーバー経由で呼び出す。
 // APIキーはクライアントに一切持たせず、yoyaku_mate_server の
@@ -75,7 +75,7 @@ class TranslationService {
       {String targetLang = 'Japanese'}) async {
     try {
       final token = await _getIdToken();
-      final response = await http.post(
+      final response = await apiClient.post(
         Uri.parse('$_baseUrl/api/provider_translate'),
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
@@ -90,7 +90,10 @@ class TranslationService {
         return "Translation failed.";
       }
 
-      final jsonResponse = json.decode(utf8.decode(response.bodyBytes));
+      // - サーバーの共通ヘルパー(utils.RespondWithJSON)は本体を data でラップするため、
+      //   他サービスと同じく data を剥がしてから読む
+      final body = json.decode(utf8.decode(response.bodyBytes));
+      final jsonResponse = body['data'] ?? body;
       return jsonResponse['translated_text'] ?? "Translation failed.";
     } catch (e) {
       debugPrint('Translation Error (Single): $e');
@@ -168,7 +171,7 @@ class TranslationService {
 
     try {
       final token = await _getIdToken();
-      final response = await http.post(
+      final response = await apiClient.post(
         Uri.parse('$_baseUrl/api/provider_translate/multi'),
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
@@ -187,7 +190,10 @@ class TranslationService {
         return {};
       }
 
-      final jsonResponse = json.decode(utf8.decode(response.bodyBytes));
+      // - サーバーの共通ヘルパー(utils.RespondWithJSON)は本体を data でラップするため、
+      //   他サービスと同じく data を剥がしてから読む
+      final body = json.decode(utf8.decode(response.bodyBytes));
+      final jsonResponse = body['data'] ?? body;
       final deepMap =
           jsonResponse['translations'] as Map<String, dynamic>? ?? {};
       final result = <String, Map<String, String>>{};

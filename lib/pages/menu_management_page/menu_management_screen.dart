@@ -75,6 +75,16 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
     });
   }
 
+  // カテゴリー数とTabControllerのlengthを合わせて作り直す (現在indexは維持)
+  void _syncTabControllerLength(List<String> categories) {
+    final currentIndex = _tabController.index
+        .clamp(0, categories.isNotEmpty ? categories.length - 1 : 0);
+    _tabController.dispose();
+    _tabController = TabController(
+        length: categories.length, vsync: this, initialIndex: currentIndex);
+    _addTabListener();
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -866,6 +876,10 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
     final menuAsync =
         ref.watch(menuItemsNotifierProvider(storeId: widget.storeId));
     final saveStatus = ref.watch(menuSaveStatusProvider);
+    // - _activeLanguagesはref.readで読むため、ここでwatchしておかないと
+    //   他画面(設定画面等)が一度も読み込んでいない場合にvalueOrNullがnullのまま
+    //   (=常に基本言語3件へフォールバック)になってしまう
+    ref.watch(storeSettingsProvider(storeId: widget.storeId));
 
     // カテゴリー数変化時のTabController再生成 + ロードエラーの1回だけのToast表示。
     // 既存の _onViewModelUpdated(addListener) と同じ役割
@@ -873,16 +887,7 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
         (previous, next) {
       final categories = next.valueOrNull?.categories ?? const <String>[];
       if (categories.length != _tabController.length) {
-        setState(() {
-          // 現在 index を維持する
-          final currentIndex = _tabController.index.clamp(
-              0, categories.isNotEmpty ? categories.length - 1 : 0);
-
-          _tabController.dispose();
-          _tabController = TabController(
-              length: categories.length, vsync: this, initialIndex: currentIndex);
-          _addTabListener();
-        });
+        setState(() => _syncTabControllerLength(categories));
       }
 
       if (next.hasError) {
@@ -892,6 +897,11 @@ class _MenuManagementViewState extends ConsumerState<_MenuManagementView>
     });
 
     final categories = menuAsync.valueOrNull?.categories ?? const <String>[];
+    // - ref.listenは登録後の変化にしか反応しないため、この画面が初回build
+    //   された時点で既にデータがロード済み(キャッシュhit)のケースをここで吸収する
+    if (categories.length != _tabController.length) {
+      _syncTabControllerLength(categories);
+    }
     final categorizedMenu = menuAsync.valueOrNull?.categorizedMenu ?? const {};
     // 初回ロード中(=まだ一度もデータを取得できていない間)のみローディング表示
     final isLoading = menuAsync.isLoading && !menuAsync.hasValue;

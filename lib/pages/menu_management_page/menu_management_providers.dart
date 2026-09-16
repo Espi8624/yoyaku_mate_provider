@@ -303,14 +303,16 @@ class MenuItemsNotifier extends _$MenuItemsNotifier {
   // 経て呼ばれる操作(自動では走らせない。翻訳API呼び出しのコストが発生するため)
   Future<void> backfillTranslations(
       String storeId, List<String> newLanguages) async {
-    final current = state.valueOrNull;
-    if (current == null || current.items.isEmpty || newLanguages.isEmpty) {
-      return;
-    }
+    if (newLanguages.isEmpty) return;
+    // - state.valueOrNullだとautoDispose後に再生成された直後のnullを
+    //   拾ってしまい、確認ダイアログでのユーザー操作待ちの間に何もしないまま
+    //   即完了扱いになるバグがあった。awaitで確実に最新データをロードする
+    final current = await future;
+    if (current.items.isEmpty) return;
 
     _setSaveStatus(SaveStatus.saving);
     try {
-      // 1回のAPI呼び出しで全メニューのタイトル/説明をまとめて翻訳 (N+1問題解決)
+      // 1回のAPI呼び出しでメニューのタイトル/説明 + カテゴリー名をまとめて翻訳 (N+1問題解決)
       final inputMap = <String, String>{};
       for (final item in current.items) {
         inputMap['t_${item.id}'] = item.title;
@@ -318,9 +320,24 @@ class MenuItemsNotifier extends _$MenuItemsNotifier {
           inputMap['d_${item.id}'] = item.description;
         }
       }
+      for (final cat in current.categories) {
+        inputMap['c_$cat'] = cat;
+      }
 
       final result = await TranslationService()
           .translateToMultipleLanguages(inputMap, newLanguages, smartMenuMode: true);
+
+      // カテゴリーごとの翻訳 (既存言語は保持しつつ、新規言語をマージ)
+      final newCategoryTranslations = <String, Map<String, String>>{};
+      for (final cat in current.categories) {
+        final merged =
+            Map<String, String>.from(current.categoryTranslations[cat] ?? {});
+        result.forEach((lang, transMap) {
+          final translated = transMap['c_$cat'];
+          if (translated != null) merged[lang] = translated;
+        });
+        newCategoryTranslations[cat] = merged;
+      }
 
       final newItems = <MenuListItem>[];
       for (final item in current.items) {
@@ -342,9 +359,12 @@ class MenuItemsNotifier extends _$MenuItemsNotifier {
         final updatedItem = item.copyWith(
           titleTranslations: newTitleTranslations,
           descriptionTranslations: newDescTranslations,
+          categoryTranslations:
+              newCategoryTranslations[item.category] ?? item.categoryTranslations,
         );
         newItems.add(updatedItem);
         // メニューごとの更新エンドポイントしか存在しないため、ここはメニュー件数分のPATCHになる
+        // (category_translationsも同じPATCHに含まれるため、カテゴリー用の追加API呼び出しは不要)
         await ref.read(menuServiceProvider).updateSingleMenu(updatedItem);
       }
 
