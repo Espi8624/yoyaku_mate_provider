@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../../../../models/menu_list.dart';
 import '../../../../models/store_settings.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/providers/session_providers.dart';
 import 'package:yoyaku_mate_provider/services/api_exception.dart';
 import 'package:yoyaku_mate_provider/widgets/common_dialogs/confirmation_dialog.dart';
+import 'package:yoyaku_mate_provider/widgets/common_dialogs/translation_progress_dialog.dart';
 import 'package:yoyaku_mate_provider/widgets/common_widgets/toast_widget.dart';
 import '../../../menu_management_page/menu_management_providers.dart';
 import '../../dialogs/business_hours_dialog.dart';
@@ -280,39 +280,99 @@ class OperationSettingsSection extends ConsumerWidget {
 
     if (newlyAdded.isEmpty || !context.mounted) return;
 
+    // 翻訳が不足している項目だけを対象にする。既に翻訳済みのものは対象外なので、
+    // 言語をOFF→ONと切り替えただけなら翻訳APIは1回も呼ばれない(課金されない)。
     // - valueOrNullだと、この設定画面に来る前にメニュー管理画面を一度も開いて
     //   いない場合(autoDisposeでまだロードされていない)nullになり、確認自体が
     //   出ないまま処理が終わってしまう。.futureで確実に一度読み込む
-    List<MenuListItem> menuItems;
+    final BackfillPlan plan;
     try {
-      menuItems = (await ref
-              .read(menuItemsNotifierProvider(storeId: storeId).future))
-          .items;
+      plan = await ref
+          .read(menuItemsNotifierProvider(storeId: storeId).notifier)
+          .planBackfillTranslations(result);
     } catch (_) {
       return;
     }
-    if (menuItems.isEmpty || !context.mounted) return;
+    if (plan.isEmpty || !context.mounted) return;
 
     final confirmed = await showConfirmationDialog(
       context: context,
       title: '既存メニューの翻訳',
-      content: '追加した言語について、登録済みのメニュー${menuItems.length}件を今すぐ翻訳しますか？\n'
-          '(翻訳APIの呼び出しが発生します。後から個別にメニューを編集して反映することもできます)',
+      content: '${_describeBackfillPlan(plan)}の翻訳が不足しています。今すぐ翻訳しますか？\n'
+          '(翻訳APIの呼び出しが発生します。翻訳済みのものは対象外です)',
       confirmText: '翻訳する',
       isDestructive: false,
     );
     if (confirmed != true || !context.mounted) return;
 
+    // 翻訳〜サーバー反映の完了まで進捗ダイアログで待たせる。
+    // 完了トーストだけが先に出て、実際にはまだ処理中という状態を防ぐ
+    final progress = ValueNotifier<TranslationProgress>((done: 0, total: 0));
+    // showDialogの既定(useRootNavigator: true)に合わせる。
+    // ネストしたNavigatorをpopして別の画面を閉じてしまうのを防ぐ
+    final navigator = Navigator.of(context, rootNavigator: true);
+    // ダイアログが完全に閉じた時点で完了するFuture。
+    // 閉じるアニメーション中にprogressを破棄するとリスナー解除で例外になるため、
+    // これをawaitしてから破棄する
+    final dialogClosed = showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => TranslationProgressDialog(
+        progress: progress,
+        title: '既存メニューを翻訳中',
+        description: '追加した言語の翻訳と保存を行っています。\n完了するまで画面を閉じないでください。',
+      ),
+    );
+    void closeProgressDialog() {
+      if (navigator.mounted) navigator.pop();
+    }
+
     try {
-      await ref
+      final backfillResult = await ref
           .read(menuItemsNotifierProvider(storeId: storeId).notifier)
-          .backfillTranslations(storeId, newlyAdded);
+          .backfillTranslations(storeId, result,
+              onProgress: (done, total) =>
+                  progress.value = (done: done, total: total));
+      closeProgressDialog();
       if (!context.mounted) return;
-      ToastWidget.show(context, '既存メニューの翻訳が完了しました', type: ToastType.success);
+
+      if (backfillResult.isComplete) {
+        ToastWidget.show(context, '既存メニューの翻訳が完了しました',
+            type: ToastType.success);
+      } else {
+        ToastWidget.show(context, _describeIncompleteBackfill(backfillResult),
+            type: ToastType.error);
+      }
     } catch (e) {
+      closeProgressDialog();
       if (!context.mounted) return;
       ToastWidget.show(context, _describeError(e), type: ToastType.error);
+    } finally {
+      await dialogClosed;
+      progress.dispose();
     }
+  }
+
+  // 翻訳対象の件数。押す前に課金規模がわかるようにする
+  String _describeBackfillPlan(BackfillPlan plan) {
+    final parts = <String>[];
+    if (plan.pendingItems.isNotEmpty) {
+      parts.add('メニュー${plan.pendingItems.length}件');
+    }
+    if (plan.pendingCategories.isNotEmpty) {
+      parts.add('カテゴリー${plan.pendingCategories.length}件');
+    }
+    return parts.join('・');
+  }
+
+  // 一部だけ翻訳できなかった場合の案内。個別編集でのリカバリーを促す
+  String _describeIncompleteBackfill(BackfillResult result) {
+    final parts = <String>[];
+    if (result.missingMenuCount > 0) parts.add('メニュー${result.missingMenuCount}件');
+    if (result.missingCategories.isNotEmpty) {
+      parts.add('カテゴリー${result.missingCategories.length}件');
+    }
+    return '${parts.join('・')}の翻訳に失敗しました。時間をおいて再度お試しください。';
   }
 
   // AIアシスタントへの追加情報は一時的に非表示中のため未使用(TODO: 復旧時はコメント解除)

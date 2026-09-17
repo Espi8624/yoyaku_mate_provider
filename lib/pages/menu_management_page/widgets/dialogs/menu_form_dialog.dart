@@ -93,6 +93,13 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
 
     final inputMap = <String, String>{};
 
+    // 原文が変わった時点で、既存の翻訳は全言語ぶん破棄する。
+    // 無効化中の言語の翻訳を残すと、その言語を再度有効化したときに
+    // 「翻訳済み」と判定されて古い原文の訳が永久に残ってしまう
+    // (＝保存されている翻訳は常に現在の原文のもの、という前提を保つ)
+    if (titleChanged) _titleTranslations.clear();
+    if (descChanged) _descTranslations.clear();
+
     // Determine if Title needs translation
     bool needTitle = titleChanged || isNew;
     if (!needTitle && title.isNotEmpty) {

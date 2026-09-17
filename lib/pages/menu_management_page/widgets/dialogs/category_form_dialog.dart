@@ -46,11 +46,15 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
     final name = _controller.text.trim();
     setState(() => _isLoading = true);
 
-    // カテゴリー名が変わった場合のみ再翻訳 (既存翻訳があれば再利用)。
-    // 有効化されている言語だけを更新し、無効化されている言語の既存翻訳は
-    // 残す(再有効化時の再翻訳を不要にするため、ここでは削除しない)
-    final translations = Map<String, String>.from(widget.initialTranslations);
-    if (name != widget.initialValue && widget.activeLanguages.isNotEmpty) {
+    // カテゴリー名が変わった場合のみ再翻訳する。
+    // その際、既存の翻訳は全言語ぶん破棄する — 無効化中の言語の訳を残すと、
+    // 再度有効化したときに「翻訳済み」と判定されて古い名前の訳が残ってしまう
+    // (＝保存されている翻訳は常に現在の原文のもの、という前提を保つ)
+    final isRenamed = name != widget.initialValue;
+    final translations = isRenamed
+        ? <String, String>{}
+        : Map<String, String>.from(widget.initialTranslations);
+    if (isRenamed && widget.activeLanguages.isNotEmpty) {
       try {
         final result = await TranslationService().translateToMultipleLanguages(
           {'c_0': name},

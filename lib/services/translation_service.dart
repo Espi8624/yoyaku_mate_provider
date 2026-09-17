@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:yoyaku_mate_provider/services/api_client.dart';
+import 'package:yoyaku_mate_provider/services/api_exception.dart';
 
 // 自動翻訳 (メニュー名/カテゴリー名/待機メモ) は Gemini API をサーバー経由で呼び出す。
 // APIキーはクライアントに一切持たせず、yoyaku_mate_server の
@@ -164,6 +165,18 @@ class TranslationService {
     return code;
   }
 
+  // HTTPエラー時のユーザー向けメッセージ。サーバーの message があればそれを優先する
+  String _describeHttpFailure(int statusCode, List<int> bodyBytes) {
+    try {
+      final body = json.decode(utf8.decode(bodyBytes));
+      final message = body is Map ? body['message'] : null;
+      if (message is String && message.isNotEmpty) return message;
+    } catch (_) {
+      // JSON以外のレスポンス(プロキシのHTMLエラーページ等)は無視して定型文にフォールバック
+    }
+    return '翻訳に失敗しました (HTTP $statusCode)';
+  }
+
   Future<Map<String, Map<String, String>>> translateToMultipleLanguages(
       Map<String, String> texts, List<String> targetLanguages,
       {bool smartMenuMode = false}) async {
@@ -184,10 +197,15 @@ class TranslationService {
         }),
       );
 
+      // - 以前はここで空マップを返していたため、呼び出し元(特に一括バックフィル)が
+      //   「翻訳0件の成功」として扱い、何も翻訳されていないのに完了扱いになっていた。
+      //   失敗は必ず例外として呼び出し元に伝える
       if (response.statusCode != 200) {
         debugPrint(
             'Multi-Translation Error: ${response.statusCode} ${response.body}');
-        return {};
+        throw TranslationException(
+            _describeHttpFailure(response.statusCode, response.bodyBytes),
+            statusCode: response.statusCode);
       }
 
       // - サーバーの共通ヘルパー(utils.RespondWithJSON)は本体を data でラップするため、
