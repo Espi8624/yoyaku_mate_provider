@@ -35,10 +35,27 @@ class WaitingListNotifier extends _$WaitingListNotifier {
   // 楽観的更新中はポーリングストリームによる上書きを防止する汎用フラグ
   bool _isPerformingOptimisticUpdate = false;
 
+  // - dispose後にストリームのコールバックが走るのを止めるためのフラグ。
+  //   build()のawait中にinvalidateされると、onDisposeが先に走ったあとで
+  //   購読が張られ、二度とcancelされないリークになっていた
+  bool _disposed = false;
+
+  // - build()の完了前に届いたSSEデータの退避先。この時点ではまだstateに
+  //   書けないため、初期取得の結果より優先して採用する(初期取得より新しいデータのため)
+  List<WaitingList>? _pendingItems;
+  bool _isBuilt = false;
+
   @override
   Future<WaitingListData> build({required String storeId}) async {
-    ref.onDispose(() => _subscription?.cancel());
+    ref.onDispose(() {
+      _disposed = true;
+      _subscription?.cancel();
+    });
     final service = ref.watch(waitingServiceProvider);
+
+    // - 購読はawaitより先に張る。以前は初期取得3往復(リスト/board_key/QRトークン)が
+    //   終わってから購読していたため、その間に入った更新を丸ごと取りこぼしていた
+    _subscribeToStream(storeId);
 
     try {
       // 待機リスト取得とboard_key取得を同時に実行。QRトークン発行はboard_key検証が
@@ -53,18 +70,29 @@ class WaitingListNotifier extends _$WaitingListNotifier {
       final boardKey = results[1] as String;
       final tokenData = await service.fetchQRToken(storeId, boardKey);
 
-      _subscribeToStream(storeId);
-
       return WaitingListData(
-          items: items, qrToken: tokenData['v_token'], boardKey: boardKey);
+          items: _takePendingItems() ?? items,
+          qrToken: tokenData['v_token'],
+          boardKey: boardKey);
     } catch (e) {
       // "データなし"は正常系として空リスト扱い (既存 _handleStreamError と同じ判定)
       if (e.toString().contains('data":null')) {
-        _subscribeToStream(storeId);
-        return const WaitingListData(items: [], qrToken: null);
+        return WaitingListData(
+            items: _takePendingItems() ?? const [], qrToken: null);
       }
+      // - 初期取得が失敗してもSSEの購読は生きている。以降に届いた更新で
+      //   エラー表示から自動復帰できるよう、反映を止めないでおく
+      _isBuilt = true;
       rethrow;
     }
+  }
+
+  // build()完了前に届いていたSSEデータを取り出す。以降は通常どおりstateへ反映される
+  List<WaitingList>? _takePendingItems() {
+    _isBuilt = true;
+    final pending = _pendingItems;
+    _pendingItems = null;
+    return pending;
   }
 
   void _subscribeToStream(String storeId) {
@@ -74,16 +102,25 @@ class WaitingListNotifier extends _$WaitingListNotifier {
     _subscription?.cancel();
     _subscription = service.waitingListStream.listen(
       (updatedList) {
+        if (_disposed) return;
         // 楽観的更新中はポーリングデータによる上書きを防止
         if (_isPerformingOptimisticUpdate) return;
 
         updatedList.sort((a, b) => b.registrationTime.compareTo(a.registrationTime));
+
+        // build()完了前はstateに触れられないため退避しておく
+        if (!_isBuilt) {
+          _pendingItems = updatedList;
+          return;
+        }
+
         final currentToken = state.valueOrNull?.qrToken;
         final currentBoardKey = state.valueOrNull?.boardKey;
         state = AsyncData(WaitingListData(
             items: updatedList, qrToken: currentToken, boardKey: currentBoardKey));
       },
       onError: (e) {
+        if (_disposed || !_isBuilt) return;
         final currentToken = state.valueOrNull?.qrToken;
         final currentBoardKey = state.valueOrNull?.boardKey;
         if (e.toString().contains('data":null')) {
