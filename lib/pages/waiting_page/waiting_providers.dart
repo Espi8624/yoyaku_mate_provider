@@ -29,6 +29,45 @@ class WaitingListData {
   const WaitingListData({required this.items, required this.qrToken, this.boardKey});
 }
 
+/// waitingFingerprint は登録内容から「同じ登録かどうか」を判定するための指紋を作る。
+///
+/// 冪等キーの再利用を、内容が一致する再試行だけに限定するために使う。
+/// 店舗では別の客を続けて登録するのが普通なので、内容を見ずにキーを使い回すと
+/// 前の客のレコードが返ってきてしまう ([WaitingListNotifier] のフィールド参照)
+String waitingFingerprint(Map<String, dynamic> data) {
+  final menuItems = data['menuItems'] as List<MenuItem>?;
+  final menuPart = (menuItems ?? const <MenuItem>[])
+      .map((e) => '${e.menuId}x${e.quantity}')
+      .join(',');
+  return [
+    data['partySize']?.toString() ?? '',
+    data['contact']?.toString() ?? '',
+    data['notes']?.toString() ?? '',
+    menuPart,
+  ].join('|');
+}
+
+/// resolveWaitingId は今回の送信に使う冪等キーを決める。
+///
+/// 前回失敗した送信のキー([pendingId])を再利用するのは、その登録内容が
+/// 今回と一致するとき([pendingFingerprint] == [fingerprint])だけ。
+/// 一致しなければ新しいキー([freshId])を使う。
+///
+/// この分岐が要点であり、間違えると次のどちらかが起きる:
+///   常に新規 → 通信失敗後の再試行で整理券が2枚出る (修正前の状態)
+///   常に再利用 → 別の客を登録したのに前の客のレコードが返る
+String resolveWaitingId({
+  required String? pendingId,
+  required String? pendingFingerprint,
+  required String fingerprint,
+  required String freshId,
+}) {
+  if (pendingId != null && pendingFingerprint == fingerprint) {
+    return pendingId;
+  }
+  return freshId;
+}
+
 @riverpod
 class WaitingListNotifier extends _$WaitingListNotifier {
   StreamSubscription<List<WaitingList>>? _subscription;
@@ -44,6 +83,20 @@ class WaitingListNotifier extends _$WaitingListNotifier {
   //   書けないため、初期取得の結果より優先して採用する(初期取得より新しいデータのため)
   List<WaitingList>? _pendingItems;
   bool _isBuilt = false;
+
+  // - 送信に失敗した登録の冪等キー(waiting_id)と、その登録内容の指紋。
+  //
+  //   サーバーは (store_id, waiting_id) が同じ要求を「同じ登録の再送」とみなして
+  //   既存レコードを返す。キーを送信のたびに作り直すと、通信失敗のあとにもう一度
+  //   登録した際サーバーからは別の登録に見え、整理券が2枚出てしまう。
+  //   そのため失敗したキーを保持し、同じ登録をやり直すときに再利用する。
+  //
+  //   指紋を併せて持つのが要点。キーだけを持ち回すと、客Aの登録に失敗したあと
+  //   別の客Bを登録したときに客Aのキーが使われ、「客Aの登録が実は成功していた」
+  //   場合に客Bのつもりで客Aのレコードが返ってくる。店舗では別の客を続けて
+  //   登録するのが普通なので、これは実際に起きる
+  String? _pendingWaitingId;
+  String? _pendingWaitingFingerprint;
 
   @override
   Future<WaitingListData> build({required String storeId}) async {
@@ -149,9 +202,26 @@ class WaitingListNotifier extends _$WaitingListNotifier {
       final msStr = jstNow.millisecond.toString().padLeft(3, '0');
       // 重複を防ぐためのマイクロ秒ベースのランダムな接尾辞 (100〜999)
       final randomSuffix = (100 + (now.microsecondsSinceEpoch % 900)).toString();
-      // 冪等キーとして使用するユニーク待機ID (フォーマット: YYYYMMDD-HHmmss-SSS-Random)
-      final clientWaitingId = "$dateStr-$timeStr-$msStr-$randomSuffix";
+
+      // - 冪等キーは「登録1件」につき1つ。前回の送信が失敗していて、かつ内容が
+      //   同じ登録なら、そのときのキーを再利用する (resolveWaitingId 参照)
+      final fingerprint = waitingFingerprint(data);
+      final clientWaitingId = resolveWaitingId(
+        pendingId: _pendingWaitingId,
+        pendingFingerprint: _pendingWaitingFingerprint,
+        fingerprint: fingerprint,
+        // フォーマット: YYYYMMDD-HHmmss-SSS-Random
+        freshId: "$dateStr-$timeStr-$msStr-$randomSuffix",
+      );
+
+      // - 送信前に控える。成功したら下で消す。例外で抜けた場合は残るため、
+      //   次の同じ内容の登録で再利用される
+      _pendingWaitingId = clientWaitingId;
+      _pendingWaitingFingerprint = fingerprint;
+
       // 顧客が登録した実際の時刻 (ISO 8601 形式)
+      // - キーとは違い毎回更新する。固定すると、しばらく経ってから再試行した場合に
+      //   古い時刻で登録され、待ち順がずれる
       final regTimeStr =
           "${jstNow.year}-${jstNow.month.toString().padLeft(2, '0')}-${jstNow.day.toString().padLeft(2, '0')}T${jstNow.hour.toString().padLeft(2, '0')}:${jstNow.minute.toString().padLeft(2, '0')}:${jstNow.second.toString().padLeft(2, '0')}.$msStr+09:00";
 
@@ -167,6 +237,12 @@ class WaitingListNotifier extends _$WaitingListNotifier {
         waitingId: clientWaitingId,
         registrationTime: regTimeStr,
       );
+
+      // - 登録が確定したので冪等キーを手放す。次の登録は新しいキーで始める。
+      //   ここで消さないと、同じ内容の客を続けて登録したときに2件目が
+      //   1件目のレコードとして返り、登録されないまま完了したように見える
+      _pendingWaitingId = null;
+      _pendingWaitingFingerprint = null;
 
       final newItems = [...(current?.items ?? const <WaitingList>[]), newWaitingItem]
         ..sort((a, b) => b.registrationTime.compareTo(a.registrationTime));
