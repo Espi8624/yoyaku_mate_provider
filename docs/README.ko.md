@@ -51,6 +51,7 @@ docs/
 |------|------|
 | [001-lessons-learned.md](./troubles/001-lessons-learned.ko.md) | SSE 재연결, 멱등성, 로컬 캐시, fl_chart 성능 개선 |
 | [002-m3-seed-color-teal.ko.md](./troubles/002-m3-seed-color-teal.ko.md) | 무채색을 시드로 준 ColorScheme이 청록색이 되어 색 미지정 위젯에 번진 문제 |
+| [003-sse-stale-connection-recovery.ko.md](./troubles/003-sse-stale-connection-recovery.ko.md) | half-open 상태로 죽은 SSE를 감지하지 못해 대기 리스트가 실시간 갱신되지 않던 문제 |
 
 ---
 
