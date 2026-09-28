@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import '../../../../constants/app_colors.dart';
+import '../../../../services/translation_service.dart';
 import '../../../../widgets/common_dialogs/base_dialog.dart';
 
 class CategoryFormDialog extends StatefulWidget {
   final String? initialValue;
   final List<String> existingCategories;
+  final Map<String, String> initialTranslations;
+  // 店舗の「多言語対応」設定で有効化されている翻訳対象言語(日本語は除く)
+  final List<String> activeLanguages;
 
   const CategoryFormDialog({
     super.key,
     this.initialValue,
     required this.existingCategories,
+    this.initialTranslations = const {},
+    this.activeLanguages = TranslationService.defaultLanguages,
   });
 
   @override
@@ -19,6 +25,7 @@ class CategoryFormDialog extends StatefulWidget {
 class _CategoryFormDialogState extends State<CategoryFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _controller;
+  bool _isLoading = false;
   bool get _isEditing => widget.initialValue != null;
 
   @override
@@ -33,10 +40,42 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.of(context).pop(_controller.text.trim());
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final name = _controller.text.trim();
+    setState(() => _isLoading = true);
+
+    // カテゴリー名が変わった場合のみ再翻訳する。
+    // その際、既存の翻訳は全言語ぶん破棄する — 無効化中の言語の訳を残すと、
+    // 再度有効化したときに「翻訳済み」と判定されて古い名前の訳が残ってしまう
+    // (＝保存されている翻訳は常に現在の原文のもの、という前提を保つ)
+    final isRenamed = name != widget.initialValue;
+    final translations = isRenamed
+        ? <String, String>{}
+        : Map<String, String>.from(widget.initialTranslations);
+    if (isRenamed && widget.activeLanguages.isNotEmpty) {
+      try {
+        final result = await TranslationService().translateToMultipleLanguages(
+          {'c_0': name},
+          widget.activeLanguages,
+        );
+        result.forEach((lang, transMap) {
+          final translated = transMap['c_0'];
+          if (translated != null) translations[lang] = translated;
+        });
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('カテゴリーの翻訳に失敗しました: $e')),
+          );
+        }
+      }
     }
+
+    if (!mounted) return;
+    Navigator.of(context)
+        .pop({'name': name, 'translations': translations});
   }
 
   @override
@@ -79,8 +118,14 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                           backgroundColor: AppColors.accentPrimary,
                           foregroundColor: AppColors.cardBackground,
                           padding: const EdgeInsets.symmetric(vertical: 16)),
-                      onPressed: _submit,
-                      child: const Text("確認"),
+                      onPressed: _isLoading ? null : _submit,
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2))
+                          : const Text("確認"),
                     ),
                   ),
                   SizedBox(
@@ -89,8 +134,9 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                       style: TextButton.styleFrom(
                           foregroundColor: AppColors.error,
                           padding: const EdgeInsets.symmetric(vertical: 0)),
-                      onPressed: () =>
-                          Navigator.of(context).pop('DELETE_ACTION'),
+                      onPressed: _isLoading
+                          ? null
+                          : () => Navigator.of(context).pop('DELETE_ACTION'),
                       child: const Text(
                         "削除",
                         style: TextStyle(
@@ -108,8 +154,14 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                       backgroundColor: AppColors.accentPrimary,
                       foregroundColor: AppColors.cardBackground,
                       padding: const EdgeInsets.symmetric(vertical: 16)),
-                  onPressed: _submit,
-                  child: const Text("確認"),
+                  onPressed: _isLoading ? null : _submit,
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Text("確認"),
                 ),
               ),
           ],

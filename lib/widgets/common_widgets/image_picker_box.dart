@@ -90,6 +90,15 @@ class _ImagePickerBoxState extends State<ImagePickerBox> {
                           : Image.network(
                               _imageUrl!,
                               fit: BoxFit.cover,
+                              // - widget.size(既定200)の表示箱に対しダウンサイズ指定がなく、
+                              //   原寸のまま(既存メニュー画像等と同じくスマホ撮影で数MBもあり得る)
+                              //   デコードされていたため、実際に必要な解像度まで抑える
+                              cacheWidth:
+                                  (widget.size * MediaQuery.of(context).devicePixelRatio)
+                                      .round(),
+                              cacheHeight:
+                                  (widget.size * MediaQuery.of(context).devicePixelRatio)
+                                      .round(),
                               errorBuilder: (context, error, stackTrace) {
                                 return Center(
                                   child: Column(

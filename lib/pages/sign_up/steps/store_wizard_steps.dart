@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
+import 'package:yoyaku_mate_provider/models/store_category.dart';
 import 'package:yoyaku_mate_provider/pages/store_selection/widgets/add_store_text_field.dart';
 import 'package:yoyaku_mate_provider/pages/store_selection/widgets/add_store_action_button.dart';
 import 'package:yoyaku_mate_provider/services/address_service.dart';
@@ -187,6 +188,91 @@ class _StoreBasicInfoStepState extends State<StoreBasicInfoStep> {
             const SizedBox(height: 40),
             AddStoreActionButton(label: '次へ', onPressed: _handleNext),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- Step 1.5: 業種 ---
+class StoreCategoryStep extends StatelessWidget {
+  final StoreCategory? selectedCategory;
+  final ValueChanged<StoreCategory> onCategorySelected;
+  final VoidCallback onNext;
+
+  const StoreCategoryStep({
+    super.key,
+    required this.selectedCategory,
+    required this.onCategorySelected,
+    required this.onNext,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('業種',
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('店舗の業種を選択してください。',
+              style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+          const SizedBox(height: 32),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: StoreCategory.values.map((category) {
+              return _CategoryChip(
+                label: category.label,
+                isSelected: selectedCategory == category,
+                onTap: () => onCategorySelected(category),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 40),
+          AddStoreActionButton(
+            label: '次へ',
+            onPressed: selectedCategory != null ? onNext : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _CategoryChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accentPrimary : Colors.white,
+          border: Border.all(
+            color: isSelected ? AppColors.accentPrimary : AppColors.border,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.textPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -419,6 +505,7 @@ class StoreOneMenuRuleStep extends StatelessWidget {
 // --- Step 5: 確認画面 ---
 class StoreReviewStep extends StatelessWidget {
   final TextEditingController nameController;
+  final StoreCategory? selectedCategory;
   final TextEditingController addressController;
   final TextEditingController buildingController; // 新規追加
   final TextEditingController phoneController;
@@ -431,6 +518,7 @@ class StoreReviewStep extends StatelessWidget {
   const StoreReviewStep({
     super.key,
     required this.nameController,
+    required this.selectedCategory,
     required this.addressController,
     required this.buildingController, // 新規追加
     required this.phoneController,
@@ -454,6 +542,7 @@ class StoreReviewStep extends StatelessWidget {
               style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
           const SizedBox(height: 32),
           _buildInfoRow('店名', nameController.text),
+          _buildInfoRow('業種', selectedCategory?.label ?? ''),
           _buildInfoRow(
               '住所', '${addressController.text} ${buildingController.text}'),
           _buildInfoRow('電話番号', phoneController.text),

@@ -192,8 +192,12 @@ class _AddWaitingDialogState extends State<AddWaitingDialog> {
                                   ? Image.memory(menu.tempImageBytes!,
                                       fit: BoxFit.cover)
                                   : menu.menuImageUrl.isNotEmpty
+                                      // - 表示は50x50でも原寸デコードされ、リスト内の全メニュー分が
+                                      //   一斉に読み込まれる際のスクロール負荷になっていた
                                       ? Image.network(menu.menuImageUrl,
                                           fit: BoxFit.cover,
+                                          cacheWidth: 150,
+                                          cacheHeight: 150,
                                           errorBuilder: (context, error,
                                                   stackTrace) =>
                                               const Icon(

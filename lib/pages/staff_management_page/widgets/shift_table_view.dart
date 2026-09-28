@@ -180,6 +180,65 @@ List<_ShiftSlot> _computeShiftSlots(String day, StoreSettings? settings) {
   ];
 }
 
+// 定休日(曜日ベースの定休日設定)かどうか。サーバー側 isClosedDay と同じく、
+// この画面のシフト表は曜日単位の繰り返しテンプレートで具体的な日付を持たないため、
+// 特定日の休業日・祝日休業は判定対象にせず regularWeekly のみを見る
+bool _isClosedDay(String day, ClosedDays? closedDays) {
+  if (closedDays == null) return false;
+  return closedDays.regularWeekly.contains(_dayLabel(day));
+}
+
+// 指定曜日・時間帯([slot.startTime, slot.endTime))と重なるシフトかどうか
+bool _shiftOverlapsSlot(Shift shift, _ShiftSlot slot) {
+  final sStart = _minutesOf(shift.startTime);
+  final sEnd = _minutesOf(shift.endTime);
+  final blockStart = _minutesOf(slot.startTime);
+  final blockEnd = _minutesOf(slot.endTime);
+  if (sStart == null || sEnd == null || blockStart == null || blockEnd == null) {
+    return false;
+  }
+  return sStart < blockEnd && sEnd > blockStart;
+}
+
+// 現在の shifts と必要人員設定を突き合わせて、今まさに人員が不足しているブロックを
+// 算出する(サーバー側 computeShiftShortages と同じロジック)。追加・削除・編集の
+// どの経路で shifts が変わっても、この関数を呼び直すだけで常に正しい状態になる
+// (自動配置直後だけのスナップショットを個別にパッチし続けると、パッチし忘れた
+// 経路でズレが生じるため、都度この関数で再計算する方式にしている)
+List<ShiftShortage> _computeShiftShortages(
+    List<Shift> shifts, StoreSettings? settings) {
+  if (settings == null) return const [];
+
+  final shortages = <ShiftShortage>[];
+  for (final day in Weekday.values) {
+    if (_isClosedDay(day, settings.closedDays)) continue;
+
+    final required = settings.requiredStaffCount[day]?.count ?? 0;
+    if (required <= 0) continue;
+
+    final dayShifts = shifts.where((s) => s.day == day).toList();
+    for (final slot in _computeShiftSlots(day, settings)) {
+      final filled = dayShifts
+          .where((s) => _shiftOverlapsSlot(s, slot))
+          .map((s) => s.staffId)
+          .toSet()
+          .length;
+      if (filled < required) {
+        shortages.add(ShiftShortage(
+          day: day,
+          shiftIndex: slot.index,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          required: required,
+          filled: filled,
+          shortage: required - filled,
+        ));
+      }
+    }
+  }
+  return shortages;
+}
+
 const double _hourHeight = 56;
 const double _dayColumnWidth = 112;
 const double _timeLabelWidth = 52;
@@ -658,6 +717,15 @@ class _ShiftGridBody extends HookConsumerWidget {
     // 下書きに未確定の変更が残っているか。バナーと下部ボタンの出し分けに使う
     final hasUnpublishedChanges = table.hasUnpublishedChanges;
 
+    // 今の table.shifts が必要人員数を満たしているかをその都度算出する。
+    // スナップショットではなく毎回計算し直すことで、自動配置に限らず追加/削除/編集の
+    // どの経路で shifts が変わっても常に実際の状態と一致する
+    // (以前はauto-generateの結果を保持して個別にパッチしていたが、削除など一部の
+    // 経路にパッチが無いとズレる問題があったため、都度再計算する方式に変更した)
+    final shiftShortages =
+        useMemoized(() => _computeShiftShortages(table.shifts, storeSettings),
+            [table.shifts, storeSettings]);
+
     // 下部ボタンを「確定して公開」にするか「自動配置」にするか。
     // 未確定の変更がある間は次にすべきことが確定なので、そちらだけを出す
     // (作ったばかりの空の表は除外。詳細は ShiftTable.hasDraftToReview を参照)
@@ -727,11 +795,21 @@ class _ShiftGridBody extends HookConsumerWidget {
       }
 
       try {
-        await ref
+        // 完了直後の要約に使うだけで、以降の表示は table.shifts から
+        // shiftShortages が再計算されるのに任せる(invalidateで自動更新される)
+        final result = await ref
             .read(shiftActionsProvider.notifier)
             .autoGenerateShifts(storeId, weekStartDate, mode: mode);
         if (!context.mounted) return;
-        ToastWidget.show(context, 'シフトを自動配置しました', type: ToastType.success);
+        ToastWidget.show(
+          context,
+          result.shiftShortages.isEmpty
+              ? 'シフトを自動配置しました'
+              : 'シフトを自動配置しました(${result.shiftShortages.length}箇所で人員が不足)',
+          type: result.shiftShortages.isEmpty
+              ? ToastType.success
+              : ToastType.info,
+        );
       } catch (e) {
         if (!context.mounted) return;
         ToastWidget.show(context, _describeShiftError(e, '自動配置失敗'),
@@ -780,6 +858,42 @@ class _ShiftGridBody extends HookConsumerWidget {
       } catch (e) {
         if (!context.mounted) return;
         ToastWidget.show(context, _describeShiftError(e, 'シフト更新失敗'),
+            type: ToastType.error);
+      }
+    }
+
+    // 人員不足の斜線パネル(シフトが1件も無い、または必要人数に足りない箇所)を
+    // タップした時に、その曜日・直をあらかじめ選んだ状態でシフト追加ダイアログを開く。
+    // 保存後は addShift が shiftTableProvider を invalidate し、それを受けて
+    // table.shifts が更新されれば shiftShortages も自動的に再計算されるため、
+    // ここでローカルの不足リストを個別にパッチする必要は無い
+    Future<void> openAddDialogForShortage(ShiftShortage shortage) async {
+      final result = await showDialog<_ShiftFormResult>(
+        context: context,
+        builder: (_) => _ShiftFormDialog(
+          approvedStaff: dialogStaffOptions,
+          storeSettings: storeSettings,
+          initialDay: shortage.day,
+          initialStartTime: shortage.startTime,
+          initialEndTime: shortage.endTime,
+        ),
+      );
+      if (result == null) return;
+
+      try {
+        await ref.read(shiftActionsProvider.notifier).addShift(
+              storeId,
+              weekStartDate,
+              staffId: result.staffId,
+              day: result.day,
+              startTime: result.startTime,
+              endTime: result.endTime,
+            );
+        if (!context.mounted) return;
+        ToastWidget.show(context, 'シフトを追加しました', type: ToastType.success);
+      } catch (e) {
+        if (!context.mounted) return;
+        ToastWidget.show(context, _describeShiftError(e, 'シフト追加失敗'),
             type: ToastType.error);
       }
     }
@@ -868,6 +982,10 @@ class _ShiftGridBody extends HookConsumerWidget {
         // 今見えている表がスタッフにも見えているとは限らないため、下書き状態を明示する。
         // これが無いと、編集しただけで反映済みだと誤解したまま画面を離れてしまう
         if (isManager && hasUnpublishedChanges) const _UnpublishedChangesBanner(),
+        // 現在の下書きで人員が不足しているブロックがあれば、何曜日の何直が
+        // 何人不足しているかを具体的に伝える(常に最新の table.shifts から算出)
+        if (isManager && shiftShortages.isNotEmpty)
+          _ShiftShortageBanner(shortages: shiftShortages),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -926,9 +1044,13 @@ class _ShiftGridBody extends HookConsumerWidget {
                             endHour: hourRange.endHour,
                             gridHeight: gridHeight,
                             shifts: table.shifts,
+                            shortages: shiftShortages,
                             staffNames: staffNames,
                             staffColors: staffColors,
                             onTapBlock: handleBlockTap,
+                            onTapShortage: isManager
+                                ? openAddDialogForShortage
+                                : null,
                           ),
                         ],
                       ),
@@ -1185,6 +1307,60 @@ class _UnpublishedChangesBanner extends StatelessWidget {
             child: Text(
               '未確定の変更があります。確定するまでスタッフには反映されません',
               style: TextStyle(fontSize: 12, color: AppColors.pending),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// 直近の自動配置で必要人員数を満たせなかったブロックを、曜日・直・不足人数まで
+// 具体的に列挙するバナー。「空欄のまま」だと足りない理由も場所も分からないため、
+// 自動配置の結果として明示的に伝える(押した直後にだけ表示される一時的な情報)
+class _ShiftShortageBanner extends StatelessWidget {
+  final List<ShiftShortage> shortages;
+
+  const _ShiftShortageBanner({required this.shortages});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded,
+              size: 18, color: AppColors.warning),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '人員が不足しているブロックがあります',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.warning,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                for (final s in shortages)
+                  Text(
+                    '${_dayLabel(s.day)}曜日 ${s.shiftIndex + 1}直'
+                    '(${s.startTime}-${s.endTime}) '
+                    '${s.filled}/${s.required}人 (${s.shortage}人不足)',
+                    style:
+                        const TextStyle(fontSize: 12, color: AppColors.warning),
+                  ),
+              ],
             ),
           ),
         ],
@@ -1721,20 +1897,28 @@ class _DayGrid extends StatelessWidget {
   final int endHour;
   final double gridHeight;
   final List<Shift> shifts;
+  // 直近の自動配置で人員不足だったブロック。既存のカードの右側に、
+  // 不足人数の割合ぶんだけグレーの斜線パネルを添えて空席を可視化する
+  final List<ShiftShortage> shortages;
   final Map<String, String> staffNames;
   final Map<String, Color> staffColors;
   // ブロック(重複クラスタ)全体のタップに反応する。1人だけのブロックなら
   // 要素数1のリストで呼ばれる(氏名ピンポイントではなくブロックのどこを押しても反応させるため)
   final void Function(List<Shift> shiftsInBlock)? onTapBlock;
+  // 不足パネル(斜線)のタップに反応する。そのブロックの曜日・直をあらかじめ
+  // 選んだ状態でシフト追加ダイアログを開くのに使う
+  final void Function(ShiftShortage shortage)? onTapShortage;
 
   const _DayGrid({
     required this.startHour,
     required this.endHour,
     required this.gridHeight,
     required this.shifts,
+    required this.shortages,
     required this.staffNames,
     required this.staffColors,
     required this.onTapBlock,
+    required this.onTapShortage,
   });
 
   @override
@@ -1765,10 +1949,11 @@ class _DayGrid extends StatelessWidget {
                   ],
                 ),
                 // その曜日のシフトブロック
-                // (同時間帯に重なる分はカードを分割せず、1枚にまとめて氏名を列挙する)
-                for (final cluster in _clusterDayShifts(
-                    shifts.where((s) => s.day == day).toList()))
-                  _buildClusterBlock(cluster, gridStartMinutes),
+                // (同時間帯に重なる分はカードを分割せず、1枚にまとめて氏名を列挙する)。
+                // 不足ブロック(shortages)と時間帯が一致するクラスタには、右側に
+                // 空席分の斜線パネルを添える。一致するクラスタが無い(誰も配置されて
+                // いない)不足ブロックは、その分だけ独立した斜線パネルとして描画する
+                ..._buildDayBlocks(day, gridStartMinutes),
               ],
             ),
           ),
@@ -1776,53 +1961,148 @@ class _DayGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildClusterBlock(_ShiftCluster cluster, int gridStartMinutes) {
+  // 指定曜日の実配置クラスタ + 不足ブロックを、重複なく画面に並べるべきWidget列に変換する
+  List<Widget> _buildDayBlocks(String day, int gridStartMinutes) {
+    final dayShortages = shortages.where((s) => s.day == day).toList();
+    final matchedShortages = <ShiftShortage>{};
+
+    final widgets = <Widget>[];
+    for (final cluster in _clusterDayShifts(
+        shifts.where((s) => s.day == day).toList())) {
+      ShiftShortage? matched;
+      for (final s in dayShortages) {
+        if (_minutesOf(s.startTime) == cluster.startMinutes &&
+            _minutesOf(s.endTime) == cluster.endMinutes) {
+          matched = s;
+          break;
+        }
+      }
+      if (matched != null) matchedShortages.add(matched);
+      widgets.add(_buildClusterBlock(cluster, gridStartMinutes, matched));
+    }
+
+    // 誰も配置されていない(実クラスタと一致しなかった)不足ブロックは、
+    // その時間帯まるごとを斜線パネルにする
+    for (final s in dayShortages) {
+      if (matchedShortages.contains(s)) continue;
+      widgets.add(_buildEmptyShortageBlock(s, gridStartMinutes));
+    }
+
+    return widgets;
+  }
+
+  Widget _buildClusterBlock(
+      _ShiftCluster cluster, int gridStartMinutes, ShiftShortage? shortage) {
     final top =
         ((cluster.startMinutes - gridStartMinutes) / 60.0) * _hourHeight;
     final height =
         ((cluster.endMinutes - cluster.startMinutes) / 60.0) * _hourHeight;
+    final double clampedTop = top.clamp(0, gridHeight).toDouble();
+    final double clampedHeight = height.clamp(4, gridHeight).toDouble();
 
+    // 不足分がある場合、カード自体の幅を「充足済みの割合」ぶんに縮め、
+    // 残りを _buildEmptyShortageBlock と同じ見た目の斜線パネルに譲る
+    const columnInset = 4.0; // Positioned(left:2, right:2) 分
+    const fullWidth = _dayColumnWidth - columnInset;
+    final filledWidth = shortage == null
+        ? fullWidth
+        : fullWidth * shortage.filled / shortage.required;
+    final hatchWidth = fullWidth - filledWidth;
+
+    final cardWidget = _buildFilledCardContent(cluster);
+
+    if (shortage == null || hatchWidth <= 0) {
+      return Positioned(
+        top: clampedTop,
+        left: 2,
+        right: 2,
+        height: clampedHeight,
+        child: cardWidget,
+      );
+    }
+
+    return Stack(
+      children: [
+        Positioned(
+          top: clampedTop,
+          left: 2,
+          width: filledWidth,
+          height: clampedHeight,
+          child: cardWidget,
+        ),
+        Positioned(
+          top: clampedTop,
+          left: 2 + filledWidth,
+          width: hatchWidth,
+          height: clampedHeight,
+          child: _ShiftShortageHatch(
+            shortageCount: shortage.shortage,
+            onTap: onTapShortage == null
+                ? null
+                : () => onTapShortage!(shortage),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 実配置が1件も無い不足ブロック。時間帯まるごとを斜線パネルにし、
+  // 何人不足しているかを添える
+  Widget _buildEmptyShortageBlock(ShiftShortage shortage, int gridStartMinutes) {
+    final startMinutes = _minutesOf(shortage.startTime) ?? 0;
+    final endMinutes = _minutesOf(shortage.endTime) ?? startMinutes;
+    final top = ((startMinutes - gridStartMinutes) / 60.0) * _hourHeight;
+    final height = ((endMinutes - startMinutes) / 60.0) * _hourHeight;
+
+    return Positioned(
+      top: top.clamp(0, gridHeight),
+      left: 2,
+      right: 2,
+      height: height.clamp(4, gridHeight),
+      child: _ShiftShortageHatch(
+        shortageCount: shortage.shortage,
+        timeLabel: '${shortage.startTime}-${shortage.endTime}',
+        onTap: onTapShortage == null ? null : () => onTapShortage!(shortage),
+      ),
+    );
+  }
+
+  Widget _buildFilledCardContent(_ShiftCluster cluster) {
     // 1人だけの場合は従来通り、その人の色で氏名+時間を表示するシンプルなカード
     if (cluster.shifts.length == 1) {
       final shift = cluster.shifts.first;
       final color = staffColors[shift.staffId] ?? AppColors.accentSecondary;
-      return Positioned(
-        top: top.clamp(0, gridHeight),
-        left: 2,
-        right: 2,
-        height: height.clamp(4, gridHeight),
-        child: GestureDetector(
-          onTap: onTapBlock == null ? null : () => onTapBlock!([shift]),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              // 複数人カード(下記)と表示順・配色を揃えるため、時間帯を上・氏名を下に表示し、
-              // 時間帯は氏名より弱いトーン(半透明の白)にして主役の氏名を目立たせる
-              children: [
-                Text(
-                  '${shift.startTime}-${shift.endTime}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 10, color: AppColors.shiftBlockSubLabel),
-                ),
-                Text(
-                  staffNames[shift.staffId] ?? '不明',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimaryLight),
-                ),
-              ],
-            ),
+      return GestureDetector(
+        onTap: onTapBlock == null ? null : () => onTapBlock!([shift]),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            // 複数人カード(下記)と表示順・配色を揃えるため、時間帯を上・氏名を下に表示し、
+            // 時間帯は氏名より弱いトーン(半透明の白)にして主役の氏名を目立たせる
+            children: [
+              Text(
+                '${shift.startTime}-${shift.endTime}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 10, color: AppColors.shiftBlockSubLabel),
+              ),
+              Text(
+                staffNames[shift.staffId] ?? '不明',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimaryLight),
+              ),
+            ],
           ),
         ),
       );
@@ -1838,73 +2118,152 @@ class _DayGrid extends StatelessWidget {
     final groupColor = AppColors.groupShiftBlockPalette[
         memberKey.hashCode.abs() % AppColors.groupShiftBlockPalette.length];
 
-    return Positioned(
-      top: top.clamp(0, gridHeight),
-      left: 2,
-      right: 2,
-      height: height.clamp(4, gridHeight),
-      child: GestureDetector(
-        onTap: onTapBlock == null
-            ? null
-            : () => onTapBlock!(cluster.shifts),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          decoration: BoxDecoration(
-            color: groupColor.withValues(alpha: 0.85),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: ClipRect(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 1人カードの時間帯表示と同じ弱いトーン(半透明の白・非太字)に揃える
-                Text(
-                  '${_formatMinutesLabel(cluster.startMinutes)}-'
-                  '${_formatMinutesLabel(cluster.endMinutes)} '
-                  '・${cluster.shifts.length}名',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 10, color: AppColors.shiftBlockSubLabel),
-                ),
-                for (final shift in cluster.shifts)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: staffColors[shift.staffId] ??
-                                AppColors.accentSecondary,
-                            shape: BoxShape.circle,
-                          ),
+    return GestureDetector(
+      onTap: onTapBlock == null ? null : () => onTapBlock!(cluster.shifts),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          color: groupColor.withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: ClipRect(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1人カードの時間帯表示と同じ弱いトーン(半透明の白・非太字)に揃える
+              Text(
+                '${_formatMinutesLabel(cluster.startMinutes)}-'
+                '${_formatMinutesLabel(cluster.endMinutes)} '
+                '・${cluster.shifts.length}名',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 10, color: AppColors.shiftBlockSubLabel),
+              ),
+              for (final shift in cluster.shifts)
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: staffColors[shift.staffId] ??
+                              AppColors.accentSecondary,
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 3),
-                        Flexible(
-                          child: Text(
-                            staffNames[shift.staffId] ?? '不明',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimaryLight),
-                          ),
+                      ),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          staffNames[shift.staffId] ?? '不明',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimaryLight),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),
     );
   }
+}
+
+// 人員不足を示すグレーの斜線(ハッチング)パネル。_buildClusterBlock(部分不足)/
+// _buildEmptyShortageBlock(全員不足)の両方から使う共通パーツ
+class _ShiftShortageHatch extends StatelessWidget {
+  final int shortageCount;
+  // 全員不足(実配置が無い)ブロックでのみ渡す。時間帯そのものを見せたほうが
+  // 分かりやすいため。部分不足のパネルは幅が狭く収まらないことが多いので省略する
+  final String? timeLabel;
+  // タップされた時にシフト追加ダイアログを開く(マネージャーのみ渡される)
+  final VoidCallback? onTap;
+
+  const _ShiftShortageHatch({
+    required this.shortageCount,
+    this.timeLabel,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.disabledBackground,
+            border:
+                Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const CustomPaint(painter: _HatchPainter()),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      timeLabel == null
+                          ? '$shortageCount名不足'
+                          : '$timeLabel\n$shortageCount名不足',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.warning,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// 斜線(45度の等間隔な線)を描くだけの軽量なペインター。
+// 不足パネルの背景に敷いて「空席」を一目で分かる見た目にする
+class _HatchPainter extends CustomPainter {
+  const _HatchPainter();
+
+  static const double _spacing = 6;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.disabled
+      ..strokeWidth = 1;
+    final diagonal = size.width + size.height;
+    for (double x = 0; x < diagonal; x += _spacing) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x - size.height, size.height),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HatchPainter oldDelegate) => false;
 }
 
 // シフト追加/編集ダイアログの入力結果
@@ -1932,11 +2291,20 @@ class _ShiftFormDialog extends HookWidget {
   final List<Map<String, dynamic>> approvedStaff;
   final StoreSettings? storeSettings;
   final Shift? initialShift;
+  // 新規追加モード(initialShiftが無い)で、不足ブロックをタップして開いた場合に
+  // その曜日・直をあらかじめ選んだ状態にするためのヒント。initialShiftがある編集
+  // モードでは無視される(既存シフトの内容を優先する)
+  final String? initialDay;
+  final String? initialStartTime;
+  final String? initialEndTime;
 
   const _ShiftFormDialog({
     required this.approvedStaff,
     required this.storeSettings,
     this.initialShift,
+    this.initialDay,
+    this.initialStartTime,
+    this.initialEndTime,
   });
 
   @override
@@ -1945,22 +2313,26 @@ class _ShiftFormDialog extends HookWidget {
         (approvedStaff.isNotEmpty
             ? approvedStaff.first['_id'] as String
             : null));
-    final day = useState<String>(initialShift?.day ?? Weekday.monday);
+    final day =
+        useState<String>(initialShift?.day ?? initialDay ?? Weekday.monday);
 
     // 選択中の曜日の営業時間・交代回数から「直」の選択肢一覧を算出する
     // (曜日を切り替えるたびに再計算する)
     final slots = useMemoized(
         () => _computeShiftSlots(day.value, storeSettings), [day.value]);
 
-    // 編集モードでは、既存シフトの開始/終了時刻と一致する直を初期選択する。
-    // 一致するものが無ければ(直制導入前に作成された/営業時間外のシフト等)先頭の直とする
-    final slotIndex = useState<int>(initialShift == null
+    // 編集モード・不足ブロックからの追加モードのどちらも、一致する開始/終了時刻の
+    // 直を初期選択する。一致するものが無ければ(直制導入前に作成された/営業時間外の
+    // シフト、または設定変更で不足ブロックの時刻がずれた等)先頭の直とする
+    final initialMatchStart = initialShift?.startTime ?? initialStartTime;
+    final initialMatchEnd = initialShift?.endTime ?? initialEndTime;
+    final slotIndex = useState<int>(initialMatchStart == null
         ? 0
         : slots
             .firstWhere(
               (s) =>
-                  s.startTime == initialShift!.startTime &&
-                  s.endTime == initialShift!.endTime,
+                  s.startTime == initialMatchStart &&
+                  s.endTime == initialMatchEnd,
               orElse: () => slots.first,
             )
             .index);

@@ -150,8 +150,8 @@ class PersonalProfileView extends ConsumerWidget {
   Future<void> _launchInquiryEmail(BuildContext context) async {
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
-      path: 'support@yoyakumate.jp',
-      query: 'subject=【Rusui】 お問い合わせ',
+      path: 'team.nezu@gmail.com',
+      query: 'subject=【rusui】 お問い合わせ',
     );
 
     try {
@@ -269,7 +269,7 @@ class PersonalProfileView extends ConsumerWidget {
                 children: [
                   ProfileSettingItem(
                     title: '問い合わせ',
-                    subtitle: 'support@yoyakumate.jp',
+                    subtitle: 'team.nezu@gmail.com',
                     onTap: () => _launchInquiryEmail(context),
                     showTrailingIcon: true,
                   ),

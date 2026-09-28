@@ -10,12 +10,18 @@ class MenuFormDialog extends StatefulWidget {
   final MenuListItem? menuItem;
   final String storeId;
   final String category;
+  final Map<String, String> categoryTranslations;
+  // 店舗の「多言語対応」設定で有効化されている翻訳対象言語(日本語は除く)。
+  // ここに無い言語は保存時に翻訳API呼び出し対象から外れる(コスト削減のため)
+  final List<String> activeLanguages;
 
   const MenuFormDialog({
     super.key,
     this.menuItem,
     required this.storeId,
     required this.category,
+    this.categoryTranslations = const {},
+    this.activeLanguages = TranslationService.defaultLanguages,
   });
 
   @override
@@ -38,20 +44,6 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
 
   bool get _isEditing => widget.menuItem != null;
 
-  static const List<String> _targetLanguages = [
-    'en', // English
-    'ko', // Korean
-    'zh', // Chinese (Simplified)
-    'zh-TW', // Traditional Chinese
-    'es', // Spanish
-    'fr', // French
-    'de', // German
-    'it', // Italian
-    'ar', // Arabic
-    'ru', // Russian
-    'pt', // Portuguese
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -73,8 +65,9 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
     final sanitized = <String, String>{};
     original.forEach((key, value) {
       final normalizedKey = TranslationService.normalizeLanguageCode(key);
-      // Only keep if it's one of our target languages
-      if (_targetLanguages.contains(normalizedKey)) {
+      // 認識対象言語であれば保持する(店舗が現在無効化している言語でも、
+      // 再度有効化したときに再翻訳が不要になるようここでは削除しない)
+      if (TranslationService.allLanguages.contains(normalizedKey)) {
         // If multiple keys normalize to same ISO code (e.g. "English" and "en"),
         // the last one wins, but prefer existing ISO code if both present.
         if (!sanitized.containsKey(normalizedKey) || key == normalizedKey) {
@@ -100,11 +93,18 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
 
     final inputMap = <String, String>{};
 
+    // 原文が変わった時点で、既存の翻訳は全言語ぶん破棄する。
+    // 無効化中の言語の翻訳を残すと、その言語を再度有効化したときに
+    // 「翻訳済み」と判定されて古い原文の訳が永久に残ってしまう
+    // (＝保存されている翻訳は常に現在の原文のもの、という前提を保つ)
+    if (titleChanged) _titleTranslations.clear();
+    if (descChanged) _descTranslations.clear();
+
     // Determine if Title needs translation
     bool needTitle = titleChanged || isNew;
     if (!needTitle && title.isNotEmpty) {
-      // Check if any target language is missing
-      for (final lang in _targetLanguages) {
+      // 有効化されている言語のうち、翻訳が欠けているものがあるかチェック
+      for (final lang in widget.activeLanguages) {
         if (!_titleTranslations.containsKey(lang)) {
           needTitle = true;
           break;
@@ -118,7 +118,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
     // Determine if Description needs translation
     bool needDesc = desc.isNotEmpty && (descChanged || isNew);
     if (!needDesc && desc.isNotEmpty) {
-      for (final lang in _targetLanguages) {
+      for (final lang in widget.activeLanguages) {
         if (!_descTranslations.containsKey(lang)) {
           needDesc = true;
           break;
@@ -135,17 +135,19 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
       return;
     }
 
-    // Call API once for all languages
+    if (widget.activeLanguages.isEmpty) return;
+
+    // Call API once, but only for the languages the store has enabled(コスト削減)
     final result = await TranslationService().translateToMultipleLanguages(
       inputMap,
-      _targetLanguages,
+      widget.activeLanguages,
       smartMenuMode: true,
     );
 
     // Apply results
     result.forEach((lang, transMap) {
       final normalizedLang = TranslationService.normalizeLanguageCode(lang);
-      if (_targetLanguages.contains(normalizedLang)) {
+      if (widget.activeLanguages.contains(normalizedLang)) {
         if (inputMap.containsKey('t_0') && transMap.containsKey('t_0')) {
           _titleTranslations[normalizedLang] = transMap['t_0']!;
         }
@@ -198,6 +200,7 @@ class _MenuFormDialogState extends State<MenuFormDialog> {
           tempImageBytes: _tempImageBytes,
           titleTranslations: _titleTranslations,
           descriptionTranslations: _descTranslations,
+          categoryTranslations: widget.categoryTranslations,
         );
 
         final result = {

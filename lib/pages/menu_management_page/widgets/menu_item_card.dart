@@ -100,8 +100,12 @@ class MenuItemCard extends StatelessWidget {
         child: menuItem.tempImageBytes != null
             ? Image.memory(menuItem.tempImageBytes!, fit: BoxFit.cover)
             : menuItem.menuImageUrl.isNotEmpty
+                // - cacheWidth/Height未指定だと表示は50x50でも元画像を原寸のままデコードしており、
+                //   メニュー点数が多いほどスクロール時のデコード負荷でカクつきの原因になっていた
                 ? Image.network(menuItem.menuImageUrl,
                     fit: BoxFit.cover,
+                    cacheWidth: 150,
+                    cacheHeight: 150,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                         Icons.image_not_supported,
                         color: AppColors.textSecondary))

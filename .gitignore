@@ -43,6 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# Gradle 8.14/AGP 8.11以降、rootProject配下にもビルド成果物が出力される
+/android/build/
+/android/.gradle/
 
 # Firebase cache (배포 시 자동 생성)
 .firebase/

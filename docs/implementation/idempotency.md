@@ -1,44 +1,90 @@
-# クライアントにおける冪等性保証 (Idempotency)
+# クライアント側の冪等性の実装 (Idempotency)
 
-> 最終更新: 2026-07-10  
-> 関連ファイル: [`lib/pages/waiting_page/waiting_screen_viewmodel.dart`](../../lib/pages/waiting_page/waiting_screen_viewmodel.dart)
+> 最終更新: 2026-09-18
+> 関連ファイル: [`lib/pages/waiting_page/waiting_providers.dart`](../../lib/pages/waiting_page/waiting_providers.dart)
 
-## 課題の背景
+## 問題の状況
 
-店舗のネットワーク（Wi-Fi、LTEの境界など）は電波状況が不安定になることが頻繁にあります。  
-スタッフがお客様を代理で大機列へ追加する際、通信が不安定なためにサーバーからの正常な応答（APIレスポンス）を受け取れず、タイムアウトが発生することがあります。
-
-この時、画面上にはエラーが表示されるためスタッフは「登録」ボタンを再クリックしますが、実際には最初のクリックですでにサーバー側の処理は成功していた場合、 **同一の顧客データが二重に登録され、順番号がずれてしまう** という深刻な問題が発生します。
+モバイル端末のネットワークが不安定なとき、スタッフが「待機登録」ボタンを押したが
+サーバーの応答(タイムアウト)を受け取れず、もう一度ボタンを押すことがある。
+サーバーは正常に処理していてクライアントだけが知らない場合、
+**同じお客様が待機列に二重登録される**という深刻な問題になる。
 
 ---
 
-## 解決策: クライアント主導の一意なID生成
+## 2026-09-18 以前は機能していなかった
 
-サーバー側でシーケンシャルなIDを自動発行するのではなく、リクエストを送信するより前に **クライアント（アプリ）側で一意な冪等性キー (`waiting_id`) を生成** してBodyに含めます。
-
-### 冪等性キー生成規則 (Dart)
+この文書はもともと「再送時は以前に生成した同じ `clientWaitingId` を一緒に送る」と
+書いていたが、**実際のコードはそうなっていなかった。** `addWaitingItem` が呼ばれる
+たびに新しいキーを作っていた。
 
 ```dart
-final jstNow = DateTime.now().toUtc().add(const Duration(hours: 9));
-
-// YYYYMMDD-HHmmss-SSS フォーマット
-final dateStr = "${jstNow.year}${jstNow.month}${jstNow.day}";
-final timeStr = "${jstNow.hour}${jstNow.minute}${jstNow.second}";
-final msStr = jstNow.millisecond;
-
-// マイクロ秒に基づく一意のランダムな末尾3桁 (100〜999)
-final randomSuffix = (100 + (jstNow.microsecondsSinceEpoch % 900)).toString();
-
+// 修正前: ボタンを押すたびに新しいキー
+final randomSuffix = (100 + (now.microsecondsSinceEpoch % 900)).toString();
 final clientWaitingId = "$dateStr-$timeStr-$msStr-$randomSuffix";
 ```
 
-### 二重登録防止の仕組み
+つまりサーバーから見れば再送ではなく**別々の登録**であり、防ぎたかった二重登録が
+そのまま起きていた。サーバー側にもユニークインデックスが無く(文書には
+「Unique Index 検査」と書かれていたが実際は非ユニークだった)、両側とも設計文書だけがあって
+実装が追いついていない状態だった。
 
-1. アプリは生成した `clientWaitingId` を付与してAPIを叩く。
-2. ネットワーク遮断により、サーバーの処理は完了したがアプリ側で応答を取得できずにタイムアウト。
-3. スタッフが「再試行」ボタンをクリック。
-4. アプリは、同じ受付データに対して **さきほど生成した `clientWaitingId` と全く同じID** を再送信。
-5. サーバーは受信した `waiting_id` がデータベースに既に存在するか確認。
-6. すでに保存されているため、新規レコードの追加は行わず、既存の登録成功データをそのまま返却（冪等性の維持）。
+> **教訓:** 「こう動く」と書かれた文書は、そう動いている証拠ではない。
+> この文書は関連ファイルとして `waiting_screen_viewmodel.dart` を指していたが、
+> そのファイルはRiverpod移行のときに無くなって久しかった。
+> 文書が古いという兆候はその時点で出ていた。
 
-これにより、通信環境が劣悪な店舗の現場であっても、正確に一度だけ待機登録が行われるようになります。
+---
+
+## 現在の実装
+
+### 1. キーは「登録1件」ごとに発行する
+
+キーを保持しておき、**同じ内容の再試行で再利用**する。成功したら捨てる。
+
+```dart
+// waiting_providers.dart
+String? _pendingWaitingId;
+String? _pendingWaitingFingerprint;
+```
+
+- 送信の直前に控える → 例外で抜ければ残る → 次の試行で再利用される
+- 成功したら即座に `null` に戻す → 次の登録は新しいキーで始まる
+
+### 2. 指紋 (fingerprint) を併せて持つ
+
+**ここが要点。** キーだけを保持すると、客Aの登録に失敗したあと客Bを登録するときに
+Aのキーが使われる。もしAの登録が実はサーバーで成功していたら、Bを登録したつもりで
+**Aのレコードが返ってくる。** 店舗では客を続けて登録するのが普通なので実際に起きる。
+
+```dart
+String waitingFingerprint(Map<String, dynamic> data)   // 人数・連絡先・備考・メニューから作る
+String resolveWaitingId({pendingId, pendingFingerprint, fingerprint, freshId})
+```
+
+`resolveWaitingId` は**指紋が一致するときだけ**以前のキーを再利用する。
+
+| 状況 | 結果 |
+|---|---|
+| 同じ内容の再試行 | 以前のキーを再利用 → サーバーが既存レコードを返す (二重登録を防止) |
+| 別の客の登録 | 新しいキー → 正常に新規レコードを作成 |
+| 保留キー無し / 指紋の消失 | 新しいキー (安全側に倒す) |
+
+どちらも純粋関数として切り出し、`test/waiting_idempotency_test.dart` で検証している。
+判定を間違えると**常に新規 = 二重登録**、**常に再利用 = 他人の整理券**のどちらかになり、
+いずれも客に直接見える不具合になる。
+
+### 3. `registration_time` は毎回更新する
+
+キーと違って時刻は再試行のたびに作り直す。キーと一緒に固定すると、しばらく経ってから
+再試行した場合に古い時刻で登録され、待ち順がずれる。
+
+---
+
+## サーバー側との関係
+
+クライアントだけでは完結しない。同時に届いた2つの再送は、クライアントが同じキーを
+送っていても、サーバーが「照会してから挿入」をすると両方が「存在しない」を見て両方挿入する。
+そのためサーバー側に `(store_id, waiting_id)` のユニークインデックスが併せて必要になる。
+
+詳細は `yoyaku_mate_server/docs/implementation/idempotency.md` を参照。

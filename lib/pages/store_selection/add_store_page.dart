@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:yoyaku_mate_provider/constants/app_colors.dart';
 import 'package:yoyaku_mate_provider/models/provider_profile.dart'; // 必要なモデルが存在し、エクスポートされていることを確認
+import 'package:yoyaku_mate_provider/models/store_category.dart';
 import 'package:yoyaku_mate_provider/models/store_profile.dart';
 import 'package:yoyaku_mate_provider/providers/session_providers.dart';
 import 'package:yoyaku_mate_provider/pages/sign_up/steps/store_wizard_steps.dart';
@@ -36,6 +37,7 @@ class _AddStorePageState extends ConsumerState<AddStorePage> {
   final _storeAddressController = TextEditingController();
   final _storeBuildingController = TextEditingController(); // New
   final _storePhoneController = TextEditingController();
+  StoreCategory? _selectedCategory; // 業種タグ (必須)
   final _estimatedWaitTimeController = TextEditingController(text: '10');
   final _maxWaitingCountController = TextEditingController(text: '10');
   bool _enableMenuSelection = false;
@@ -45,16 +47,16 @@ class _AddStorePageState extends ConsumerState<AddStorePage> {
   // ... (existing code)
 
   void _nextPage() {
-    if (_currentPage < 6) {
-      if (_currentPage == 4 && !_enableMenuSelection) {
+    if (_currentPage < 7) {
+      if (_currentPage == 5 && !_enableMenuSelection) {
         // Skip OneMenuRule if PreOrder is disabled
         _pageController.animateToPage(
-          6,
+          7,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
         setState(() {
-          _currentPage = 6;
+          _currentPage = 7;
         });
         return;
       }
@@ -71,15 +73,15 @@ class _AddStorePageState extends ConsumerState<AddStorePage> {
 
   void _previousPage() {
     if (_currentPage > 0) {
-      if (_currentPage == 6 && !_enableMenuSelection) {
+      if (_currentPage == 7 && !_enableMenuSelection) {
         // Skip back over OneMenuRule
         _pageController.animateToPage(
-          4,
+          5,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
         setState(() {
-          _currentPage = 4;
+          _currentPage = 5;
         });
         return;
       }
@@ -188,6 +190,7 @@ class _AddStorePageState extends ConsumerState<AddStorePage> {
         nameFurigana: fullNameFurigana,
         role: 'manager',
         storeName: _storeNameController.text.trim(),
+        storeBusinessCategory: _selectedCategory?.value,
         storeAddress: _storeAddressController.text.trim(),
         storeBuilding: _storeBuildingController.text.trim(), // New
         storeZipCode: _storeZipCodeController.text.trim(),
@@ -266,7 +269,7 @@ class _AddStorePageState extends ConsumerState<AddStorePage> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 32.0, vertical: 8),
               child: LinearProgressIndicator(
-                value: (_currentPage + 1) / 7,
+                value: (_currentPage + 1) / 8,
                 backgroundColor: AppColors.border,
                 color: AppColors.accentPrimary,
               ),
@@ -292,6 +295,19 @@ class _AddStorePageState extends ConsumerState<AddStorePage> {
                       addressController: _storeAddressController,
                       buildingController: _storeBuildingController, // New
                       phoneController: _storePhoneController,
+                      onNext: _nextPage,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32.0, vertical: 24.0),
+                    child: StoreCategoryStep(
+                      selectedCategory: _selectedCategory,
+                      onCategorySelected: (category) {
+                        setState(() {
+                          _selectedCategory = category;
+                        });
+                      },
                       onNext: _nextPage,
                     ),
                   ),
@@ -356,6 +372,7 @@ class _AddStorePageState extends ConsumerState<AddStorePage> {
                         horizontal: 32.0, vertical: 24.0),
                     child: StoreReviewStep(
                       nameController: _storeNameController,
+                      selectedCategory: _selectedCategory,
                       addressController: _storeAddressController,
                       buildingController: _storeBuildingController, // New
                       phoneController: _storePhoneController,

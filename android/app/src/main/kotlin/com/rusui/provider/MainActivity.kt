@@ -1,4 +1,4 @@
-package com.example.yoyaku_mate_provider
+package com.rusui.provider
 
 import io.flutter.embedding.android.FlutterActivity
 

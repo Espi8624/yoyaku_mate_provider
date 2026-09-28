@@ -341,5 +341,9 @@ class StoreActions extends _$StoreActions {
     final service = ref.read(storeSettingsServiceProvider);
     await service.updateStoreSettings(newSettings);
     ref.invalidate(storeSettingsProvider(storeId: newSettings.storeId));
+    // - invalidateは再取得を予約するだけで待たない。呼び出し元の「保存完了」表示が
+    //   キャッシュ更新より先に出てしまい、直後の印刷等が古い設定を読む競合を防ぐため
+    //   ここで再取得の完了を待つ
+    await ref.read(storeSettingsProvider(storeId: newSettings.storeId).future);
   }
 }

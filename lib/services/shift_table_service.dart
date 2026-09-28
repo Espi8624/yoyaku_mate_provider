@@ -142,7 +142,8 @@ class ShiftTableService {
 
   // 必要人員設定・勤務可能時間をもとにシフトを自動配置 (マネージャー専用)
   // mode: 'fill_gaps' (既存シフトは維持し不足分のみ追加) / 'replace_all' (全て新規に生成)
-  Future<void> autoGenerateShifts(
+  // 戻り値の shiftShortages で、配置しきれなかったブロックを呼び出し元に伝える
+  Future<ShiftTable> autoGenerateShifts(
     String storeId,
     String weekStartDate, {
     required String mode,
@@ -160,6 +161,9 @@ class ShiftTableService {
           'シフトの自動配置に失敗しました。Status: ${response.statusCode}, Body: ${response.body}',
           statusCode: response.statusCode);
     }
+
+    final decoded = json.decode(utf8.decode(response.bodyBytes));
+    return ShiftTable.fromJson(decoded['data'] as Map<String, dynamic>);
   }
 
   // 下書きを確定してスタッフに公開する (マネージャー専用)。

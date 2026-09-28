@@ -84,34 +84,12 @@ class QRCodeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // break point設定
-    const double mobileBreakpoint = 700;
-    final bool isMobile = MediaQuery.of(context).size.width < mobileBreakpoint;
-
-    // mobile UI
-    if (isMobile) {
-      return IconButton(
-        icon: const Icon(Icons.qr_code_2_rounded),
-        tooltip: 'QRコード表示',
-        onPressed: () => _showQrDialog(context),
-      );
-    }
-    // desktop UI
-    else {
-      return Tooltip(
-        message: 'QRコード',
-        child: ElevatedButton(
-          onPressed: () => _showQrDialog(context),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.textPrimary,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.all(12),
-            minimumSize: const Size(48, 48),
-          ),
-          child: const Icon(Icons.qr_code_rounded, color: Colors.white),
-        ),
-      );
-    }
+    // モバイル/デスクトップ共通デザイン (待機モニターURLボタンとスタイル統一)
+    return IconButton(
+      icon: const Icon(Icons.qr_code_2_rounded, color: AppColors.textPrimary),
+      tooltip: 'QRコード表示',
+      onPressed: () => _showQrDialog(context),
+    );
   }
 }
 
